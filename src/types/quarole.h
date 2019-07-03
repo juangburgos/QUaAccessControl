@@ -19,6 +19,10 @@ public:
 
 	Q_INVOKABLE void remove();
 
+	// C++ API
+
+	QString    getName() const;
+
 signals:
 
 public slots:

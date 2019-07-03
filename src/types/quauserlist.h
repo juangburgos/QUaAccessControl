@@ -21,9 +21,13 @@ public:
 
 	Q_INVOKABLE void clear();
 
+	Q_INVOKABLE QString xmlConfig();
+
+	Q_INVOKABLE QString setXmlConfig(QString strXmlConfig);
+
 	// C++ API
 
-	QList<QUaUser*> users();
+	QList<QUaUser*> users() const;
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;

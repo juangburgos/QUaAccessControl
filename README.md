@@ -26,3 +26,6 @@ TODO.
 
 QUaUserList, QUaUser, QUaRoleList, QUaRole, QUaPermissionsList, QUaPermissions
 
+## TODO
+
+Need to modify, add a callback or something to QUaServer to allow external validation. E.g. transforming plain passwords into hashes and validate the hashes.

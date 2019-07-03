@@ -10,3 +10,8 @@ void QUaRole::remove()
 {
 	this->deleteLater();
 }
+
+QString QUaRole::getName() const
+{
+	return this->browseName();
+}
