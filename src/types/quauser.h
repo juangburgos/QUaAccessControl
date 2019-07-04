@@ -29,10 +29,10 @@ public:
 
 	// UA methods
 
-	Q_INVOKABLE void    remove();
+	Q_INVOKABLE void remove();
 	// overwrite password, does not care about old password
 	Q_INVOKABLE QString setPassword(QString strPassword);
-	// need password to set role because server does not store passwords 
+	// needs current password to set role because server does not store passwords 
 	// (no way to recalculate the hash that depends on password and role name)
 	Q_INVOKABLE QString setRole(QString strPassword, QList<QString> strRolePath);
 	// same as above
@@ -47,7 +47,7 @@ public:
 
 	bool       hasRole() const;
 
-	QUaRole  * getRole() const;
+	QUaRole  * role() const;
 
 	bool       isPasswordValid(const QString &strPassword) const;
 

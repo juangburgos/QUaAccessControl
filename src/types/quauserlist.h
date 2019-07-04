@@ -29,6 +29,8 @@ public:
 
 	QList<QUaUser*> users() const;
 
+	QUaUser * user(const QString &strName) const;
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
@@ -38,7 +40,7 @@ signals:
 public slots:
 
 private:
-
+	bool isUserNameValid(QString &strName, QString &strError);
 };
 
 #endif // QUAUSERLIST_H

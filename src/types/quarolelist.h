@@ -19,11 +19,17 @@ public:
 
 	Q_INVOKABLE QString addRole(QString strName);
 
-	Q_INVOKABLE void clear();
+	Q_INVOKABLE void    clear();
+
+	Q_INVOKABLE QString xmlConfig();
+
+	Q_INVOKABLE QString setXmlConfig(QString strXmlConfig);
 
 	// C++ API
 
-	QList<QUaRole*> roles();
+	QList<QUaRole*> roles() const;
+
+	QUaRole * role(const QString &strName) const;
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;

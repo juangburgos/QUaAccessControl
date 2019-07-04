@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	// add list entry point to object's folder
+	// setup access control information model
 	auto accessControl = objsFolder->addFolderObject();
 	accessControl->setDisplayName("AccessControl");
 	accessControl->setBrowseName ("AccessControl");

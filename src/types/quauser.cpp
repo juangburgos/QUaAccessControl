@@ -45,7 +45,7 @@ QString QUaUser::setPassword(QString strPassword)
 	QString strMessage = this->getName();
 	if (this->hasRole())
 	{
-		strMessage += ":" + this->getRole()->getName();
+		strMessage += ":" + this->role()->getName();
 	}
 	// create hash
 	QByteArray hash = QMessageAuthenticationCode::hash(
@@ -139,13 +139,13 @@ void QUaUser::setHash(const QByteArray & hash)
 
 bool QUaUser::hasRole() const
 {
-	return this->getRole() ? true : false;
+	return this->role() ? true : false;
 }
 
-QUaRole * QUaUser::getRole() const
+QUaRole * QUaUser::role() const
 {
 	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
-	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::getRole", "Only one role per user is currently supported.");
+	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::role", "Only one role per user is currently supported.");
 	return listRefs.count() >= 1 ? dynamic_cast<QUaRole*>(listRefs.at(0)) : nullptr;
 }
 
@@ -154,7 +154,7 @@ bool QUaUser::isPasswordValid(const QString &strPassword) const
 	QString strMessage = this->getName();
 	if (this->hasRole())
 	{
-		strMessage += ":" + this->getRole()->getName();
+		strMessage += ":" + this->role()->getName();
 	}
 	// create hash
 	QByteArray hash = QMessageAuthenticationCode::hash(
@@ -175,7 +175,7 @@ QDomElement QUaUser::toDomElement(QDomDocument & domDoc) const
 	elem.setAttribute("Hash", QString(this->getHash().toHex()));
 	if (this->hasRole())
 	{
-		elem.setAttribute("Role", this->getRole()->nodeBrowsePath().join("/"));
+		elem.setAttribute("Role", this->role()->nodeBrowsePath().join("/"));
 	}
 	// return element
 	return elem;
@@ -202,10 +202,11 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 	}
 	if (!role)
 	{
-		strError += tr("%1 : Unexisting node in browse path %2. Could not add role to user %3.")
+		strError += tr("%1 : Unexisting node in browse path %2. Could not add role to user %3.\n")
 			.arg("Error")
 			.arg(strRolePath.join("/"))
 			.arg(this->getName());
+		return;
 	}
 	// add reference
 	this->addReference(QUaUser::UserHasRoleRefType, role);
@@ -213,11 +214,4 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 	//        because password is not available to recreate the hash.
 	//        therefore, we must forbid role destruction while still has users attached
 	//        or delete all users attached to role automatically when destroyed.
-	/*
-	QObject::disconnect(m_conRoleDestroyed);
-	m_conRoleDestroyed = QObject::connect(this->getRole(), QObject::destroyed, this,
-	[this, strPassword]() {
-		this->clearRole(strPassword);
-	});
-	*/
 }

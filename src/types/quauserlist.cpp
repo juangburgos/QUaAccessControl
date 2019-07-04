@@ -16,41 +16,22 @@ QUaUserList::QUaUserList(QUaServer *server)
 
 QString QUaUserList::addUser(QString strName, QString strPassword)
 {
-	// validate name
-	strName = strName.trimmed();
-	// check empty
-	if (strName.isEmpty())
+	QString strError;
+	if (!this->isUserNameValid(strName, strError))
 	{
-		return tr("%1 : User Name argument cannot be empty.").arg("Error");
-	}
-	// check valid length
-	if (strName.count() > 16)
-	{
-		return  tr("%1 : User Name cannot contain more than 16 characters.").arg("Error");
-	}
-	// check valid characters
-	QRegularExpression rx("^[a-zA-Z0-9_]*$");
-	QRegularExpressionMatch match = rx.match(strName, 0, QRegularExpression::PartialPreferCompleteMatch);
-	if (!match.hasMatch())
-	{
-		return  tr("%1 : User Name can only contain numbers, letters and underscores /^[a-zA-Z0-9_]*$/.").arg("Error");
-	}
-	// check if id already exists
-	if (this->hasChild(strName))
-	{
-		return  tr("%1 : User Name already exists.").arg("Error");
+		return strError;
 	}
 	// validate password
 	strPassword = strPassword.trimmed();
 	// check empty
 	if (strPassword.isEmpty())
 	{
-		return tr("%1 : User Password argument cannot be empty.").arg("Error");
+		return tr("%1 : User Password argument cannot be empty.\n").arg("Error");
 	}
 	// check valid length
 	if (strPassword.count() < 6)
 	{
-		return  tr("%1 : User Password cannot contain less than 6 characters.").arg("Error");
+		return  tr("%1 : User Password cannot contain less than 6 characters.\n").arg("Error");
 	}
 	// create instance
 	// TODO : set custom nodeId when https://github.com/open62541/open62541/issues/2667 fixed
@@ -66,9 +47,10 @@ QString QUaUserList::addUser(QString strName, QString strPassword)
 
 void QUaUserList::clear()
 {
-	for (int i = 0; i < this->users().count(); i++)
+	auto users = this->users();
+	for (int i = 0; i < users.count(); i++)
 	{
-		this->users().at(i)->remove();
+		users.at(i)->remove();
 	}
 }
 
@@ -94,14 +76,14 @@ QString QUaUserList::setXmlConfig(QString strXmlConfig)
 	doc.setContent(strXmlConfig, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
-		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4").arg("Error").arg(line).arg(col).arg(strError);
+		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
 		return strError;
 	}
 	// get list of params
 	QDomElement elemUsers = doc.firstChildElement(QUaUserList::staticMetaObject.className());
 	if (elemUsers.isNull())
 	{
-		strError = tr("%1 : No User list found in XML config.").arg("Error");
+		strError = tr("%1 : No User list found in XML config.\n").arg("Error");
 		return strError;
 	}
 	// load config from xml
@@ -116,6 +98,11 @@ QString QUaUserList::setXmlConfig(QString strXmlConfig)
 QList<QUaUser*> QUaUserList::users() const
 {
 	return this->browseChildren<QUaUser>();
+}
+
+QUaUser * QUaUserList::user(const QString & strName) const
+{
+	return this->browseChild<QUaUser>(strName);
 }
 
 QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
@@ -154,6 +141,11 @@ void QUaUserList::fromDomElement(QDomElement & domElem, QString & strError)
 		}
 		// attempt to add
 		QString strName = elem.attribute("Name");
+		// validate
+		if (!this->isUserNameValid(strName, strError))
+		{
+			continue;
+		}
 		// NOTE : cannot use QUaUserList::addUser because server does not store passwords
 		auto user = this->addChild<QUaUser>(/*strNodeId*/);
 		user->setDisplayName(strName);
@@ -161,4 +153,37 @@ void QUaUserList::fromDomElement(QDomElement & domElem, QString & strError)
 		// set client config
 		user->fromDomElement(elem, strError);
 	}
+}
+
+bool QUaUserList::isUserNameValid(QString &strName, QString &strError)
+{
+	// validate name
+	strName = strName.trimmed();
+	// check empty
+	if (strName.isEmpty())
+	{
+		strError += tr("%1 : User Name argument cannot be empty.\n").arg("Error");
+		return false;
+	}
+	// check valid length
+	if (strName.count() > 16)
+	{
+		strError += tr("%1 : User Name cannot contain more than 16 characters.\n").arg("Error");
+		return false;
+	}
+	// check valid characters
+	QRegularExpression rx("^[a-zA-Z0-9_]*$");
+	QRegularExpressionMatch match = rx.match(strName, 0, QRegularExpression::PartialPreferCompleteMatch);
+	if (!match.hasMatch())
+	{
+		strError += tr("%1 : User Name can only contain numbers, letters and underscores /^[a-zA-Z0-9_]*$/.\n").arg("Error");
+		return false;
+	}
+	// check if id already exists
+	if (this->hasChild(strName))
+	{
+		strError += tr("%1 : User Name already exists.\n").arg("Error");
+		return false;
+	}
+	return true;
 }

@@ -21,9 +21,15 @@ public:
 
 	Q_INVOKABLE void clear();
 
+	Q_INVOKABLE QString xmlConfig();
+
+	Q_INVOKABLE QString setXmlConfig(QString strXmlConfig);
+
 	// C++ API
 
-	QList<QUaPermissions*> permissions();
+	QList<QUaPermissions*> permissionsList() const;
+
+	QUaPermissions * permission(const QString &strId) const;
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
