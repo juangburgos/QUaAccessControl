@@ -34,9 +34,9 @@ public:
 	Q_INVOKABLE QString setPassword(QString strPassword);
 	// needs current password to set role because server does not store passwords 
 	// (no way to recalculate the hash that depends on password and role name)
-	Q_INVOKABLE QString setRole(QString strPassword, QList<QString> strRolePath);
+	Q_INVOKABLE QString setRole(QList<QString> strRolePath);
 	// same as above
-	Q_INVOKABLE QString clearRole(QString strPassword);
+	Q_INVOKABLE QString clearRole();
 
 	// C++ API
 

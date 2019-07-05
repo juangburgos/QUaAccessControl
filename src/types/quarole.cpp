@@ -11,12 +11,6 @@ QUaRole::QUaRole(QUaServer *server)
 
 void QUaRole::remove()
 {
-	// must destroy users first
-	auto users = this->users();
-	for (int i = 0; i < users.count(); i++)
-	{
-		users.at(i)->remove();
-	}
 	this->deleteLater();
 }
 

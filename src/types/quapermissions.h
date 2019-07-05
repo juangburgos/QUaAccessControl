@@ -57,6 +57,10 @@ public:
 	static QUaReference IsWritableByRefType;
 
 signals:
+	void canReadRoleAdded   (QUaRole * role);
+	void canReadRoleRemoved (QUaRole * role);
+	void canWriteRoleAdded  (QUaRole * role);
+	void canWriteRoleRemoved(QUaRole * role);
 
 public slots:
 

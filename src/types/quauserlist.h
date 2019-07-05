@@ -27,6 +27,8 @@ public:
 
 	// C++ API
 
+	QString addUser(const QString &strName, const QByteArray &bytaHash);
+
 	QList<QUaUser*> users() const;
 
 	QUaUser * user(const QString &strName) const;

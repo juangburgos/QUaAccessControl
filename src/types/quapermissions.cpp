@@ -97,6 +97,8 @@ void QUaPermissions::addRoleCanRead(QUaRole * role)
 	}
 	// add reference
 	this->addReference(QUaPermissions::IsReadableByRefType, role);
+	// emit
+	emit this->canReadRoleAdded(role);
 }
 
 void QUaPermissions::removeRoleCanRead(QUaRole * role)
@@ -107,6 +109,8 @@ void QUaPermissions::removeRoleCanRead(QUaRole * role)
 	}
 	// remove reference
 	this->removeReference(QUaPermissions::IsReadableByRefType, role);
+	// emit
+	emit this->canReadRoleRemoved(role);
 }
 
 void QUaPermissions::addRoleCanWrite(QUaRole * role)
@@ -117,6 +121,8 @@ void QUaPermissions::addRoleCanWrite(QUaRole * role)
 	}
 	// add reference
 	this->addReference(QUaPermissions::IsWritableByRefType, role);
+	// emit
+	emit this->canWriteRoleAdded(role);
 }
 
 void QUaPermissions::removeRoleCanWrite(QUaRole * role)
@@ -127,6 +133,8 @@ void QUaPermissions::removeRoleCanWrite(QUaRole * role)
 	}
 	// remove reference
 	this->removeReference(QUaPermissions::IsWritableByRefType, role);
+	// emit
+	emit this->canWriteRoleRemoved(role);
 }
 
 QList<QUaRole*> QUaPermissions::rolesCanRead() const

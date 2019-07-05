@@ -95,6 +95,23 @@ QString QUaUserList::setXmlConfig(QString strXmlConfig)
 	return strError;
 }
 
+QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHash)
+{
+	QString strError;
+	QString strNameCopy = strName;
+	if (!this->isUserNameValid(strNameCopy, strError))
+	{
+		return strError;
+	}
+	auto user = this->addChild<QUaUser>(/*strNodeId*/);
+	user->setDisplayName(strName);
+	user->setBrowseName(strName);
+	// set password
+	user->setHash(bytaHash);
+	// return
+	return "Success";
+}
+
 QList<QUaUser*> QUaUserList::users() const
 {
 	return this->browseChildren<QUaUser>();

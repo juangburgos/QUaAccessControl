@@ -43,10 +43,6 @@ QString QUaUser::setPassword(QString strPassword)
 		return  tr("%1 : User Password cannot contain less than 6 characters.").arg("Error");
 	}
 	QString strMessage = this->getName();
-	if (this->hasRole())
-	{
-		strMessage += ":" + this->role()->getName();
-	}
 	// create hash
 	QByteArray hash = QMessageAuthenticationCode::hash(
 		strMessage.toUtf8(), 
@@ -59,14 +55,8 @@ QString QUaUser::setPassword(QString strPassword)
 	return "Success";
 }
 
-QString QUaUser::setRole(QString strPassword, QList<QString> strRolePath)
+QString QUaUser::setRole(QList<QString> strRolePath)
 {
-	// validate password
-	strPassword = strPassword.trimmed();
-	if (!this->isPasswordValid(strPassword))
-	{
-		return tr("%1 : Incorrect Password. Please try again.").arg("Error");
-	}
 	// get target node
 	QUaNode * node = this->server()->browsePath(strRolePath);
 	QUaRole * role = dynamic_cast<QUaRole*>(node);
@@ -84,27 +74,19 @@ QString QUaUser::setRole(QString strPassword, QList<QString> strRolePath)
 	// remove old reference if any
 	if (this->hasRole())
 	{
-		this->clearRole(strPassword);
+		this->clearRole();
 	}
 	Q_ASSERT(!this->hasRole());
 	// add reference
 	this->addReference(QUaUser::UserHasRoleRefType, role);
-	// re-set password
-	this->setPassword(strPassword);
 	// emit
 	emit this->roleChanged(role);
 	// return
 	return "Success";
 }
 
-QString QUaUser::clearRole(QString strPassword)
+QString QUaUser::clearRole()
 {
-	// validate password
-	strPassword = strPassword.trimmed();
-	if (!this->isPasswordValid(strPassword))
-	{
-		return tr("%1 : Incorrect Password. Please try again.").arg("Error");
-	}
 	// clear reference
 	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::clearRole", "Only one role per user is currently supported.");
@@ -113,8 +95,6 @@ QString QUaUser::clearRole(QString strPassword)
 		return "Success";
 	}
 	this->removeReference(QUaUser::UserHasRoleRefType, listRefs.at(0));
-	// re-set password
-	this->setPassword(strPassword);
 	// emit
 	emit this->roleChanged(nullptr);
 	// return
@@ -152,10 +132,6 @@ QUaRole * QUaUser::role() const
 bool QUaUser::isPasswordValid(const QString &strPassword) const
 {
 	QString strMessage = this->getName();
-	if (this->hasRole())
-	{
-		strMessage += ":" + this->role()->getName();
-	}
 	// create hash
 	QByteArray hash = QMessageAuthenticationCode::hash(
 		strMessage.toUtf8(),
@@ -210,8 +186,4 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 	}
 	// add reference
 	this->addReference(QUaUser::UserHasRoleRefType, role);
-	// NOTE : undefined behaviour when role destroyed and config was loaded from XML,
-	//        because password is not available to recreate the hash.
-	//        therefore, we must forbid role destruction while still has users attached
-	//        or delete all users attached to role automatically when destroyed.
 }
