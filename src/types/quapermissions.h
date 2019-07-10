@@ -1,7 +1,7 @@
 #ifndef QUAPERMISSIONS_H
 #define QUAPERMISSIONS_H
 
-#include <QUaBaseObject>
+#include <QUaBaseObjectProtected>
 
 #include <QDomDocument>
 #include <QDomElement>
@@ -10,7 +10,7 @@ class QUaRole;
 class QUaUser;
 class QUaPermissionsList;
 
-class QUaPermissions : public QUaBaseObject
+class QUaPermissions : public QUaBaseObjectProtected
 {
 	friend class QUaPermissionsList;
     Q_OBJECT
@@ -48,6 +48,13 @@ public:
 	bool canUserRead (QUaUser * user) const;
 	bool canUserWrite(QUaUser * user) const;
 
+	bool canRoleRead (const QString strRoleName) const;
+	bool canRoleWrite(const QString strRoleName) const;
+	bool canUserRead (const QString strUserName) const;
+	bool canUserWrite(const QString strUserName) const;
+
+	QUaPermissionsList * list() const;
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
@@ -55,6 +62,7 @@ public:
 	// static
 	static QUaReference IsReadableByRefType;
 	static QUaReference IsWritableByRefType;
+	static QUaReference HasPermissionsRefType;
 
 signals:
 	void canReadRoleAdded   (QUaRole * role);

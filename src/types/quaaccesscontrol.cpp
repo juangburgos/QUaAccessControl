@@ -1,9 +1,19 @@
 #include "quaaccesscontrol.h"
 
-QUaAccessControl::QUaAccessControl(QUaServer *server)
-	: QUaFolderObject(server)
-{
+#include <QUaServer>
+#include <QUaUser>
+#include <QUaRole>
+#include <QUaPermissions>
 
+QUaAccessControl::QUaAccessControl(QUaServer *server)
+	: QUaFolderObjectProtected(server)
+{
+	server->registerType<QUaUserList>();
+	server->registerType<QUaUser>();
+	server->registerType<QUaRoleList>();
+	server->registerType<QUaRole>();
+	server->registerType<QUaPermissionsList>();
+	server->registerType<QUaPermissions>();
 }
 
 QUaUserList * QUaAccessControl::users() const

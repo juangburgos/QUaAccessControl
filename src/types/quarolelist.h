@@ -1,14 +1,14 @@
 #ifndef QUAROLELIST_H
 #define QUAROLELIST_H
 
-#include <QUaFolderObject>
+#include <QUaFolderObjectProtected>
 
 #include <QDomDocument>
 #include <QDomElement>
 
 class QUaRole;
 
-class QUaRoleList : public QUaFolderObject
+class QUaRoleList : public QUaFolderObjectProtected
 {
 	friend class QUaRole;
     Q_OBJECT

@@ -5,6 +5,7 @@
 
 #include <QUaAccessControl>
 #include <QUaUser>
+#include <QUaPermissions>
 
 int main(int argc, char *argv[])
 {
@@ -39,6 +40,12 @@ int main(int argc, char *argv[])
 	// set admin role to admin user
 	adminUser->setRole(adminRole);
 
+	// add some other user (with no role) "juan", "whatever"
+	listUsers->addUser(
+		"juan",
+		QByteArray::fromHex("0acca173e954e140fb621a08282b51d4df7d86ec9c916292b9fc56660451bc10bb9eaa14e02fd1a90c03722d6568c98659313e61b64bdfc6ddb29c124b8ce6e7")
+	);
+
 	// disable anon login
 	server.setAnonymousLoginAllowed(false);
 	// define custom user validation 
@@ -52,9 +59,17 @@ int main(int argc, char *argv[])
 		return user->isPasswordValid(strPassword);
 	});
 
-	// set access control permissions
+	// create permissions object
+	auto listPermissions = accessControl->permissions();
+	listPermissions->addPermissions("AdminOnly");
+	auto adminOnly = listPermissions->permission("AdminOnly");
+	Q_CHECK_PTR(adminOnly);
+	// give admin role full permissions
+	adminOnly->addRoleCanRead(adminRole);
+	adminOnly->addRoleCanWrite(adminRole);
 
-	// TODO
+	// set access control permissions
+	accessControl->setPermissionsObject(adminOnly);
 
 	server.start();
 

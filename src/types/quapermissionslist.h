@@ -1,14 +1,15 @@
 #ifndef QUAPERMISSIONSLIST_H
 #define QUAPERMISSIONSLIST_H
 
-#include <QUaFolderObject>
+#include <QUaFolderObjectProtected>
 
 #include <QDomDocument>
 #include <QDomElement>
 
 class QUaPermissions;
+class QUaAccessControl;
 
-class QUaPermissionsList : public QUaFolderObject
+class QUaPermissionsList : public QUaFolderObjectProtected
 {
 	friend class QUaPermissions;
     Q_OBJECT
@@ -30,6 +31,8 @@ public:
 	QList<QUaPermissions*> permissionsList() const;
 
 	QUaPermissions * permission(const QString &strId) const;
+
+	QUaAccessControl * accessControl() const;
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;

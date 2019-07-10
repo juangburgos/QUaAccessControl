@@ -1,7 +1,7 @@
 #ifndef QUAUSER_H
 #define QUAUSER_H
 
-#include <QUaBaseObject>
+#include <QUaBaseObjectProtected>
 #include <QUaProperty>
 
 #include <QDomDocument>
@@ -10,7 +10,7 @@
 class QUaUserList;
 class QUaRole;
 
-class QUaUser : public QUaBaseObject
+class QUaUser : public QUaBaseObjectProtected
 {
 	friend class QUaUserList;
     Q_OBJECT
@@ -32,10 +32,9 @@ public:
 	Q_INVOKABLE void remove();
 	// overwrite password, does not care about old password
 	Q_INVOKABLE QString setPassword(QString strPassword);
-	// needs current password to set role because server does not store passwords 
-	// (no way to recalculate the hash that depends on password and role name)
+
 	Q_INVOKABLE QString setRole(QList<QString> strRolePath);
-	// same as above
+
 	Q_INVOKABLE QString clearRole();
 
 	// C++ API
@@ -46,7 +45,6 @@ public:
 	void       setHash(const QByteArray &hash);
 
 	bool       hasRole() const;
-
 	QUaRole  * role() const;
 	void       setRole(QUaRole * role);
 

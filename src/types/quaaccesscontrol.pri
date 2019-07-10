@@ -11,7 +11,9 @@ HEADERS += \
     $$PWD/quarole.h \
     $$PWD/quapermissionslist.h \
     $$PWD/quapermissions.h \
-    $$PWD/quaaccesscontrol.h
+    $$PWD/quaaccesscontrol.h \
+    $$PWD/quafolderobjectprotected.h \
+    $$PWD/quabaseobjectprotected.h
 
 SOURCES += \
     $$PWD/quauserlist.cpp \
@@ -20,4 +22,6 @@ SOURCES += \
     $$PWD/quarole.cpp \
     $$PWD/quapermissionslist.cpp \
     $$PWD/quapermissions.cpp \
-    $$PWD/quaaccesscontrol.cpp
+    $$PWD/quaaccesscontrol.cpp \
+    $$PWD/quafolderobjectprotected.cpp \
+    $$PWD/quabaseobjectprotected.cpp

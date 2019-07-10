@@ -1,14 +1,14 @@
 #ifndef QUAUSERLIST_H
 #define QUAUSERLIST_H
 
-#include <QUaFolderObject>
+#include <QUaFolderObjectProtected>
 
 #include <QDomDocument>
 #include <QDomElement>
 
 class QUaUser;
 
-class QUaUserList : public QUaFolderObject
+class QUaUserList : public QUaFolderObjectProtected
 {
 	friend class QUaUser;
     Q_OBJECT

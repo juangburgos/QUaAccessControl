@@ -4,12 +4,13 @@
 //        and was getting "lnk2019 unresolved external symbol template function" without it
 #include <QUaServer>
 #include <QUaPermissions>
+#include <QUaAccessControl>
 
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 
 QUaPermissionsList::QUaPermissionsList(QUaServer *server)
-	: QUaFolderObject(server)
+	: QUaFolderObjectProtected(server)
 {
 
 }
@@ -108,6 +109,11 @@ QList<QUaPermissions*> QUaPermissionsList::permissionsList() const
 QUaPermissions * QUaPermissionsList::permission(const QString & strId) const
 {
 	return this->browseChild<QUaPermissions>(strId);
+}
+
+QUaAccessControl * QUaPermissionsList::accessControl() const
+{
+	return dynamic_cast<QUaAccessControl*>(this->parent());
 }
 
 QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const

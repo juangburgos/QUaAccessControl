@@ -3,7 +3,7 @@
 #include <QUaUser>
 
 QUaRole::QUaRole(QUaServer *server)
-	: QUaBaseObject(server)
+	: QUaBaseObjectProtected(server)
 {
 	QObject::connect(this, &QUaNode::referenceAdded  , this, &QUaRole::on_referenceAdded);
 	QObject::connect(this, &QUaNode::referenceRemoved, this, &QUaRole::on_referenceRemoved);

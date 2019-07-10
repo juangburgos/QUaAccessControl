@@ -8,7 +8,7 @@
 QUaReference QUaUser::UserHasRoleRefType = { "HasRole", "IsRoleOf" };
 
 QUaUser::QUaUser(QUaServer *server)
-	: QUaBaseObject(server)
+	: QUaBaseObjectProtected(server)
 {
 	// set defaults
 	hash()->setDataType(QMetaType::QByteArray);
@@ -111,7 +111,7 @@ void QUaUser::setHash(const QByteArray & hash)
 
 bool QUaUser::hasRole() const
 {
-	return this->role() ? true : false;
+	return this->role();
 }
 
 QUaRole * QUaUser::role() const

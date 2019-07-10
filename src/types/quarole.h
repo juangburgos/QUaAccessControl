@@ -1,7 +1,7 @@
 #ifndef QUAROLE_H
 #define QUAROLE_H
 
-#include <QUaBaseObject>
+#include <QUaBaseObjectProtected>
 
 #include <QDomDocument>
 #include <QDomElement>
@@ -10,7 +10,7 @@ class QUaRoleList;
 
 class QUaUser;
 
-class QUaRole : public QUaBaseObject
+class QUaRole : public QUaBaseObjectProtected
 {
 	friend class QUaRoleList;
     Q_OBJECT

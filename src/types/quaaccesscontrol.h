@@ -1,13 +1,13 @@
 #ifndef QUAACCESSCONTROL_H
 #define QUAACCESSCONTROL_H
 
-#include <QUaFolderObject>
+#include <QUaFolderObjectProtected>
 
 #include <QUaUserList>
 #include <QUaRoleList>
 #include <QUaPermissionsList>
 
-class QUaAccessControl : public QUaFolderObject
+class QUaAccessControl : public QUaFolderObjectProtected
 {
     Q_OBJECT
 

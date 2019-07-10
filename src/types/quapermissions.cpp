@@ -3,12 +3,14 @@
 #include <QUaServer>
 #include <QUaRole>
 #include <QUaUser>
+#include <QUaAccessControl>
 
-QUaReference QUaPermissions::IsReadableByRefType = { "IsReadableBy", "CanRead"  };
-QUaReference QUaPermissions::IsWritableByRefType = { "IsWritableBy", "CanWrite" };
+QUaReference QUaPermissions::IsReadableByRefType   = { "IsReadableBy"  , "CanRead"         };
+QUaReference QUaPermissions::IsWritableByRefType   = { "IsWritableBy"  , "CanWrite"        };
+QUaReference QUaPermissions::HasPermissionsRefType = { "HasPermissions", "IsPermissionsOf" };
 
 QUaPermissions::QUaPermissions(QUaServer *server)
-	: QUaBaseObject(server)
+	: QUaBaseObjectProtected(server)
 {
 
 }
@@ -187,6 +189,35 @@ bool QUaPermissions::canUserRead(QUaUser * user) const
 bool QUaPermissions::canUserWrite(QUaUser * user) const
 {
 	return this->canRoleWrite(user->role());
+}
+
+bool QUaPermissions::canUserRead(const QString strUserName) const
+{
+	auto list = this->list();
+	Q_CHECK_PTR(list);
+	auto ac = list->accessControl();
+	Q_CHECK_PTR(ac);
+	auto users = ac->users();
+	Q_CHECK_PTR(users);
+	auto user = users->user(strUserName);
+	return this->canUserRead(user);
+}
+
+bool QUaPermissions::canUserWrite(const QString strUserName) const
+{
+	auto list = this->list();
+	Q_CHECK_PTR(list);
+	auto ac = list->accessControl();
+	Q_CHECK_PTR(ac);
+	auto users = ac->users();
+	Q_CHECK_PTR(users);
+	auto user = users->user(strUserName);
+	return this->canUserWrite(user);
+}
+
+QUaPermissionsList * QUaPermissions::list() const
+{
+	return dynamic_cast<QUaPermissionsList*>(this->parent());
 }
 
 QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const

@@ -9,7 +9,7 @@
 #include <QRegularExpressionMatch>
 
 QUaRoleList::QUaRoleList(QUaServer *server)
-	: QUaFolderObject(server)
+	: QUaFolderObjectProtected(server)
 {
 
 }
