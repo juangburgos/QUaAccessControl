@@ -48,6 +48,7 @@ public:
 	bool       hasRole() const;
 
 	QUaRole  * role() const;
+	void       setRole(QUaRole * role);
 
 	bool       isPasswordValid(const QString &strPassword) const;
 

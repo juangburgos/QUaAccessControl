@@ -71,16 +71,8 @@ QString QUaUser::setRole(QList<QString> strRolePath)
 			.arg("Error")
 			.arg(strRolePath.join("/"));
 	}
-	// remove old reference if any
-	if (this->hasRole())
-	{
-		this->clearRole();
-	}
-	Q_ASSERT(!this->hasRole());
-	// add reference
-	this->addReference(QUaUser::UserHasRoleRefType, role);
-	// emit
-	emit this->roleChanged(role);
+	// use c++ api
+	this->setRole(role);
 	// return
 	return "Success";
 }
@@ -127,6 +119,20 @@ QUaRole * QUaUser::role() const
 	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::role", "Only one role per user is currently supported.");
 	return listRefs.count() >= 1 ? dynamic_cast<QUaRole*>(listRefs.at(0)) : nullptr;
+}
+
+void QUaUser::setRole(QUaRole * role)
+{
+	// remove old reference if any
+	if (this->hasRole())
+	{
+		this->clearRole();
+	}
+	Q_ASSERT(!this->hasRole());
+	// add reference
+	this->addReference(QUaUser::UserHasRoleRefType, role);
+	// emit
+	emit this->roleChanged(role);
 }
 
 bool QUaUser::isPasswordValid(const QString &strPassword) const
