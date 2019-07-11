@@ -38,8 +38,10 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 signals:
+	void userAdded(QUaUser * user);
 
-public slots:
+private slots:
+	void on_childAdded(QUaNode * node);
 
 private:
 	bool isUserNameValid(QString &strName, QString &strError);

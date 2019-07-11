@@ -12,7 +12,7 @@
 QUaPermissionsList::QUaPermissionsList(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
-
+	QObject::connect(this, &QUaNode::childAdded, this, &QUaPermissionsList::on_childAdded);
 }
 
 QString QUaPermissionsList::addPermissions(QString strId)
@@ -157,4 +157,14 @@ void QUaPermissionsList::fromDomElement(QDomElement & domElem, QString & strErro
 		auto perm = this->browseChild<QUaPermissions>(strId);
 		perm->fromDomElement(elem, strError);
 	}
+}
+
+void QUaPermissionsList::on_childAdded(QUaNode * node)
+{
+	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+	if (!permissions)
+	{
+		return;
+	}
+	emit this->permissionsAdded(permissions);
 }

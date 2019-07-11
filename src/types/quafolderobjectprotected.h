@@ -15,7 +15,7 @@ public:
 
 	Q_INVOKABLE QString setPermissions(QList<QString> strPermissionsPath);
 
-	Q_INVOKABLE QString clearPermissions();
+	Q_INVOKABLE void    clearPermissions();
 
 	// C++ API
 

@@ -29,6 +29,14 @@ public:
 
 	Q_INVOKABLE QString removeRoleCanWrite(QList<QString> strRolePath);
 
+	Q_INVOKABLE QString addUserCanRead(QList<QString> strUserPath);
+
+	Q_INVOKABLE QString removeUserCanRead(QList<QString> strUserPath);
+
+	Q_INVOKABLE QString addUserCanWrite(QList<QString> strUserPath);
+
+	Q_INVOKABLE QString removeUserCanWrite(QList<QString> strUserPath);
+
 	// C++ API
 
 	QString getId() const;
@@ -38,15 +46,28 @@ public:
 	void addRoleCanWrite   (QUaRole * role);
 	void removeRoleCanWrite(QUaRole * role);
 
+	void addUserCanRead    (QUaUser * user);
+	void removeUserCanRead (QUaUser * user);
+	void addUserCanWrite   (QUaUser * user);
+	void removeUserCanWrite(QUaUser * user);
+
 	QList<QUaRole*> rolesCanRead () const;
 	QList<QUaRole*> rolesCanWrite() const;
 	QList<QUaUser*> usersCanRead () const;
 	QList<QUaUser*> usersCanWrite() const;
 
+	// directly == not due to role permissions
+	QList<QUaUser*> usersCanReadDirectly () const;
+	QList<QUaUser*> usersCanWriteDirectly() const;
+
 	bool canRoleRead (QUaRole * role) const;
 	bool canRoleWrite(QUaRole * role) const;
 	bool canUserRead (QUaUser * user) const;
 	bool canUserWrite(QUaUser * user) const;
+
+	// directly == not due to role permissions
+	bool canUserReadDirectly (QUaUser * user) const;
+	bool canUserWriteDirectly(QUaUser * user) const;
 
 	bool canRoleRead (const QString strRoleName) const;
 	bool canRoleWrite(const QString strRoleName) const;
@@ -69,11 +90,16 @@ signals:
 	void canReadRoleRemoved (QUaRole * role);
 	void canWriteRoleAdded  (QUaRole * role);
 	void canWriteRoleRemoved(QUaRole * role);
+	void canReadUserAdded   (QUaUser * user);
+	void canReadUserRemoved (QUaUser * user);
+	void canWriteUserAdded  (QUaUser * user);
+	void canWriteUserRemoved(QUaUser * user);
 
 public slots:
 
 private:
 	QUaRole * findRole(const QList<QString> &strRolePath, QString &strError) const;
+	QUaUser * findUser(const QList<QString> &strUserPath, QString &strError) const;
 
 };
 

@@ -39,8 +39,10 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 signals:
+	void permissionsAdded(QUaPermissions * permissions);
 
-public slots:
+private slots:
+	void on_childAdded(QUaNode * node);
 
 private:
 

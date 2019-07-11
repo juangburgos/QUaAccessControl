@@ -20,12 +20,6 @@ int main(int argc, char *argv[])
 	accessControl->setDisplayName("AccessControl");
 	accessControl->setBrowseName ("AccessControl");
 
-	// default role (all permissions)
-	auto listRoles = accessControl->roles();
-	listRoles->addRole("admin");
-	auto adminRole = listRoles->role("admin");
-	Q_CHECK_PTR(adminRole);
-
 	// default admin user and hash
 	// hash generated with https://www.freeformatter.com/hmac-generator.html, 
 	// using sha512, string is username (e.g. "admin"), key is password (e.g. "password")
@@ -36,9 +30,6 @@ int main(int argc, char *argv[])
 	);
 	auto adminUser = listUsers->user("admin");
 	Q_CHECK_PTR(adminUser);
-
-	// set admin role to admin user
-	adminUser->setRole(adminRole);
 
 	// add some other user (with no role) "juan", "whatever"
 	listUsers->addUser(
@@ -60,13 +51,14 @@ int main(int argc, char *argv[])
 	});
 
 	// create permissions object
+	QString strAdminOnly = QString("only_%1").arg(adminUser->getName());
 	auto listPermissions = accessControl->permissions();
-	listPermissions->addPermissions("AdminOnly");
-	auto adminOnly = listPermissions->permission("AdminOnly");
+	listPermissions->addPermissions(strAdminOnly);
+	auto adminOnly = listPermissions->permission(strAdminOnly);
 	Q_CHECK_PTR(adminOnly);
-	// give admin role full permissions
-	adminOnly->addRoleCanRead(adminRole);
-	adminOnly->addRoleCanWrite(adminRole);
+	// give admin user full permissions
+	adminOnly->addUserCanRead (adminUser);
+	adminOnly->addUserCanWrite(adminUser);
 
 	// set access control permissions
 	accessControl->setPermissionsObject(adminOnly);

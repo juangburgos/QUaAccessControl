@@ -11,7 +11,7 @@
 QUaRoleList::QUaRoleList(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
-
+	QObject::connect(this, &QUaNode::childAdded, this, &QUaRoleList::on_childAdded);
 }
 
 QString QUaRoleList::addRole(QString strName)
@@ -150,4 +150,14 @@ void QUaRoleList::fromDomElement(QDomElement & domElem, QString & strError)
 		auto role = this->browseChild<QUaRole>(strName);
 		role->fromDomElement(elem, strError);
 	}
+}
+
+void QUaRoleList::on_childAdded(QUaNode * node)
+{
+	QUaRole * role = dynamic_cast<QUaRole*>(node);
+	if (!role)
+	{
+		return;
+	}
+	emit this->roleAdded(role);
 }

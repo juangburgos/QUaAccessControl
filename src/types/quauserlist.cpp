@@ -11,7 +11,7 @@
 QUaUserList::QUaUserList(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
-
+	QObject::connect(this, &QUaNode::childAdded, this, &QUaUserList::on_childAdded);
 }
 
 QString QUaUserList::addUser(QString strName, QString strPassword)
@@ -170,6 +170,16 @@ void QUaUserList::fromDomElement(QDomElement & domElem, QString & strError)
 		// set client config
 		user->fromDomElement(elem, strError);
 	}
+}
+
+void QUaUserList::on_childAdded(QUaNode * node)
+{
+	QUaUser * user = dynamic_cast<QUaUser*>(node);
+	if (!user)
+	{
+		return;
+	}
+	emit this->userAdded(user);
 }
 
 bool QUaUserList::isUserNameValid(QString &strName, QString &strError)

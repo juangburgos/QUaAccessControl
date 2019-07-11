@@ -31,7 +31,7 @@ QString QUaFolderObjectProtected::setPermissions(QList<QString> strPermissionsPa
 	return "Success";
 }
 
-QString QUaFolderObjectProtected::clearPermissions()
+void QUaFolderObjectProtected::clearPermissions()
 {
 	// clear reference
 	auto listRefs = this->findReferences(QUaPermissions::HasPermissionsRefType);
@@ -39,13 +39,13 @@ QString QUaFolderObjectProtected::clearPermissions()
 		"Only one permissions object per protected object is currently suppported.");
 	if (listRefs.count() <= 0)
 	{
-		return "Success";
+		return;
 	}
 	this->removeReference(QUaPermissions::HasPermissionsRefType, listRefs.at(0));
 	// emit
 	emit this->permissionsObjectChanged(nullptr);
 	// return
-	return "Success";
+	return;
 }
 
 bool QUaFolderObjectProtected::hasPermissionsObject() const

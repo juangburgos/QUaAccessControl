@@ -68,6 +68,54 @@ QString QUaPermissions::removeRoleCanWrite(QList<QString> strRolePath)
 	return "Success";
 }
 
+QString QUaPermissions::addUserCanRead(QList<QString> strUserPath)
+{
+	QString strError;
+	auto user = this->findUser(strUserPath, strError);
+	if (!user)
+	{
+		return strError;
+	}
+	this->addUserCanRead(user);
+	return "Success";
+}
+
+QString QUaPermissions::removeUserCanRead(QList<QString> strUserPath)
+{
+	QString strError;
+	auto user = this->findUser(strUserPath, strError);
+	if (!user)
+	{
+		return strError;
+	}
+	this->removeUserCanRead(user);
+	return "Success";
+}
+
+QString QUaPermissions::addUserCanWrite(QList<QString> strUserPath)
+{
+	QString strError;
+	auto user = this->findUser(strUserPath, strError);
+	if (!user)
+	{
+		return strError;
+	}
+	this->addUserCanWrite(user);
+	return "Success";
+}
+
+QString QUaPermissions::removeUserCanWrite(QList<QString> strUserPath)
+{
+	QString strError;
+	auto user = this->findUser(strUserPath, strError);
+	if (!user)
+	{
+		return strError;
+	}
+	this->removeUserCanWrite(user);
+	return "Success";
+}
+
 QString QUaPermissions::getId() const
 {
 	return this->browseName();
@@ -84,11 +132,29 @@ QUaRole * QUaPermissions::findRole(const QList<QString> &strRolePath, QString &s
 	}
 	if (!role)
 	{
-		strError += tr("%1 : Unexisting node in browse path %2.")
+		strError += tr("%1 : Unexisting node in browse path %2. Could not add Role to Permissions.\n")
 			.arg("Error")
 			.arg(strRolePath.join("/"));
 	}
 	return role;
+}
+
+QUaUser * QUaPermissions::findUser(const QList<QString>& strUserPath, QString & strError) const
+{
+	QUaNode * node = this->server()->browsePath(strUserPath);
+	QUaUser * user = dynamic_cast<QUaUser*>(node);
+	if (!user)
+	{
+		node = this->server()->objectsFolder()->browsePath(strUserPath);
+		user = dynamic_cast<QUaUser*>(node);
+	}
+	if (!user)
+	{
+		strError += tr("%1 : Unexisting node in browse path %2. Could not add User to Permissions.\n")
+			.arg("Error")
+			.arg(strUserPath.join("/"));
+	}
+	return user;
 }
 
 void QUaPermissions::addRoleCanRead(QUaRole * role)
@@ -101,6 +167,16 @@ void QUaPermissions::addRoleCanRead(QUaRole * role)
 	this->addReference(QUaPermissions::IsReadableByRefType, role);
 	// emit
 	emit this->canReadRoleAdded(role);
+	auto users = role->users();
+	for (int i = 0; i < users.count(); i++)
+	{
+		auto user = users.at(i);
+		if (this->canUserReadDirectly(user))
+		{
+			continue;
+		}
+		emit this->canReadUserAdded(user);
+	}
 }
 
 void QUaPermissions::removeRoleCanRead(QUaRole * role)
@@ -113,6 +189,16 @@ void QUaPermissions::removeRoleCanRead(QUaRole * role)
 	this->removeReference(QUaPermissions::IsReadableByRefType, role);
 	// emit
 	emit this->canReadRoleRemoved(role);
+	auto users = role->users();
+	for (int i = 0; i < users.count(); i++)
+	{
+		auto user = users.at(i);
+		if (this->canUserReadDirectly(user))
+		{
+			continue;
+		}
+		emit this->canReadUserRemoved(users.at(i));
+	}
 }
 
 void QUaPermissions::addRoleCanWrite(QUaRole * role)
@@ -125,6 +211,16 @@ void QUaPermissions::addRoleCanWrite(QUaRole * role)
 	this->addReference(QUaPermissions::IsWritableByRefType, role);
 	// emit
 	emit this->canWriteRoleAdded(role);
+	auto users = role->users();
+	for (int i = 0; i < users.count(); i++)
+	{
+		auto user = users.at(i);
+		if (this->canUserWriteDirectly(user))
+		{
+			continue;
+		}
+		emit this->canWriteUserAdded(users.at(i));
+	}
 }
 
 void QUaPermissions::removeRoleCanWrite(QUaRole * role)
@@ -137,6 +233,64 @@ void QUaPermissions::removeRoleCanWrite(QUaRole * role)
 	this->removeReference(QUaPermissions::IsWritableByRefType, role);
 	// emit
 	emit this->canWriteRoleRemoved(role);
+	auto users = role->users();
+	for (int i = 0; i < users.count(); i++)
+	{
+		auto user = users.at(i);
+		if (this->canUserWriteDirectly(user))
+		{
+			continue;
+		}
+		emit this->canWriteUserRemoved(users.at(i));
+	}
+}
+
+void QUaPermissions::addUserCanRead(QUaUser * user)
+{
+	if (this->canUserReadDirectly(user))
+	{
+		return;
+	}
+	// add reference
+	this->addReference(QUaPermissions::IsReadableByRefType, user);
+	// emit
+	emit this->canReadUserAdded(user);
+}
+
+void QUaPermissions::removeUserCanRead(QUaUser * user)
+{
+	if (!this->canUserReadDirectly(user))
+	{
+		return;
+	}
+	// remove reference
+	this->removeReference(QUaPermissions::IsReadableByRefType, user);
+	// emit
+	emit this->canReadUserRemoved(user);
+}
+
+void QUaPermissions::addUserCanWrite(QUaUser * user)
+{
+	if (this->canUserWriteDirectly(user))
+	{
+		return;
+	}
+	// add reference
+	this->addReference(QUaPermissions::IsWritableByRefType, user);
+	// emit
+	emit this->canWriteUserAdded(user);
+}
+
+void QUaPermissions::removeUserCanWrite(QUaUser * user)
+{
+	if (!this->canUserWriteDirectly(user))
+	{
+		return;
+	}
+	// remove reference
+	this->removeReference(QUaPermissions::IsWritableByRefType, user);
+	// emit
+	emit this->canWriteUserRemoved(user);
 }
 
 QList<QUaRole*> QUaPermissions::rolesCanRead() const
@@ -151,24 +305,24 @@ QList<QUaRole*> QUaPermissions::rolesCanWrite() const
 
 QList<QUaUser*> QUaPermissions::usersCanRead() const
 {
-	QList<QUaUser*> users;
+	QList<QUaUser*> users = this->usersCanReadDirectly();
 	auto roles = this->rolesCanRead();
 	for (int i = 0; i < roles.count(); i++)
 	{
 		users << roles.at(i)->users();
 	}
-	return users;
+	return users.toSet().toList();
 }
 
 QList<QUaUser*> QUaPermissions::usersCanWrite() const
 {
-	QList<QUaUser*> users;
+	QList<QUaUser*> users = this->usersCanWriteDirectly();
 	auto roles = this->rolesCanWrite();
 	for (int i = 0; i < roles.count(); i++)
 	{
 		users << roles.at(i)->users();
 	}
-	return users;
+	return users.toSet().toList();
 }
 
 bool QUaPermissions::canRoleRead(QUaRole * role) const
@@ -183,12 +337,36 @@ bool QUaPermissions::canRoleWrite(QUaRole * role) const
 
 bool QUaPermissions::canUserRead(QUaUser * user) const
 {
-	return this->canRoleRead(user->role());
+	return this->canUserReadDirectly(user) || this->canRoleRead(user->role());
 }
 
 bool QUaPermissions::canUserWrite(QUaUser * user) const
 {
-	return this->canRoleWrite(user->role());
+	return this->canUserWriteDirectly(user) || this->canRoleWrite(user->role());
+}
+
+bool QUaPermissions::canRoleRead(const QString strRoleName) const
+{
+	auto list = this->list();
+	Q_CHECK_PTR(list);
+	auto ac = list->accessControl();
+	Q_CHECK_PTR(ac);
+	auto roles = ac->roles();
+	Q_CHECK_PTR(roles);
+	auto role = roles->role(strRoleName);
+	return this->canRoleRead(role);
+}
+
+bool QUaPermissions::canRoleWrite(const QString strRoleName) const
+{
+	auto list = this->list();
+	Q_CHECK_PTR(list);
+	auto ac = list->accessControl();
+	Q_CHECK_PTR(ac);
+	auto roles = ac->roles();
+	Q_CHECK_PTR(roles);
+	auto role = roles->role(strRoleName);
+	return this->canRoleWrite(role);
 }
 
 bool QUaPermissions::canUserRead(const QString strUserName) const
@@ -226,33 +404,55 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 	QDomElement elem = domDoc.createElement(QUaPermissions::staticMetaObject.className());
 	// set all attributes
 	elem.setAttribute("Id", this->getId());
-	// can read
+	// add element for read list
+	QDomElement elemReadList = domDoc.createElement("CanReadList");
+	elem.appendChild(elemReadList);
+	// roles can read
 	auto rolesRead = this->rolesCanRead();
 	if (rolesRead.count() > 0)
 	{
-		// add element for read list
-		QDomElement elemReadList = domDoc.createElement("CanReadList");
 		for (int i = 0; i < rolesRead.count(); i++)
 		{
-			QDomElement elemRead = domDoc.createElement("CanRead");
-			elemRead.setAttribute("Role", rolesRead.at(i)->nodeBrowsePath().join("/"));
+			QDomElement elemRead = domDoc.createElement("Role");
+			elemRead.setAttribute("BrowsePath", rolesRead.at(i)->nodeBrowsePath().join("/"));
 			elemReadList.appendChild(elemRead);
 		}
-		elem.appendChild(elemReadList);
 	}
-	// can write
+	// users can read directly
+	auto usersRead = this->usersCanReadDirectly();
+	if (usersRead.count() > 0)
+	{
+		for (int i = 0; i < usersRead.count(); i++)
+		{
+			QDomElement elemRead = domDoc.createElement("User");
+			elemRead.setAttribute("BrowsePath", usersRead.at(i)->nodeBrowsePath().join("/"));
+			elemReadList.appendChild(elemRead);
+		}
+	}
+	// add element for read list
+	QDomElement elemWriteList = domDoc.createElement("CanWriteList");
+	elem.appendChild(elemWriteList);
+	// roles can write
 	auto rolesWrite = this->rolesCanWrite();
 	if (rolesWrite.count() > 0)
 	{
-		// add element for read list
-		QDomElement elemWriteList = domDoc.createElement("CanWriteList");
 		for (int i = 0; i < rolesWrite.count(); i++)
 		{
-			QDomElement elemWrite = domDoc.createElement("CanWrite");
-			elemWrite.setAttribute("Role", rolesWrite.at(i)->nodeBrowsePath().join("/"));
+			QDomElement elemWrite = domDoc.createElement("Role");
+			elemWrite.setAttribute("BrowsePath", rolesWrite.at(i)->nodeBrowsePath().join("/"));
 			elemWriteList.appendChild(elemWrite);
 		}
-		elem.appendChild(elemWriteList);
+	}
+	// users can write directly
+	auto usersWrite = this->usersCanWriteDirectly();
+	if (usersWrite.count() > 0)
+	{
+		for (int i = 0; i < usersWrite.count(); i++)
+		{
+			QDomElement elemWrite = domDoc.createElement("User");
+			elemWrite.setAttribute("BrowsePath", usersWrite.at(i)->nodeBrowsePath().join("/"));
+			elemWriteList.appendChild(elemWrite);
+		}
 	}
 	// return element
 	return elem;
@@ -266,26 +466,66 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 	QDomElement elemReadList = domElem.firstChildElement("CanReadList");
 	if (!elemReadList.isNull())
 	{
-		QDomNodeList listReadRoles = elemReadList.elementsByTagName("CanRead");
+		// can read roles
+		QDomNodeList listReadRoles = elemReadList.elementsByTagName("Role");
 		for (int i = 0; i < listReadRoles.count(); i++)
 		{
 			QDomElement elem = listReadRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strRolePath  = elem.attribute("Role").split("/");
+			auto strRolePath  = elem.attribute("BrowsePath").split("/");
 			strError += this->addRoleCanRead(strRolePath);
+		}
+		// can read users
+		QDomNodeList listReadUsers = elemReadList.elementsByTagName("User");
+		for (int i = 0; i < listReadUsers.count(); i++)
+		{
+			QDomElement elem = listReadUsers.at(i).toElement();
+			Q_ASSERT(!elem.isNull());
+			auto strUserPath = elem.attribute("BrowsePath").split("/");
+			strError += this->addUserCanRead(strUserPath);
 		}
 	}
 	// can write
 	QDomElement elemWriteList = domElem.firstChildElement("CanWriteList");
 	if (!elemWriteList.isNull())
 	{
-		QDomNodeList listWriteRoles = elemWriteList.elementsByTagName("CanWrite");
+		// can write roles
+		QDomNodeList listWriteRoles = elemWriteList.elementsByTagName("Role");
 		for (int i = 0; i < listWriteRoles.count(); i++)
 		{
 			QDomElement elem = listWriteRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strRolePath = elem.attribute("Role").split("/");
+			auto strRolePath = elem.attribute("BrowsePath").split("/");
 			strError += this->addRoleCanWrite(strRolePath);
 		}
+		// can write users
+		QDomNodeList listWriteUsers = elemWriteList.elementsByTagName("User");
+		for (int i = 0; i < listWriteUsers.count(); i++)
+		{
+			QDomElement elem = listWriteUsers.at(i).toElement();
+			Q_ASSERT(!elem.isNull());
+			auto strUserPath = elem.attribute("BrowsePath").split("/");
+			strError += this->addUserCanWrite(strUserPath);
+		}
 	}
+}
+
+QList<QUaUser*> QUaPermissions::usersCanReadDirectly() const
+{
+	return this->findReferences<QUaUser>(QUaPermissions::IsReadableByRefType);
+}
+
+QList<QUaUser*> QUaPermissions::usersCanWriteDirectly() const
+{
+	return this->findReferences<QUaUser>(QUaPermissions::IsWritableByRefType);
+}
+
+bool QUaPermissions::canUserReadDirectly(QUaUser * user) const
+{
+	return this->usersCanReadDirectly().contains(user);
+}
+
+bool QUaPermissions::canUserWriteDirectly(QUaUser * user) const
+{
+	return this->usersCanWriteDirectly().contains(user);
 }
