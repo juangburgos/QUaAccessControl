@@ -20,9 +20,30 @@ int main(int argc, char *argv[])
 	debouncedFunc("Juan", 32);
 	debouncedFunc("Juan", 33);
 
-	server.objectsFolder()->addMethod("CallFunc", 
+	server.objectsFolder()->addMethod("CallDebouncedFunc", 
 	[debouncedFunc](QString strName, int iAge) {
 		debouncedFunc(strName, iAge);
+	});
+
+	// test throttle
+
+	auto throttledFunc = FunctionUtils::Throttle([](int iNum) {
+		qDebug() << "throttle" << iNum;
+	}, 5000);
+
+	/*
+	QTimer timer;
+	QObject::connect(&timer, &QTimer::timeout, 
+	[throttledFunc]() {
+		static int iNum = 0;
+		throttledFunc(iNum++);
+	});
+	timer.start(1000);
+	*/
+
+	server.objectsFolder()->addMethod("CallThrottledFunc",
+	[throttledFunc](int iNum) {
+		throttledFunc(iNum);
 	});
 
 	server.start();

@@ -39,10 +39,56 @@ std::function<R(Args(...args))> debounce_internal(const std::function<R(Args(...
 		// connect new timer callback, restart timer
 		*conn = QObject::connect(timer, &QTimer::timeout,
 			[callback, timer, funcCache]() {
+			// stop timer
 			timer->stop();
+			// call after delay
 			funcCache(callback);
 		});
 		timer->start();
+		// return default constructed return type (just to support any return type)
+		return R();
+	};
+}
+
+template<typename R, class ...Args>
+std::function<R(Args(...args))> throttle_internal(const std::function<R(Args(...args))> &callback, const int &delay)
+{
+	QTimer * timer = new QTimer;
+	QMetaConnPtr conn = QMetaConnPtr(new QMetaObject::Connection,
+		[timer](QMetaObject::Connection * pConn) mutable {
+		// same logic as in debounce_internal
+		delete pConn;
+		delete timer;
+	});
+	timer->setInterval(delay);
+	// return function that the user can call
+	return [callback, timer, conn](Args(...args)) {
+		// disconnect old timer callback
+		QObject::disconnect(*conn);
+		// check timer (throttle) state
+		if (!timer->isActive())
+		{
+			// connect new timer callback
+			*conn = QObject::connect(timer, &QTimer::timeout,
+				[timer]() {
+				// stop timer only (this happens if user did not call the function during the delay)
+				timer->stop();
+			});
+			// start timer to start throttle
+			timer->start();
+			// call inmediatly and return
+			return callback(args...);
+		}
+		// create function that caches user arguments
+		std::function<void(std::function<R(Args(...args))>)> funcCache = std::bind(debounce_args_cache<R, Args...>, std::placeholders::_1, args...);
+		// connect new timer callback
+		*conn = QObject::connect(timer, &QTimer::timeout,
+			[callback, timer, funcCache]() {
+			// stop timer
+			timer->stop();
+			// call after delay
+			funcCache(callback);
+		});
 		// return default constructed return type (just to support any return type)
 		return R();
 	};
@@ -80,6 +126,13 @@ auto Debounce(T callback, const int &delay)
 {
 	const auto f = make_std_function(callback);
 	return debounce_internal(f, delay);
+}
+// convert callback into std::function and call internal throttle
+template<typename T>
+auto Throttle(T callback, const int &delay)
+{
+	const auto f = make_std_function(callback);
+	return throttle_internal(f, delay);
 }
 
 }
