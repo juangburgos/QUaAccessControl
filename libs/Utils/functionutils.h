@@ -1,0 +1,85 @@
+#include <functional>
+#include <QSharedPointer>
+#include <QTimer>
+
+namespace FunctionUtils
+{
+
+// function used to cache user arguments to be able to use them once timer times out
+template<typename R, class ...Args>
+void debounce_args_cache(const std::function<R(Args(...args))> &funcFinish, Args(&...args))
+{
+	funcFinish(args...);
+}
+
+typedef QSharedPointer<QMetaObject::Connection> QMetaConnPtr;
+// debounce implmentation using std::function
+// gets a user defined function as an argument and a 'delay' in miliseconds
+// returns a new function that the user can call many times, but will only execute the last
+// call after 'delay' miliseconds have passed
+template<typename R, class ...Args>
+std::function<R(Args(...args))> debounce_internal(const std::function<R(Args(...args))> &callback, const int &delay)
+{
+	QTimer * timer = new QTimer;
+	QMetaConnPtr conn = QMetaConnPtr(new QMetaObject::Connection,
+		[timer](QMetaObject::Connection * pConn) mutable {
+		// connection will be deleted when returned function goes out of scope, but not timer not
+		// so we need to delete it manually
+		delete pConn;
+		delete timer;
+	});
+	timer->setInterval(delay);
+	// return function that the user can call
+	return [callback, timer, conn](Args(...args)) {
+		// disconnect old timer callback, stop timer
+		QObject::disconnect(*conn);
+		timer->stop();
+		// create function that caches user arguments
+		std::function<void(std::function<R(Args(...args))>)> funcCache = std::bind(debounce_args_cache<R, Args...>, std::placeholders::_1, args...);
+		// connect new timer callback, restart timer
+		*conn = QObject::connect(timer, &QTimer::timeout,
+			[callback, timer, funcCache]() {
+			timer->stop();
+			funcCache(callback);
+		});
+		timer->start();
+		// return default constructed return type (just to support any return type)
+		return R();
+	};
+}
+
+// for any class implementing operator() (e.g. lambdas)
+template<typename T> struct functor_traits : functor_traits<decltype(&T::operator())>
+{ };
+// specialization - lambda
+template<typename C, typename R, typename... Args>
+struct functor_traits<R(C::*)(Args...) const>
+{
+	using lambda_type = std::function<R(Args...)>;
+};
+// specialization - lambda mutable
+template<typename C, typename R, typename... Args>
+struct functor_traits<R(C::*)(Args...)>
+{
+	using lambda_type = std::function<R(Args...)>;
+};
+// specialization - function pointer
+template<class R, class... Args>
+struct functor_traits<R(*)(Args...)>
+{
+	using lambda_type = std::function<R(Args...)>;
+};
+// wrap any of the specializations above into an std::function
+template<typename T> auto make_std_function(const T& fn)
+{
+	return typename functor_traits<T>::lambda_type(fn);
+}
+// convert callback into std::function and call internal debounce
+template<typename T>
+auto Debounce(T callback, const int &delay)
+{
+	const auto f = make_std_function(callback);
+	return debounce_internal(f, delay);
+}
+
+}

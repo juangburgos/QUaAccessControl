@@ -8,6 +8,7 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 include($$PWD/../../libs/QUaServer.git/src/wrapper/quaserver.pri)
+include($$PWD/../../libs/Utils/utils.pri)
 
 INCLUDEPATH += $$PWD/
 

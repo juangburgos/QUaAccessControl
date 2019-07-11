@@ -35,7 +35,7 @@ public:
 
 	Q_INVOKABLE QString setRole(QList<QString> strRolePath);
 
-	Q_INVOKABLE QString clearRole();
+	Q_INVOKABLE void    clearRole();
 
 	// C++ API
 

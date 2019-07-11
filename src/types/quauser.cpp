@@ -77,20 +77,20 @@ QString QUaUser::setRole(QList<QString> strRolePath)
 	return "Success";
 }
 
-QString QUaUser::clearRole()
+void QUaUser::clearRole()
 {
 	// clear reference
 	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::clearRole", "Only one role per user is currently supported.");
 	if (listRefs.count() <= 0)
 	{
-		return "Success";
+		return;
 	}
 	this->removeReference(QUaUser::UserHasRoleRefType, listRefs.at(0));
 	// emit
 	emit this->roleChanged(nullptr);
 	// return
-	return "Success";
+	return;
 }
 
 QString QUaUser::getName() const
@@ -129,6 +129,12 @@ void QUaUser::setRole(QUaRole * role)
 		this->clearRole();
 	}
 	Q_ASSERT(!this->hasRole());
+	// check if new role valid
+	if (!role)
+	{
+		// NOTE : clearRole already emits nullptr
+		return;
+	}
 	// add reference
 	this->addReference(QUaUser::UserHasRoleRefType, role);
 	// emit
