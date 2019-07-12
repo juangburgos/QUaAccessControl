@@ -38,7 +38,8 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 signals:
-	void userAdded(QUaUser * user);
+	void userAdded  (QUaUser * user);
+	void userRemoved(QUaUser * user);
 
 private slots:
 	void on_childAdded(QUaNode * node);

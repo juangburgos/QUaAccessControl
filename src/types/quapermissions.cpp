@@ -3,6 +3,7 @@
 #include <QUaServer>
 #include <QUaRole>
 #include <QUaUser>
+#include <QUaPermissions>
 #include <QUaAccessControl>
 
 QUaReference QUaPermissions::IsReadableByRefType   = { "IsReadableBy"  , "CanRead"         };
@@ -402,6 +403,11 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 {
 	// add element
 	QDomElement elem = domDoc.createElement(QUaPermissions::staticMetaObject.className());
+	// set parmissions if any
+	if (this->hasPermissionsObject())
+	{
+		elem.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+	}
 	// set all attributes
 	elem.setAttribute("Id", this->getId());
 	// add element for read list
@@ -462,6 +468,12 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 {
 	// NOTE : at this point id must already be set
 	Q_ASSERT(this->getId().compare(domElem.attribute("Id"), Qt::CaseSensitive) == 0);
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
 	// can read
 	QDomElement elemReadList = domElem.firstChildElement("CanReadList");
 	if (!elemReadList.isNull())

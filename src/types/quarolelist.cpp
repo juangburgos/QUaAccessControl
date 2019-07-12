@@ -4,6 +4,7 @@
 //        and was getting "lnk2019 unresolved external symbol template function" without it
 #include <QUaServer>
 #include <QUaRole>
+#include <QUaPermissions>
 
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
@@ -11,7 +12,8 @@
 QUaRoleList::QUaRoleList(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
-	QObject::connect(this, &QUaNode::childAdded, this, &QUaRoleList::on_childAdded);
+	// NOTE : need to be queued, otherwise browseName will not be yet set on callback
+	QObject::connect(this, &QUaNode::childAdded, this, &QUaRoleList::on_childAdded, Qt::QueuedConnection);
 }
 
 QString QUaRoleList::addRole(QString strName)
@@ -113,6 +115,11 @@ QDomElement QUaRoleList::toDomElement(QDomDocument & domDoc) const
 {
 	// add client list element
 	QDomElement elemRoles = domDoc.createElement(QUaRoleList::staticMetaObject.className());
+	// set parmissions if any
+	if (this->hasPermissionsObject())
+	{
+		elemRoles.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+	}
 	// loop users and add them
 	auto roles = this->roles();
 	for (int i = 0; i < roles.count(); i++)
@@ -127,6 +134,12 @@ QDomElement QUaRoleList::toDomElement(QDomDocument & domDoc) const
 
 void QUaRoleList::fromDomElement(QDomElement & domElem, QString & strError)
 {
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
 	// add user elems
 	QDomNodeList listRoles = domElem.elementsByTagName(QUaRole::staticMetaObject.className());
 	for (int i = 0; i < listRoles.count(); i++)
@@ -159,5 +172,12 @@ void QUaRoleList::on_childAdded(QUaNode * node)
 	{
 		return;
 	}
+	// subscribe to remove
+	QObject::connect(role, &QObject::destroyed, this,
+		[this, role]() {
+		// emit removed
+		emit this->roleRemoved(role);
+	});
+	// emit added
 	emit this->roleAdded(role);
 }

@@ -3,8 +3,8 @@
 // NOTE : had to add this header because the actual implementation of QUaBaseObject::addChild is in here
 //        and was getting "lnk2019 unresolved external symbol template function" without it
 #include <QUaServer>
-#include <QUaPermissions>
 #include <QUaAccessControl>
+#include <QUaPermissions>
 
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
@@ -12,7 +12,8 @@
 QUaPermissionsList::QUaPermissionsList(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
-	QObject::connect(this, &QUaNode::childAdded, this, &QUaPermissionsList::on_childAdded);
+	// NOTE : need to be queued, otherwise browseName will not be yet set on callback
+	QObject::connect(this, &QUaNode::childAdded, this, &QUaPermissionsList::on_childAdded, Qt::QueuedConnection);
 }
 
 QString QUaPermissionsList::addPermissions(QString strId)
@@ -120,6 +121,11 @@ QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const
 {
 	// add client list element
 	QDomElement elemPerms = domDoc.createElement(QUaPermissionsList::staticMetaObject.className());
+	// set parmissions if any
+	if (this->hasPermissionsObject())
+	{
+		elemPerms.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+	}
 	// loop users and add them
 	auto permissions = this->permissionsList();
 	for (int i = 0; i < permissions.count(); i++)
@@ -134,6 +140,12 @@ QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const
 
 void QUaPermissionsList::fromDomElement(QDomElement & domElem, QString & strError)
 {
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
 	// add perm elems
 	QDomNodeList listPerms = domElem.elementsByTagName(QUaPermissions::staticMetaObject.className());
 	for (int i = 0; i < listPerms.count(); i++)
@@ -166,5 +178,12 @@ void QUaPermissionsList::on_childAdded(QUaNode * node)
 	{
 		return;
 	}
+	// subscribe to remove
+	QObject::connect(permissions, &QObject::destroyed, this,
+		[this, permissions]() {
+		// emit removed
+		emit this->permissionsRemoved(permissions);
+	});
+	// emit added
 	emit this->permissionsAdded(permissions);
 }

@@ -50,15 +50,15 @@ int main(int argc, char *argv[])
 		return user->isPasswordValid(strPassword);
 	});
 
-	// create permissions object
+	// create "admin only" permissions object
 	QString strAdminOnly = QString("only_%1").arg(adminUser->getName());
 	auto listPermissions = accessControl->permissions();
 	listPermissions->addPermissions(strAdminOnly);
 	auto adminOnly = listPermissions->permission(strAdminOnly);
 	Q_CHECK_PTR(adminOnly);
 	// give admin user full permissions
-	adminOnly->addUserCanRead (adminUser);
 	adminOnly->addUserCanWrite(adminUser);
+	adminOnly->addUserCanRead (adminUser);
 
 	// set access control permissions
 	accessControl->setPermissionsObject(adminOnly);

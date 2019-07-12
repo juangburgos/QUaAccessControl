@@ -28,7 +28,7 @@ QString QUaBaseObjectProtected::setPermissions(QList<QString> strPermissionsPath
 	// use c++ api
 	this->setPermissionsObject(permissions);
 	// return
-	return "Success";
+	return "Success.\n";
 }
 
 void QUaBaseObjectProtected::clearPermissions()

@@ -2,6 +2,7 @@
 
 #include <QUaServer>
 #include <QUaRole>
+#include <QUaPermissions>
 
 #include <QMessageAuthenticationCode>
 
@@ -158,6 +159,11 @@ QDomElement QUaUser::toDomElement(QDomDocument & domDoc) const
 {
 	// add element
 	QDomElement elem = domDoc.createElement(QUaUser::staticMetaObject.className());
+	// set parmissions if any
+	if (this->hasPermissionsObject())
+	{
+		elem.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+	}
 	// set all attributes
 	elem.setAttribute("Name", this->getName());
 	elem.setAttribute("Hash", QString(this->getHash().toHex()));
@@ -173,11 +179,18 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 {
 	// NOTE : at this point name must already be set
 	Q_ASSERT(this->getName().compare(domElem.attribute("Name"), Qt::CaseSensitive) == 0);
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
 	// load hash (raw)
 	this->setHash(QByteArray::fromHex(domElem.attribute("Hash").toUtf8()));
 	// load role (raw)
 	if (domElem.attribute("Role", "").isEmpty())
 	{
+		// having no role is acceptable, so no error or warning is required
 		return;
 	}
 	auto strRolePath = domElem.attribute("Role").split("/");

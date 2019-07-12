@@ -36,7 +36,8 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 signals:
-	void roleAdded(QUaRole * role);
+	void roleAdded  (QUaRole * role);
+	void roleRemoved(QUaRole * role);
 
 private slots:
 	void on_childAdded(QUaNode * node);

@@ -18,6 +18,12 @@ class QUaAccessControl : public QUaFolderObjectProtected
 public:
 	Q_INVOKABLE explicit QUaAccessControl(QUaServer *server);
 
+	// UA methods
+
+	Q_INVOKABLE QString xmlConfig();
+
+	Q_INVOKABLE QString setXmlConfig(QString strXmlConfig);
+
 	// UA variables
 
 	QUaUserList        * users() const;
@@ -26,6 +32,11 @@ public:
 
 	QUaPermissionsList * permissions() const;
 
+	// C++ API
+
+	// XML import / export
+	QDomElement toDomElement(QDomDocument & domDoc) const;
+	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 signals:
 
