@@ -18,6 +18,8 @@ QUaPermissions::QUaPermissions(QUaServer *server)
 
 void QUaPermissions::remove()
 {
+	// NOTE : destroyed signal is too late
+	emit this->list()->permissionsRemoved(this);
 	this->deleteLater();
 }
 
@@ -133,6 +135,16 @@ QUaRole * QUaPermissions::findRole(const QList<QString> &strRolePath, QString &s
 	}
 	if (!role)
 	{
+		node = this->list()->accessControl()->browsePath(strRolePath);
+		role = dynamic_cast<QUaRole*>(node);
+	}
+	if (!role)
+	{
+		node = this->list()->accessControl()->roles()->browsePath(strRolePath);
+		role = dynamic_cast<QUaRole*>(node);
+	}
+	if (!role)
+	{
 		strError += tr("%1 : Unexisting node in browse path %2. Could not add Role to Permissions.\n")
 			.arg("Error")
 			.arg(strRolePath.join("/"));
@@ -147,6 +159,16 @@ QUaUser * QUaPermissions::findUser(const QList<QString>& strUserPath, QString & 
 	if (!user)
 	{
 		node = this->server()->objectsFolder()->browsePath(strUserPath);
+		user = dynamic_cast<QUaUser*>(node);
+	}
+	if (!user)
+	{
+		node = this->list()->accessControl()->browsePath(strUserPath);
+		user = dynamic_cast<QUaUser*>(node);
+	}
+	if (!user)
+	{
+		node = this->list()->accessControl()->users()->browsePath(strUserPath);
 		user = dynamic_cast<QUaUser*>(node);
 	}
 	if (!user)
@@ -312,6 +334,12 @@ QList<QUaUser*> QUaPermissions::usersCanRead() const
 	{
 		users << roles.at(i)->users();
 	}
+	// add root user if any
+	auto ac = this->list()->accessControl();
+	if (ac->hasRootUser())
+	{
+		users << ac->rootUser();
+	}
 	return users.toSet().toList();
 }
 
@@ -322,6 +350,12 @@ QList<QUaUser*> QUaPermissions::usersCanWrite() const
 	for (int i = 0; i < roles.count(); i++)
 	{
 		users << roles.at(i)->users();
+	}
+	// add root user if any
+	auto ac = this->list()->accessControl();
+	if (ac->hasRootUser())
+	{
+		users << ac->rootUser();
 	}
 	return users.toSet().toList();
 }
@@ -338,12 +372,14 @@ bool QUaPermissions::canRoleWrite(QUaRole * role) const
 
 bool QUaPermissions::canUserRead(QUaUser * user) const
 {
-	return this->canUserReadDirectly(user) || this->canRoleRead(user->role());
+	// always consider root user
+	return this->canUserReadDirectly(user) || this->canRoleRead(user->role()) || user->isRootUser();
 }
 
 bool QUaPermissions::canUserWrite(QUaUser * user) const
 {
-	return this->canUserWriteDirectly(user) || this->canRoleWrite(user->role());
+	// always consider root user
+	return this->canUserWriteDirectly(user) || this->canRoleWrite(user->role()) || user->isRootUser();
 }
 
 bool QUaPermissions::canRoleRead(const QString strRoleName) const

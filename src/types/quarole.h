@@ -29,6 +29,8 @@ public:
 
 	bool            hasUser(QUaUser * user) const;
 
+	QUaRoleList   * list() const;
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
 	void        fromDomElement(QDomElement  & domElem, QString &strError);

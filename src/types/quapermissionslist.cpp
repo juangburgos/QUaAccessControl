@@ -25,10 +25,10 @@ QString QUaPermissionsList::addPermissions(QString strId)
 	{
 		return tr("%1 : Permissions Id argument cannot be empty.\n").arg("Error");
 	}
-	// check valid length
-	if (strId.count() > 16)
+	// check valid length (userLength16 + -only)
+	if (strId.count() > 21)
 	{
-		return  tr("%1 : Permissions Id cannot contain more than 16 characters.\n").arg("Error");
+		return  tr("%1 : Permissions Id cannot contain more than 21 characters.\n").arg("Error");
 	}
 	// check valid characters
 	QRegularExpression rx("^[a-zA-Z0-9_]*$");
@@ -43,13 +43,18 @@ QString QUaPermissionsList::addPermissions(QString strId)
 		return  tr("%1 : Permissions Id already exists.\n").arg("Error");
 	}
 	// create instance
-	// TODO : set custom nodeId when https://github.com/open62541/open62541/issues/2667 fixed
-	//QString strNodeId = QString("ns=1;s=%1").arg(this->nodeBrowsePath().join(".") + "." + strId);
-	auto permissions = this->addChild<QUaPermissions>(/*strNodeId*/);
+	QString strNodeId = QString("ns=1;s=permissions/%1").arg(strId);
+	auto permissions = this->addChild<QUaPermissions>(strNodeId);
+	// check
+	Q_ASSERT_X(permissions, "addPermissions", "Is NodeId repeated or invalid?");
+	if (!permissions)
+	{
+		return tr("%1 : Failed to create permissions %2 with NodeId %3.\n").arg("Error").arg(strId).arg(strNodeId);
+	}
 	permissions->setDisplayName(strId);
 	permissions->setBrowseName(strId);
 	// return
-	return "Success";
+	return "Success\n";
 }
 
 void QUaPermissionsList::clear()
@@ -94,7 +99,8 @@ QString QUaPermissionsList::setXmlConfig(QString strXmlConfig)
 		return strError;
 	}
 	// load config from xml
-	this->fromDomElement(elemPerms, strError);
+	this->fromDomElementInstantiate(elemPerms, strError);
+	this->fromDomElementConfigure  (elemPerms, strError);
 	if (strError.isEmpty())
 	{
 		strError = "Success.";
@@ -138,14 +144,8 @@ QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const
 	return elemPerms;
 }
 
-void QUaPermissionsList::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaPermissionsList::fromDomElementInstantiate(QDomElement & domElem, QString & strError)
 {
-	// load permissions if any
-	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
-	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
-	}
 	// add perm elems
 	QDomNodeList listPerms = domElem.elementsByTagName(QUaPermissions::staticMetaObject.className());
 	for (int i = 0; i < listPerms.count(); i++)
@@ -163,10 +163,32 @@ void QUaPermissionsList::fromDomElement(QDomElement & domElem, QString & strErro
 		if (strErrorPerm.contains("Error"))
 		{
 			strError += tr("%1 : Error adding Permissions %2. Skipping.\n").arg("Error").arg(strErrorPerm);
+		}
+	}
+}
+
+void QUaPermissionsList::fromDomElementConfigure(QDomElement & domElem, QString & strError)
+{
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
+	// add perm elems
+	QDomNodeList listPerms = domElem.elementsByTagName(QUaPermissions::staticMetaObject.className());
+	for (int i = 0; i < listPerms.count(); i++)
+	{
+		QDomElement elem = listPerms.at(i).toElement();
+		Q_ASSERT(!elem.isNull());
+		// set permissions config		
+		QString strId = elem.attribute("Id");
+		auto perm = this->browseChild<QUaPermissions>(strId);
+		if (!perm)
+		{
+			strError += tr("%1 : Error finding Permissions %2. Skipping.\n").arg("Error").arg(strId);
 			continue;
 		}
-		// set client config
-		auto perm = this->browseChild<QUaPermissions>(strId);
 		perm->fromDomElement(elem, strError);
 	}
 }
@@ -178,12 +200,7 @@ void QUaPermissionsList::on_childAdded(QUaNode * node)
 	{
 		return;
 	}
-	// subscribe to remove
-	QObject::connect(permissions, &QObject::destroyed, this,
-		[this, permissions]() {
-		// emit removed
-		emit this->permissionsRemoved(permissions);
-	});
+	// NOTE : removed implemented in QUaPermissions::remove (destroyed signal is too late)
 	// emit added
 	emit this->permissionsAdded(permissions);
 }

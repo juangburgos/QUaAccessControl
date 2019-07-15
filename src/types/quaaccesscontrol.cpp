@@ -5,6 +5,8 @@
 #include <QUaRole>
 #include <QUaPermissions>
 
+QUaReference QUaAccessControl::HasRootUserRefType = { "HasRootUser"  , "IsRootUserOf" };
+
 QUaAccessControl::QUaAccessControl(QUaServer *server)
 	: QUaFolderObjectProtected(server)
 {
@@ -52,7 +54,7 @@ QString QUaAccessControl::setXmlConfig(QString strXmlConfig)
 	this->fromDomElement(elemAc, strError);
 	if (strError.isEmpty())
 	{
-		strError = "Success.";
+		strError = "Success.\n";
 	}
 	return strError;
 }
@@ -72,14 +74,66 @@ QUaPermissionsList * QUaAccessControl::permissions() const
 	return this->browseChild<QUaPermissionsList>("Permissions");
 }
 
+bool QUaAccessControl::hasRootUser() const
+{
+	return this->rootUser();
+}
+
+QUaUser * QUaAccessControl::rootUser() const
+{
+	auto listRefs = this->findReferences(QUaAccessControl::HasRootUserRefType);
+	Q_ASSERT_X(listRefs.count() <= 1, "QUaAccessControl::rootUser", "Only one root user is currently supported.");
+	return listRefs.count() >= 1 ? dynamic_cast<QUaUser*>(listRefs.at(0)) : nullptr;
+}
+
+void QUaAccessControl::setRootUser(QUaUser * rootUser)
+{
+	// remove old reference if any
+	if (this->hasRootUser())
+	{
+		this->clearRootUser();
+	}
+	Q_ASSERT(!this->hasRootUser());
+	// check if new role valid
+	if (!rootUser)
+	{
+		// NOTE : clearRole already emits nullptr
+		return;
+	}
+	// add reference
+	this->addReference(QUaAccessControl::HasRootUserRefType, rootUser);
+	// emit
+	emit this->rootUserChanged(rootUser);
+}
+
+void QUaAccessControl::clearRootUser()
+{
+	// clear reference
+	auto rootUser = this->rootUser();
+	if (!rootUser)
+	{
+		return;
+	}
+	this->removeReference(QUaAccessControl::HasRootUserRefType, rootUser);
+	// emit
+	emit this->rootUserChanged(nullptr);
+	// return
+	return;
+}
+
 QDomElement QUaAccessControl::toDomElement(QDomDocument & domDoc) const
 {
 	// add ac element
 	QDomElement elemAc = domDoc.createElement(QUaAccessControl::staticMetaObject.className());
-	// set parmissions if any
+	// set permissions if any
 	if (this->hasPermissionsObject())
 	{
 		elemAc.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+	}
+	// set root user if any
+	if (this->hasRootUser())
+	{
+		elemAc.setAttribute("RootUser", this->rootUser()->nodeBrowsePath().join("/"));
 	}
 	// attach roles, users and permissions
 	QDomElement elemRoles = this->roles()->toDomElement(domDoc);
@@ -94,13 +148,7 @@ QDomElement QUaAccessControl::toDomElement(QDomDocument & domDoc) const
 
 void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 {
-	// load permissions if any
-	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
-	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
-	}
-	// NOTE : load order is important due to references
+	// NOTE : first we need to instantiate all, then configure them (due to references)
 	// find roles
 	QDomElement elemRoles = domElem.firstChildElement(QUaRoleList::staticMetaObject.className());
 	if (elemRoles.isNull())
@@ -108,8 +156,8 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 		strError = tr("%1 : No Role list found in XML config.\n").arg("Error");
 		return;
 	}
-	// load roles
-	this->roles()->fromDomElement(elemRoles, strError);
+	// instantiate roles
+	this->roles()->fromDomElementInstantiate(elemRoles, strError);
 	// find roles
 	QDomElement elemUsers = domElem.firstChildElement(QUaUserList::staticMetaObject.className());
 	if (elemUsers.isNull())
@@ -117,8 +165,8 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 		strError = tr("%1 : No User list found in XML config.\n").arg("Error");
 		return;
 	}
-	// load roles
-	this->users()->fromDomElement(elemUsers, strError);
+	// instantiate roles
+	this->users()->fromDomElementInstantiate(elemUsers, strError);
 	// find permissions
 	QDomElement elemPerms = domElem.firstChildElement(QUaPermissionsList::staticMetaObject.className());
 	if (elemPerms.isNull())
@@ -126,6 +174,47 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 		strError = tr("%1 : No Permissions list found in XML config.\n").arg("Error");
 		return;
 	}
-	// load permissions
-	this->permissions()->fromDomElement(elemPerms, strError);
+	// instantiate permissions list
+	this->permissions()->fromDomElementInstantiate(elemPerms, strError);
+
+	// configure all
+	this->roles      ()->fromDomElementConfigure(elemRoles, strError);
+	this->users      ()->fromDomElementConfigure(elemUsers, strError);
+	this->permissions()->fromDomElementConfigure(elemPerms, strError);
+
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
+
+	// load root user if any
+	if (domElem.hasAttribute("RootUser") && !domElem.attribute("RootUser").isEmpty())
+	{
+		auto strRootUserPath = domElem.attribute("RootUser").split("/");
+		// get target node
+		QUaNode * node = this->server()->browsePath(strRootUserPath);
+		QUaUser * user = dynamic_cast<QUaUser*>(node);
+		if (!user)
+		{
+			node = this->browsePath(strRootUserPath);
+			user = dynamic_cast<QUaUser*>(node);
+		}
+		if (!user)
+		{
+			node = this->users()->browsePath(strRootUserPath);
+			user = dynamic_cast<QUaUser*>(node);
+		}
+		if (!user)
+		{
+			strError += tr("%1 : Unexisting node in browse path %2.")
+				.arg("Error")
+				.arg(strRootUserPath.join("/"));
+		}
+		else
+		{
+			this->setRootUser(user);
+		}
+	}
 }

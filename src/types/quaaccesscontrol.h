@@ -34,11 +34,20 @@ public:
 
 	// C++ API
 
+	bool       hasRootUser() const;
+	QUaUser  * rootUser() const;
+	void       setRootUser(QUaUser * rootUser);
+	void       clearRootUser();
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
+	// static
+	static QUaReference HasRootUserRefType;
+
 signals:
+	void rootUserChanged(QUaUser * rootUser);
 
 public slots:
 };

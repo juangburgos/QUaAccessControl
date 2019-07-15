@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QMessageAuthenticationCode>
 #include <QFile>
 #include <QDebug>
 
@@ -10,54 +11,111 @@
 
 #include <FunctionUtils>
 
-QString strFileName = "AcConfig.xml";
+QString strSecret         = "my_secret";
+QString strConfigFileName = "AcConfig.xml";
+QString strKeyFileName    = "AcConfig.key";
 
-void configLoad(QUaAccessControl * ac)
+bool configLoad(QUaAccessControl * ac)
 {
-	QFile fileConfig(strFileName);
+	bool success = false;
+	QFile fileConfig(strConfigFileName);
+	QFile fileKey   (strKeyFileName);
 	// check exists and can be opened
 	if (!fileConfig.exists())
 	{
-		qWarning() << QObject::tr("File %1 does not exist.").arg(strFileName);
+		qWarning() << QObject::tr("File %1 does not exist.").arg(strConfigFileName);
+		// having no config is acceptable for the first time
+		success = true;
 	}
-	else if (fileConfig.open(QIODevice::ReadOnly))
+	else if (!fileKey.exists())
 	{
-		// set config
-		auto strError = ac->setXmlConfig(fileConfig.readAll());
-		if (strError.contains("Error"))
+		qWarning() << QObject::tr("File %1 does not exist.").arg(strKeyFileName);
+	}
+	else if (fileConfig.open(QIODevice::ReadOnly) && fileKey.open(QIODevice::ReadOnly))
+	{
+		auto byteContents = fileConfig.readAll();
+		auto byteKey      = fileKey.readAll();
+		// compute key
+		QByteArray keyComputed = QMessageAuthenticationCode::hash(
+			byteContents,
+			strSecret.toUtf8(),
+			QCryptographicHash::Sha512
+		).toHex();
+		// compare computed key with loaded key
+		if (byteKey == keyComputed)
 		{
-			qWarning() << strError;
+			// try load config
+			auto strError = ac->setXmlConfig(byteContents);
+			if (strError.contains("Error"))
+			{
+				qWarning() << strError;
+			}
+			else
+			{
+				// config loaded correctly
+				success = true;
+			}
+		}
+		else
+		{
+			qWarning() << QObject::tr("Corrupted file %1. Contents does not match key stored in %2.").arg(strConfigFileName).arg(strKeyFileName);
 		}
 	}
 	else
 	{
-		qWarning() << QObject::tr("File %1 could not be opened.").arg(strFileName);
+		qWarning() << QObject::tr("File %1, %2 could not be opened.").arg(strConfigFileName).arg(strKeyFileName);
 	}
+	// close files
+	fileConfig.close();
+	fileKey.close();
+	// return result
+	return success;
 }
 
 void configSave(QUaAccessControl * ac)
 {
 	// save to file
 	QString strSaveError;
-	QFile file(strFileName);
-	if (file.open(QIODevice::ReadWrite | QFile::Truncate))
+	QFile fileConfig(strConfigFileName);
+	QFile fileKey   (strKeyFileName);
+	if (fileConfig.open(QIODevice::ReadWrite | QFile::Truncate) && fileKey.open(QIODevice::ReadWrite | QFile::Truncate))
 	{
-		// get config
-		QTextStream stream(&file);
-		stream << ac->xmlConfig();
+		QTextStream streamConfig(&fileConfig);
+		QTextStream streamKey   (&fileKey);
+		// create dom doc
+		QDomDocument doc;
+		// set xml header
+		QDomProcessingInstruction header = doc.createProcessingInstruction("xml", "version='1.0' encoding='UTF-8'");
+		doc.appendChild(header);
+		// convert config to xml
+		auto elemAc = ac->toDomElement(doc);
+		doc.appendChild(elemAc);
+		// get contents bytearray
+		auto byteContents = doc.toByteArray();
+		// save config in file
+		streamConfig << byteContents;
+		// create key
+		QByteArray key = QMessageAuthenticationCode::hash(
+			byteContents,
+			strSecret.toUtf8(),
+			QCryptographicHash::Sha512
+		).toHex();
+		// save key in file
+		streamKey << key;
 	}
 	else
 	{
-		qCritical() << QObject::tr("Error opening file %1 for write operations.").arg(strFileName);
+		qCritical() << QObject::tr("Error opening files %1, %2 for write operations.").arg(strConfigFileName).arg(strKeyFileName);
 	}
-	// close file
-	file.close();
+	// close files
+	fileConfig.close();
+	fileKey.close();
 }
 
 void autoConfigSave(QUaAccessControl * ac)
 {
 	// save inmediatly on any change, then wait 5 secs for any further changes and if any, save again after wait
-	auto throttledConfigSave = std::bind(FunctionUtils::Throttle(&configSave, 5000), ac);
+	auto throttledConfigSave = std::bind(FunctionUtils::Throttle(&configSave, 2000), ac);
 	// changes in ac
 	QObject::connect(ac, &QUaAccessControl::permissionsObjectChanged, throttledConfigSave);
 	// changes in users list
@@ -70,7 +128,7 @@ void autoConfigSave(QUaAccessControl * ac)
 		QObject::connect(user, &QUaUser::hashChanged, throttledConfigSave);
 		QObject::connect(user, &QUaUser::roleChanged, throttledConfigSave);
 	});
-	QObject::connect(ac->users(), &QUaUserList::userRemoved, throttledConfigSave);
+	QObject::connect(ac->users(), &QUaUserList::userRemoved, ac->users(), throttledConfigSave, Qt::QueuedConnection);
 	// changes in roles list
 	QObject::connect(ac->roles(), &QUaRoleList::permissionsObjectChanged, throttledConfigSave);
 	QObject::connect(ac->roles(), &QUaRoleList::roleAdded  , 
@@ -78,7 +136,7 @@ void autoConfigSave(QUaAccessControl * ac)
 		// changes in role
 		QObject::connect(role, &QUaRole::permissionsObjectChanged, throttledConfigSave);
 	});
-	QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, throttledConfigSave);
+	QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, ac->roles(), throttledConfigSave, Qt::QueuedConnection);
 	// changes in permissions list
 	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsObjectChanged, throttledConfigSave);
 	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsAdded,
@@ -95,7 +153,37 @@ void autoConfigSave(QUaAccessControl * ac)
 		QObject::connect(permissions, &QUaPermissions::canWriteUserAdded  , throttledConfigSave);
 		QObject::connect(permissions, &QUaPermissions::canWriteUserRemoved, throttledConfigSave);
 	});
-	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsRemoved, throttledConfigSave);
+	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsRemoved, ac->permissions(), throttledConfigSave, Qt::QueuedConnection);
+}
+
+void autoUserPermissions(QUaAccessControl * ac)
+{
+	QObject::connect(ac->users(), &QUaUserList::userAdded,
+	[ac](QUaUser * user) {
+		// return if user already has permissions
+		if (user->hasPermissionsObject())
+		{
+			return;
+		}
+		// add user-only permissions
+		auto permissionsList = ac->permissions();
+		// create instance
+		QString strPermId = QString("only_%1").arg(user->getName());
+		permissionsList->addPermissions(strPermId);
+		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
+		Q_CHECK_PTR(permissions);
+		// set user can read write
+		permissions->addUserCanWrite(user);
+		permissions->addUserCanRead (user);
+		// set user's permissions
+		user->setPermissionsObject(permissions);		
+	});
+	QObject::connect(ac->users(), &QUaUserList::userRemoved, 
+	[ac](QUaUser * user) {
+		// remove user-only permissions
+		auto permissions = user->permissionsObject();
+		permissions->deleteLater();
+	});
 }
 
 int main(int argc, char *argv[])
@@ -112,10 +200,16 @@ int main(int argc, char *argv[])
 	accessControl->setBrowseName ("AccessControl");
 
 	// load existing config if any
-	configLoad(accessControl);
+	if (!configLoad(accessControl))
+	{
+		return -1;
+	}
 
 	// setup auto config save
 	autoConfigSave(accessControl);
+
+	// setup auto create user permissions
+	autoUserPermissions(accessControl);
 
 	auto listUsers = accessControl->users();
 
@@ -127,21 +221,18 @@ int main(int argc, char *argv[])
 			"admin",
 			QByteArray::fromHex("f5ae6aba9a6d1465b945e592340ea22358fdc24ac856d73f51a9c766cc4e69881c72a50290dfbf3d0986dd24cb4f6af6a7c0b564ad757f781339a36de93f46b4")
 		);
+		// set as root user
 		auto adminUser = listUsers->user("admin");
 		Q_CHECK_PTR(adminUser);
-
-		// create "admin only" permissions object
-		QString strAdminOnly = QString("only_%1").arg(adminUser->getName());
-		auto listPermissions = accessControl->permissions();
-		listPermissions->addPermissions(strAdminOnly);
-		auto adminOnly = listPermissions->permission(strAdminOnly);
-		Q_CHECK_PTR(adminOnly);
-		// give admin user full permissions
-		adminOnly->addUserCanWrite(adminUser);
-		adminOnly->addUserCanRead (adminUser);
-
-		// set access control permissions
-		accessControl->setPermissionsObject(adminOnly);
+		Q_CHECK_PTR(server.nodeById<QUaUser>("ns=1;s=users/admin"));
+		accessControl->setRootUser(adminUser);
+		// permissions will be auto created later
+		QObject::connect(adminUser, &QUaUser::permissionsObjectChanged,
+		[adminUser, accessControl](QUaPermissions * adminOnly) {
+			Q_CHECK_PTR(adminOnly);
+			// set access control permissions
+			accessControl->setPermissionsObject(adminOnly);		
+		});
 	}
 
 	// disable anon login

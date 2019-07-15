@@ -87,7 +87,7 @@ QUaAccessLevel QUaBaseObjectProtected::userAccessLevel(const QString & strUserNa
 	auto permissions = this->permissionsObject();
 	Q_CHECK_PTR(permissions);
 	// Set permissions according to user
-	access.bits.bRead = permissions->canUserRead(strUserName);
+	access.bits.bRead  = permissions->canUserRead(strUserName);
 	access.bits.bWrite = permissions->canUserWrite(strUserName);
 	return access;
 }

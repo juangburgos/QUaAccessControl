@@ -43,13 +43,18 @@ QString QUaRoleList::addRole(QString strName)
 		return  tr("%1 : Role Name already exists.\n").arg("Error");
 	}
 	// create instance
-	// TODO : set custom nodeId when https://github.com/open62541/open62541/issues/2667 fixed
-	//QString strNodeId = QString("ns=1;s=%1").arg(this->nodeBrowsePath().join(".") + "." + strName);
-	auto role = this->addChild<QUaRole>(/*strNodeId*/);
+	QString strNodeId = QString("ns=1;s=roles/%1").arg(strName);
+	auto role = this->addChild<QUaRole>(strNodeId);
+	// check
+	Q_ASSERT_X(role, "addRole", "Is NodeId repeated or invalid?");
+	if (!role)
+	{
+		return tr("%1 : Failed to create role %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+	}
 	role->setDisplayName(strName);
 	role->setBrowseName(strName);
 	// return
-	return "Success";
+	return "Success\n";
 }
 
 void QUaRoleList::clear()
@@ -93,7 +98,8 @@ QString QUaRoleList::setXmlConfig(QString strXmlConfig)
 		return strError;
 	}
 	// load config from xml
-	this->fromDomElement(elemRoles, strError);
+	this->fromDomElementInstantiate(elemRoles, strError);
+	this->fromDomElementConfigure  (elemRoles, strError);
 	if (strError.isEmpty())
 	{
 		strError = "Success.";
@@ -132,15 +138,9 @@ QDomElement QUaRoleList::toDomElement(QDomDocument & domDoc) const
 	return elemRoles;
 }
 
-void QUaRoleList::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaRoleList::fromDomElementInstantiate(QDomElement & domElem, QString & strError)
 {
-	// load permissions if any
-	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
-	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
-	}
-	// add user elems
+	// add role elems
 	QDomNodeList listRoles = domElem.elementsByTagName(QUaRole::staticMetaObject.className());
 	for (int i = 0; i < listRoles.count(); i++)
 	{
@@ -157,10 +157,32 @@ void QUaRoleList::fromDomElement(QDomElement & domElem, QString & strError)
 		if (strErrorRole.contains("Error"))
 		{
 			strError += tr("%1 : Error adding Role %2. Skipping.\n").arg("Error").arg(strErrorRole);
+		}
+	}
+}
+
+void QUaRoleList::fromDomElementConfigure(QDomElement & domElem, QString & strError)
+{
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
+	// add role elems
+	QDomNodeList listRoles = domElem.elementsByTagName(QUaRole::staticMetaObject.className());
+	for (int i = 0; i < listRoles.count(); i++)
+	{
+		QDomElement elem = listRoles.at(i).toElement();
+		Q_ASSERT(!elem.isNull());
+		QString strName = elem.attribute("Name");
+		// set role config
+		auto role = this->browseChild<QUaRole>(strName);
+		if (!role)
+		{
+			strError += tr("%1 : Error finding Role %2. Skipping.\n").arg("Error").arg(strName);
 			continue;
 		}
-		// set client config
-		auto role = this->browseChild<QUaRole>(strName);
 		role->fromDomElement(elem, strError);
 	}
 }
@@ -172,12 +194,7 @@ void QUaRoleList::on_childAdded(QUaNode * node)
 	{
 		return;
 	}
-	// subscribe to remove
-	QObject::connect(role, &QObject::destroyed, this,
-		[this, role]() {
-		// emit removed
-		emit this->roleRemoved(role);
-	});
+	// NOTE : removed implemented in QUaRole::remove (destroyed signal is too late)
 	// emit added
 	emit this->roleAdded(role);
 }

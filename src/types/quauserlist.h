@@ -7,6 +7,7 @@
 #include <QDomElement>
 
 class QUaUser;
+class QUaAccessControl;
 
 class QUaUserList : public QUaFolderObjectProtected
 {
@@ -33,9 +34,12 @@ public:
 
 	QUaUser * user(const QString &strName) const;
 
+	QUaAccessControl * accessControl() const;
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
-	void        fromDomElement(QDomElement  & domElem, QString &strError);
+	void        fromDomElementInstantiate(QDomElement  & domElem, QString &strError);
+	void        fromDomElementConfigure  (QDomElement  & domElem, QString &strError);
 
 signals:
 	void userAdded  (QUaUser * user);

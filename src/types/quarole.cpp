@@ -1,5 +1,6 @@
 #include "quarole.h"
 
+#include <QUaRoleList>
 #include <QUaUser>
 #include <QUaPermissions>
 
@@ -12,6 +13,8 @@ QUaRole::QUaRole(QUaServer *server)
 
 void QUaRole::remove()
 {
+	// NOTE : destroyed signal is too late
+	emit this->list()->roleRemoved(this);
 	this->deleteLater();
 }
 
@@ -28,6 +31,11 @@ QList<QUaUser*> QUaRole::users() const
 bool QUaRole::hasUser(QUaUser * user) const
 {
 	return this->users().contains(user);
+}
+
+QUaRoleList * QUaRole::list() const
+{
+	return dynamic_cast<QUaRoleList*>(this->parent());
 }
 
 QDomElement QUaRole::toDomElement(QDomDocument & domDoc) const

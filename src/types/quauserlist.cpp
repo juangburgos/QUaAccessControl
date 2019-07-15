@@ -3,6 +3,7 @@
 // NOTE : had to add this header because the actual implementation of QUaBaseObject::addChild is in here
 //        and was getting "lnk2019 unresolved external symbol template function" without it
 #include <QUaServer>
+#include <QUaAccessControl>
 #include <QUaUser>
 #include <QUaPermissions>
 
@@ -36,15 +37,20 @@ QString QUaUserList::addUser(QString strName, QString strPassword)
 		return  tr("%1 : User Password cannot contain less than 6 characters.\n").arg("Error");
 	}
 	// create instance
-	// TODO : set custom nodeId when https://github.com/open62541/open62541/issues/2667 fixed
-	//QString strNodeId = QString("ns=1;s=%1").arg(this->nodeBrowsePath().join(".") + "." + strName);
-	auto user = this->addChild<QUaUser>(/*strNodeId*/);
+	QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
+	auto user = this->addChild<QUaUser>(strNodeId);
+	// check
+	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
+	if (!user)
+	{
+		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+	}
 	user->setDisplayName(strName);
 	user->setBrowseName(strName);
 	// set password
 	user->setPassword(strPassword);
 	// return
-	return "Success";
+	return "Success\n";
 }
 
 void QUaUserList::clear()
@@ -89,7 +95,8 @@ QString QUaUserList::setXmlConfig(QString strXmlConfig)
 		return strError;
 	}
 	// load config from xml
-	this->fromDomElement(elemUsers, strError);
+	this->fromDomElementInstantiate(elemUsers, strError);
+	this->fromDomElementConfigure  (elemUsers, strError);
 	if (strError.isEmpty())
 	{
 		strError = "Success.";
@@ -105,13 +112,20 @@ QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHas
 	{
 		return strError;
 	}
-	auto user = this->addChild<QUaUser>(/*strNodeId*/);
+	QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
+	auto user = this->addChild<QUaUser>(strNodeId);
+	// check
+	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
+	if (!user)
+	{
+		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+	}
 	user->setDisplayName(strName);
 	user->setBrowseName(strName);
 	// set password
 	user->setHash(bytaHash);
 	// return
-	return "Success";
+	return "Success\n";
 }
 
 QList<QUaUser*> QUaUserList::users() const
@@ -122,6 +136,11 @@ QList<QUaUser*> QUaUserList::users() const
 QUaUser * QUaUserList::user(const QString & strName) const
 {
 	return this->browseChild<QUaUser>(strName);
+}
+
+QUaAccessControl * QUaUserList::accessControl() const
+{
+	return dynamic_cast<QUaAccessControl*>(this->parent());
 }
 
 QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
@@ -145,14 +164,8 @@ QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
 	return elemUsers;
 }
 
-void QUaUserList::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & strError)
 {
-	// load permissions if any
-	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
-	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
-	}
 	// add user elems
 	QDomNodeList listUsers = domElem.elementsByTagName(QUaUser::staticMetaObject.className());
 	for (int i = 0; i < listUsers.count(); i++)
@@ -177,10 +190,43 @@ void QUaUserList::fromDomElement(QDomElement & domElem, QString & strError)
 			continue;
 		}
 		// NOTE : cannot use QUaUserList::addUser because server does not store passwords
-		auto user = this->addChild<QUaUser>(/*strNodeId*/);
+		QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
+		auto user = this->addChild<QUaUser>(strNodeId);
+		// check
+		Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
+		if (!user)
+		{
+			strError += tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+			continue;
+		}
 		user->setDisplayName(strName);
 		user->setBrowseName(strName);
-		// set client config
+	}
+}
+
+void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QString & strError)
+{
+	// load permissions if any
+	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
+	{
+		auto strPermsPath = domElem.attribute("Permissions").split("/");
+		strError += this->setPermissions(strPermsPath);
+	}
+	// add user elems
+	QDomNodeList listUsers = domElem.elementsByTagName(QUaUser::staticMetaObject.className());
+	for (int i = 0; i < listUsers.count(); i++)
+	{
+		QDomElement elem = listUsers.at(i).toElement();
+		Q_ASSERT(!elem.isNull());
+		// attempt to add
+		QString strName = elem.attribute("Name");
+		// set user config
+		auto user = this->browseChild<QUaUser>(strName);
+		if (!user)
+		{
+			strError += tr("%1 : Error finding User %2. Skipping.\n").arg("Error").arg(strName);
+			continue;
+		}
 		user->fromDomElement(elem, strError);
 	}
 }
@@ -192,12 +238,7 @@ void QUaUserList::on_childAdded(QUaNode * node)
 	{
 		return;
 	}
-	// subscribe to remove
-	QObject::connect(user, &QObject::destroyed, this, 
-	[this, user]() {
-		// emit removed
-		emit this->userRemoved(user);
-	});
+	// NOTE : removed implemented in QUaUser::remove (destroyed signal is too late)
 	// emit added
 	emit this->userAdded(user);
 }

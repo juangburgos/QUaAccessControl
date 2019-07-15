@@ -50,6 +50,10 @@ public:
 
 	bool       isPasswordValid(const QString &strPassword) const;
 
+	QUaUserList * list() const;
+
+	bool       isRootUser() const;
+
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
 	void        fromDomElement(QDomElement  & domElem, QString &strError);

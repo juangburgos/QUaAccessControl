@@ -1,6 +1,7 @@
 #include "quauser.h"
 
 #include <QUaServer>
+#include <QUaAccessControl>
 #include <QUaRole>
 #include <QUaPermissions>
 
@@ -26,6 +27,8 @@ QUaProperty * QUaUser::hash() const
 
 void QUaUser::remove()
 {
+	// NOTE : destroyed signal is too late
+	emit this->list()->userRemoved(this);
 	this->deleteLater();
 }
 
@@ -63,7 +66,12 @@ QString QUaUser::setRole(QList<QString> strRolePath)
 	QUaRole * role = dynamic_cast<QUaRole*>(node);
 	if (!role)
 	{
-		node = this->server()->objectsFolder()->browsePath(strRolePath);
+		node = this->list()->accessControl()->browsePath(strRolePath);
+		role = dynamic_cast<QUaRole*>(node);
+	}
+	if (!role)
+	{
+		node = this->list()->accessControl()->roles()->browsePath(strRolePath);
 		role = dynamic_cast<QUaRole*>(node);
 	}
 	if (!role)
@@ -81,13 +89,12 @@ QString QUaUser::setRole(QList<QString> strRolePath)
 void QUaUser::clearRole()
 {
 	// clear reference
-	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
-	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::clearRole", "Only one role per user is currently supported.");
-	if (listRefs.count() <= 0)
+	auto role = this->role();
+	if (!role)
 	{
 		return;
 	}
-	this->removeReference(QUaUser::UserHasRoleRefType, listRefs.at(0));
+	this->removeReference(QUaUser::UserHasRoleRefType, role);
 	// emit
 	emit this->roleChanged(nullptr);
 	// return
@@ -153,6 +160,18 @@ bool QUaUser::isPasswordValid(const QString &strPassword) const
 	);
 	// compare
 	return hash == this->getHash();
+}
+
+QUaUserList * QUaUser::list() const
+{
+	return dynamic_cast<QUaUserList*>(this->parent());
+}
+
+bool QUaUser::isRootUser() const
+{
+	auto listRefs = this->findReferences(QUaAccessControl::HasRootUserRefType, false);
+	Q_ASSERT(listRefs.count() <= 1);
+	return listRefs.count() >= 1 ? true : false;
 }
 
 QDomElement QUaUser::toDomElement(QDomDocument & domDoc) const
