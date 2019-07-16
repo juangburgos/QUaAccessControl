@@ -29,6 +29,16 @@ QUaUserWidgetEdit::~QUaUserWidgetEdit()
     delete ui;
 }
 
+bool QUaUserWidgetEdit::isUserNameReadOnly() const
+{
+	return ui->lineEditUserName->isReadOnly();
+}
+
+void QUaUserWidgetEdit::setUserNameReadOnly(const bool & readOnly)
+{
+	ui->lineEditUserName->setReadOnly(readOnly);
+}
+
 bool QUaUserWidgetEdit::isRoleVisible() const
 {
 	return ui->comboBoxRole->isEnabled();
@@ -42,6 +52,16 @@ void QUaUserWidgetEdit::setRoleVisible(const bool & isVisible)
 	ui->labelRole->setVisible(isVisible);
 }
 
+bool QUaUserWidgetEdit::isRoleReadOnly() const
+{
+	return ui->comboBoxRole->isReadOnly();
+}
+
+void QUaUserWidgetEdit::setRoleReadOnly(const bool & readOnly)
+{
+	ui->comboBoxRole->setReadOnly(readOnly);
+}
+
 bool QUaUserWidgetEdit::isHashVisible() const
 {
 	return ui->plainTextEditHash->isEnabled();
@@ -53,6 +73,19 @@ void QUaUserWidgetEdit::setHashVisible(const bool & isVisible)
 	ui->plainTextEditHash->setVisible(isVisible);
 	ui->labelHash->setEnabled(isVisible);
 	ui->labelHash->setVisible(isVisible);
+}
+
+bool QUaUserWidgetEdit::isPasswordVisible() const
+{
+	return ui->lineEditPass->isEnabled();
+}
+
+void QUaUserWidgetEdit::setPasswordVisible(const bool & isVisible)
+{
+	ui->lineEditPass->setEnabled(isVisible);
+	ui->lineEditPass->setVisible(isVisible);
+	ui->labelPassword->setEnabled(isVisible);
+	ui->labelPassword->setVisible(isVisible);
 }
 
 void QUaUserWidgetEdit::setRoleList(const QUaRoleList * listRoles)
@@ -123,7 +156,12 @@ QUaRole * QUaUserWidgetEdit::role() const
 
 void QUaUserWidgetEdit::setRole(const QUaRole * role)
 {
-	auto index = ui->comboBoxRole->findText(role->getName());
+	QString strRole = "";
+	if (role)
+	{
+		strRole = role->getName();
+	}
+	auto index = ui->comboBoxRole->findText(strRole);
 	Q_ASSERT(index >= 0);
 	// NOTE : setCurrentText does not work, it does not hold the pointer (userData)
 	ui->comboBoxRole->setCurrentIndex(index);

@@ -30,8 +30,6 @@ private slots:
 
     void on_pushButtonLogin_clicked();
 
-    void on_pushButtonApply_clicked();
-
 	void on_loggedUserChanged(QUaUser * user);
 
     void on_pushButtonLogout_clicked();
@@ -41,6 +39,9 @@ private:
 	QUaServer   m_server;
 	QString     m_strSecret;
 	QUaUser    *m_loggedUser;
+	bool        m_deleting;
+
+	QList<QMetaObject::Connection> m_connections;
 
 	QUaUser * loggedUser() const;
 	void      setLoggedUser(QUaUser * user);
@@ -48,6 +49,8 @@ private:
 	void login();
 	void showCreateRootUserDialog (QUaAcCommonDialog &dialog);
 	void showUserCredentialsDialog(QUaAcCommonDialog &dialog);
+
+	void bindUserWidgetEdit(QUaUser * user);
 };
 
 #endif // QUAUSERTABLETESTDIALOG_H

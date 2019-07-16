@@ -186,6 +186,16 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 	parent->setChild(row, (int)Headers::Role, iRole);
 	// set data
 	iRole->setData(QVariant::fromValue(user), QUaUserTable::PointerRole);
+	// updates
+	QObject::connect(user, &QUaUser::roleChanged, this,
+	[iRole](QUaRole * role) {
+		QString strRole = "";
+		if (role)
+		{
+			strRole = role->getName();
+		}
+		iRole->setText(strRole);
+	});
 
 	// actions column
 	auto iActs = new QStandardItem();

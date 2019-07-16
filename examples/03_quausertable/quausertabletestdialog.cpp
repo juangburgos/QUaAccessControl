@@ -22,6 +22,11 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
     ui(new Ui::QUaUserTableTestDialog)
 {
     ui->setupUi(this);
+	m_deleting = false;
+	// hide apply button until some valid object selected
+	ui->pushButtonApply->setEnabled(false);
+	ui->pushButtonApply->setVisible(false);
+	ui->widgetUserEdit->setEnabled(false);
 	// logged in user
 	m_loggedUser = nullptr;
 	QObject::connect(this, &QUaUserTableTestDialog::loggedUserChanged, this, &QUaUserTableTestDialog::on_loggedUserChanged);
@@ -78,7 +83,23 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 	// set ac to table
 	ui->widgetUserTable->setAccessControl(ac);
 
-	// TODO : handle table events (user selection)
+	// handle table events (user selection)
+	// change widgets
+	QObject::connect(ui->widgetUserTable, &QUaUserTable::userSelectionChanged, this,
+	[this](QUaUser * userPrev, QUaUser * userCurr)
+	{
+		Q_UNUSED(userPrev);
+		// early exit
+		if (!userCurr || m_deleting)
+		{
+			return;
+		}
+		// bind widget for current selection
+		this->bindUserWidgetEdit(userCurr);
+	});
+
+	// setup edit widget
+	ui->widgetUserEdit->setRoleList(ac->roles());
 
 	// start server
 	m_server.start();
@@ -86,6 +107,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 
 QUaUserTableTestDialog::~QUaUserTableTestDialog()
 {
+	m_deleting = true;
     delete ui;
 }
 
@@ -225,11 +247,6 @@ void QUaUserTableTestDialog::on_pushButtonExport_clicked()
 void QUaUserTableTestDialog::on_pushButtonLogin_clicked()
 {
 	this->login();
-}
-
-void QUaUserTableTestDialog::on_pushButtonApply_clicked()
-{
-	// TODO : 
 }
 
 void QUaUserTableTestDialog::on_loggedUserChanged(QUaUser * user)
@@ -375,4 +392,85 @@ void QUaUserTableTestDialog::on_pushButtonLogout_clicked()
 {
 	// logout
 	this->setLoggedUser(nullptr);
+}
+
+void QUaUserTableTestDialog::bindUserWidgetEdit(QUaUser * user)
+{
+	// disable old connections
+	while (m_connections.count() > 0)
+	{
+		QObject::disconnect(m_connections.takeFirst());
+	}
+	// show apply button
+	ui->pushButtonApply->setEnabled(true);
+	ui->pushButtonApply->setVisible(true);
+	ui->widgetUserEdit->setEnabled(true);
+	// bind common
+	m_connections <<
+	QObject::connect(user, &QObject::destroyed, this,
+	[this]() {
+		if (m_deleting)
+		{
+			return;
+		}
+		// clear wdit widget
+		ui->widgetUserEdit->setUserName("");
+		ui->widgetUserEdit->setRole(nullptr);
+		ui->widgetUserEdit->setHash("");
+		ui->widgetUserEdit->setEnabled(false);
+		// disable apply until new chosen
+		ui->pushButtonApply->setEnabled(false);
+		ui->pushButtonApply->setVisible(false);
+	});
+	// name
+	ui->widgetUserEdit->setUserNameReadOnly(true);
+	ui->widgetUserEdit->setUserName(user->getName());
+	// role
+	ui->widgetUserEdit->setRole(user->role());
+	m_connections <<
+	QObject::connect(user, &QUaUser::roleChanged, this,
+	[this](QUaRole * role) {
+		if (m_deleting)
+		{
+			return;
+		}
+		ui->widgetUserEdit->setRole(role);
+	});
+	// hash
+	ui->widgetUserEdit->setHash(user->getHash().toHex());
+	m_connections <<
+	QObject::connect(user, &QUaUser::hashChanged, this,
+	[this](const QByteArray &hash) {
+		if (m_deleting)
+		{
+			return;
+		}
+		ui->widgetUserEdit->setHash(hash.toHex());
+	});
+
+	// password
+	ui->widgetUserEdit->setPassword("");
+
+	// on click apply
+	m_connections <<
+	QObject::connect(ui->pushButtonApply, &QPushButton::clicked, user,
+	[this, user]() {
+		// udpate role
+		user->setRole(ui->widgetUserEdit->role());
+		// update password (if non empty)
+		QString strNewPass = ui->widgetUserEdit->password();
+		if (strNewPass.isEmpty())
+		{
+			return;
+		}
+		QString strError = user->setPassword(strNewPass);
+		if (strError.contains("Error"))
+		{
+			QMessageBox msgBox;
+			msgBox.setWindowTitle("Error Updating User");
+			msgBox.setIcon(QMessageBox::Critical);
+			msgBox.setText(tr("Invalid new password. %1").arg(strError));
+			msgBox.exec();
+		}
+	});
 }

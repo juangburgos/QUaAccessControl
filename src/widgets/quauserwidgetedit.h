@@ -21,11 +21,20 @@ public:
     explicit QUaUserWidgetEdit(QWidget *parent = nullptr);
     ~QUaUserWidgetEdit();
 
+	bool isUserNameReadOnly() const;
+	void setUserNameReadOnly(const bool &readOnly);
+
 	bool isRoleVisible() const;
 	void setRoleVisible(const bool &isVisible);
 
+	bool isRoleReadOnly() const;
+	void setRoleReadOnly(const bool &readOnly);
+
 	bool isHashVisible() const;
 	void setHashVisible(const bool &isVisible);
+
+	bool isPasswordVisible() const;
+	void setPasswordVisible(const bool &isVisible);
 
 	void setRoleList(const QUaRoleList * listRoles);
 
