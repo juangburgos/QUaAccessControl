@@ -75,7 +75,8 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 		permissions->deleteLater();
 	});
 
-	// TODO : set users to table
+	// set ac to table
+	ui->widgetUserTable->setAccessControl(ac);
 
 	// TODO : handle table events (user selection)
 
@@ -108,7 +109,7 @@ void QUaUserTableTestDialog::on_pushButtonImport_clicked()
 		return;
 	}
 	// compose key file name
-	QString strKeyFileName = QString("%1.key").arg(QFileInfo(strConfigFileName).baseName());
+	QString strKeyFileName = QString("%1/%2.key").arg(QFileInfo(strConfigFileName).absoluteDir().absolutePath()).arg(QFileInfo(strConfigFileName).baseName());
 	// create files
 	QFile fileConfig(strConfigFileName);
 	QFile fileKey   (strKeyFileName);
@@ -179,7 +180,7 @@ void QUaUserTableTestDialog::on_pushButtonExport_clicked()
 		return;
 	}
 	// compose key file name
-	QString strKeyFileName = QString("%1.key").arg(QFileInfo(strConfigFileName).baseName());
+	QString strKeyFileName = QString("%1/%2.key").arg(QFileInfo(strConfigFileName).absoluteDir().absolutePath()).arg(QFileInfo(strConfigFileName).baseName());
 	// save to file
 	QFile fileConfig(strConfigFileName);
 	QFile fileKey(strKeyFileName);
@@ -302,8 +303,8 @@ void QUaUserTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog
 	auto widgetNewUser = qobject_cast<QUaUserWidgetEdit*>(dialog.widget());
 	Q_CHECK_PTR(widgetNewUser);
 	// get user data
-	QString strUserName = widgetNewUser->userName();
-	QString strPassword = widgetNewUser->password();
+	QString strUserName = widgetNewUser->userName().trimmed();
+	QString strPassword = widgetNewUser->password().trimmed();
 	// check
 	QString strError = listUsers->addUser(strUserName, strPassword);
 	if (strError.contains("Error"))

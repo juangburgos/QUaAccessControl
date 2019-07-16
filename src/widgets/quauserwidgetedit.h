@@ -2,6 +2,9 @@
 #define QUAUSERWIDGETEDIT_H
 
 #include <QWidget>
+#include <QStandardItemModel>
+#include <QSortFilterProxyModel>
+#include <QCompleter>
 
 namespace Ui {
 class QUaUserWidgetEdit;
@@ -40,6 +43,13 @@ public:
 
 private:
     Ui::QUaUserWidgetEdit *ui;
+
+	QStandardItemModel    m_modelCombo;
+	QSortFilterProxyModel m_proxyCombo;
+
+	QList<QMetaObject::Connection> m_connections;
+
+	static int PointerRole;
 };
 
 #endif // QUAUSERWIDGETEDIT_H

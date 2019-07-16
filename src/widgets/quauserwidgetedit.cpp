@@ -1,11 +1,27 @@
 #include "quauserwidgetedit.h"
 #include "ui_quauserwidgetedit.h"
 
+#include <QUaRoleList>
+#include <QUaRole>
+
+int QUaUserWidgetEdit::PointerRole = Qt::UserRole + 1;
+
 QUaUserWidgetEdit::QUaUserWidgetEdit(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::QUaUserWidgetEdit)
 {
     ui->setupUi(this);
+	// setup combo model
+	m_proxyCombo.setSourceModel(&m_modelCombo);
+	// setup combo
+	ui->comboBoxRole->setModel(&m_proxyCombo);
+	ui->comboBoxRole->setEditable(true);
+	// setup completer
+	QCompleter *completer = new QCompleter(ui->comboBoxRole);
+	completer->setModel(&m_proxyCombo);
+	completer->setFilterMode(Qt::MatchContains);
+	ui->comboBoxRole->setCompleter(completer);
+	ui->comboBoxRole->setInsertPolicy(QComboBox::NoInsert);
 }
 
 QUaUserWidgetEdit::~QUaUserWidgetEdit()
@@ -39,6 +55,57 @@ void QUaUserWidgetEdit::setHashVisible(const bool & isVisible)
 	ui->labelHash->setVisible(isVisible);
 }
 
+void QUaUserWidgetEdit::setRoleList(const QUaRoleList * listRoles)
+{
+	// disable connections
+	while (m_connections.count() > 0)
+	{
+		QObject::disconnect(m_connections.takeFirst());
+	}
+	// re-set model for comboboxes
+	m_modelCombo.clear();
+	// add empty/undefined
+	auto parent = m_modelCombo.invisibleRootItem();
+	auto row    = parent->rowCount();
+	auto col    = 0;
+	auto iInvalidParam = new QStandardItem("");
+	parent->setChild(row, col, iInvalidParam);
+	iInvalidParam->setData(QVariant::fromValue(nullptr), QUaUserWidgetEdit::PointerRole);
+	// add all existing roles
+	auto roles = listRoles->roles();
+	for (int i = 0; i < roles.count(); i++)
+	{
+		auto role = roles.at(i);
+		row = parent->rowCount();
+		auto iRole = new QStandardItem(role->getName());
+		parent->setChild(row, col, iRole);
+		iRole->setData(QVariant::fromValue(role), QUaUserWidgetEdit::PointerRole);
+		// subscribe to destroyed
+		m_connections << QObject::connect(role, &QObject::destroyed, this,
+			[this, iRole]() {
+			Q_CHECK_PTR(iRole);
+			// remove from model
+			m_modelCombo.removeRows(iRole->index().row(), 1);
+		});
+	}
+	// subscribe to role created
+	m_connections << QObject::connect(listRoles, &QUaRoleList::roleAdded, this,
+	[this, col](QUaRole * role) {
+		auto parent = m_modelCombo.invisibleRootItem();
+		auto row    = parent->rowCount();
+		auto iRole  = new QStandardItem(role->getName());
+		parent->setChild(row, col, iRole);
+		iRole->setData(QVariant::fromValue(role), QUaUserWidgetEdit::PointerRole);
+		// subscribe to destroyed
+		m_connections << QObject::connect(role, &QObject::destroyed, this,
+		[this, iRole]() {
+			Q_CHECK_PTR(iRole);
+			// remove from model
+			m_modelCombo.removeRows(iRole->index().row(), 1);
+		});
+	});
+}
+
 QString QUaUserWidgetEdit::userName() const
 {
 	return ui->lineEditUserName->text();
@@ -47,6 +114,20 @@ QString QUaUserWidgetEdit::userName() const
 void QUaUserWidgetEdit::setUserName(const QString & strUserName)
 {
 	ui->lineEditUserName->setText(strUserName);
+}
+
+QUaRole * QUaUserWidgetEdit::role() const
+{
+	return ui->comboBoxRole->currentData(QUaUserWidgetEdit::PointerRole).value<QUaRole*>();;
+}
+
+void QUaUserWidgetEdit::setRole(const QUaRole * role)
+{
+	auto index = ui->comboBoxRole->findText(role->getName());
+	Q_ASSERT(index >= 0);
+	// NOTE : setCurrentText does not work, it does not hold the pointer (userData)
+	ui->comboBoxRole->setCurrentIndex(index);
+	Q_ASSERT(ui->comboBoxRole->currentData(QUaUserWidgetEdit::PointerRole).value<QUaRole*>() == role);
 }
 
 QString QUaUserWidgetEdit::password() const
