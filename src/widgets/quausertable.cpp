@@ -3,7 +3,6 @@
 
 #include <QMessageBox>
 #include <QMetaEnum>
-#include <QPainter>
 
 #include <QUaAccessControl>
 #include <QUaUser>
@@ -150,7 +149,7 @@ void QUaUserTable::setAccessControl(QUaAccessControl * ac)
 		ui->tableViewUsers->setCurrentIndex(index);
 	}, Qt::QueuedConnection);
 
-	// add already existing clients
+	// add already existing users
 	auto listUsers = m_ac->users()->users();
 	for (int i = 0; i < listUsers.count(); i++)
 	{
@@ -276,7 +275,7 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 		iRole->setText(strRole);
 	});
 
-	// romev row if deleted
+	// remove row if deleted
 	// NOTE : set this as receiver, so callback is not called if this has been deleted
 	QObject::connect(user, &QObject::destroyed, this,
 	[this, iName]() {

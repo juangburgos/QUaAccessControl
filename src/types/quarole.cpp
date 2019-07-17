@@ -74,6 +74,7 @@ void QUaRole::on_referenceAdded(const QUaReference & ref, QUaNode * nodeTarget, 
 	}
 	Q_ASSERT(!isForward);
 	auto user = dynamic_cast<QUaUser*>(nodeTarget);
+	//Q_CHECK_PTR(user); happens on shutdown
 	if (!user)
 	{
 		return;
@@ -90,6 +91,7 @@ void QUaRole::on_referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget
 	}
 	Q_ASSERT(!isForward);
 	auto user = dynamic_cast<QUaUser*>(nodeTarget);
+	//Q_CHECK_PTR(user); happens on shutdown
 	if (!user)
 	{
 		return;

@@ -1,24 +1,25 @@
-#ifndef QUAUSERTABLETESTDIALOG_H
-#define QUAUSERTABLETESTDIALOG_H
+#ifndef QUAROLETABLETESTDIALOG_H
+#define QUAROLETABLETESTDIALOG_H
 
 #include <QDialog>
 
 #include <QUaServer>
 
 class QUaUser;
+class QUaRole;
 class QUaAcCommonDialog;
 
 namespace Ui {
-class QUaUserTableTestDialog;
+class QUaRoleTableTestDialog;
 }
 
-class QUaUserTableTestDialog : public QDialog
+class QUaRoleTableTestDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit QUaUserTableTestDialog(QWidget *parent = nullptr);
-    ~QUaUserTableTestDialog();
+    explicit QUaRoleTableTestDialog(QWidget *parent = nullptr);
+    ~QUaRoleTableTestDialog();
 
 signals:
 	void loggedUserChanged(QUaUser * user);
@@ -35,7 +36,7 @@ private slots:
 	void on_loggedUserChanged(QUaUser * user);
 
 private:
-    Ui::QUaUserTableTestDialog *ui;
+    Ui::QUaRoleTableTestDialog *ui;
 	QUaServer   m_server;
 	QString     m_strSecret;
 	QUaUser    *m_loggedUser;
@@ -48,14 +49,14 @@ private:
 
 	void login();
 	void logout();
-	void showCreateRootUserDialog (QUaAcCommonDialog &dialog);
+	void showCreateRootUserDialog(QUaAcCommonDialog &dialog);
 	void showUserCredentialsDialog(QUaAcCommonDialog &dialog);
 
 	void clearApplication();
 
-	void clearWidgetUserEdit();
-	void bindWidgetUserEdit(QUaUser * user);
-	void setWidgetUserEditPermissions(QUaUser * user);
+	void clearWidgetRoleEdit();
+	void bindWidgetRoleEdit(QUaRole * role);
+	void setWidgetRoleEditPermissions(QUaUser * user);
 };
 
-#endif // QUAUSERTABLETESTDIALOG_H
+#endif // QUAROLETABLETESTDIALOG_H

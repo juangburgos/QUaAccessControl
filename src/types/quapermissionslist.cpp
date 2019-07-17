@@ -25,10 +25,10 @@ QString QUaPermissionsList::addPermissions(QString strId)
 	{
 		return tr("%1 : Permissions Id argument cannot be empty.\n").arg("Error");
 	}
-	// check valid length (userLength16 + -only)
-	if (strId.count() > 21)
+	// check valid length (userLength16 + onlyuser_ | only_role)
+	if (strId.count() > 25)
 	{
-		return  tr("%1 : Permissions Id cannot contain more than 21 characters.\n").arg("Error");
+		return  tr("%1 : Permissions Id cannot contain more than 25 characters.\n").arg("Error");
 	}
 	// check valid characters
 	QRegularExpression rx("^[a-zA-Z0-9_]*$");
