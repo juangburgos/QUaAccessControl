@@ -24,8 +24,6 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
     ui->setupUi(this);
 	m_deleting = false;
 	// hide apply button until some valid object selected
-	ui->pushButtonApply->setEnabled(false);
-	ui->pushButtonApply->setVisible(false);
 	ui->widgetUserEdit->setEnabled(false);
 	// logged in user
 	m_loggedUser = nullptr;
@@ -43,7 +41,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 	// define custom user validation 
 	auto listUsers = ac->users();
 	m_server.setUserValidationCallback(
-		[listUsers](const QString &strUserName, const QString &strPassword) {
+	[listUsers](const QString &strUserName, const QString &strPassword) {
 		auto user = listUsers->user(strUserName);
 		if (!user)
 		{
@@ -81,6 +79,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 	});
 
 	// set ac to table
+	QObject::connect(this, &QUaUserTableTestDialog::loggedUserChanged, ui->widgetUserTable, &QUaUserTable::on_loggedUserChanged);
 	ui->widgetUserTable->setAccessControl(ac);
 
 	// handle table events (user selection)
@@ -95,7 +94,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 			return;
 		}
 		// bind widget for current selection
-		this->bindUserWidgetEdit(userCurr);
+		this->bindWidgetUserEdit(userCurr);
 	});
 
 	// setup edit widget
@@ -103,6 +102,9 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 
 	// start server
 	m_server.start();
+
+	// intially logged out
+	this->logout();
 }
 
 QUaUserTableTestDialog::~QUaUserTableTestDialog()
@@ -251,12 +253,21 @@ void QUaUserTableTestDialog::on_pushButtonLogin_clicked()
 
 void QUaUserTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
+	// set user edit widget permissions
+	this->setWidgetUserEditPermissions(user);
+	// update ui
 	if (!user)
 	{
+		// logged out user
 		ui->lineEditLoggedUser->setText("");
+		ui->pushButtonLogout->setEnabled(false);
+		// clear user edit widget
+		this->clearWidgetUserEdit();
 		return;
 	}
+	// logged in user
 	ui->lineEditLoggedUser->setText(user->getName());
+	ui->pushButtonLogout->setEnabled(true);
 }
 
 QUaUser * QUaUserTableTestDialog::loggedUser() const
@@ -282,6 +293,7 @@ void QUaUserTableTestDialog::login()
 	{
 		// setup new user widget
 		auto widgetNewUser = new QUaUserWidgetEdit;
+		widgetNewUser->setActionsVisible(false);
 		widgetNewUser->setRoleVisible(false);
 		widgetNewUser->setHashVisible(false);
 		// setup dialog
@@ -294,6 +306,7 @@ void QUaUserTableTestDialog::login()
 	}
 	// if users existing, setup widget for credentials
 	auto widgetNewUser = new QUaUserWidgetEdit;
+	widgetNewUser->setActionsVisible(false);
 	widgetNewUser->setRoleVisible(false);
 	widgetNewUser->setHashVisible(false);
 	// setup dialog
@@ -302,6 +315,12 @@ void QUaUserTableTestDialog::login()
 	dialog.setWidget(widgetNewUser);
 	// show dialog
 	this->showUserCredentialsDialog(dialog);
+}
+
+void QUaUserTableTestDialog::logout()
+{
+	// logout
+	this->setLoggedUser(nullptr);
 }
 
 void QUaUserTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
@@ -338,13 +357,20 @@ void QUaUserTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog
 	auto rootPermissions = root->permissionsObject();
 	if (rootPermissions)
 	{
+		// only root can add/remove users, roles and permissions
 		ac->setPermissionsObject(rootPermissions);
+		ac->users()->setPermissionsObject(rootPermissions);
+		ac->roles()->setPermissionsObject(rootPermissions);
+		ac->permissions()->setPermissionsObject(rootPermissions);
 	}
 	else
 	{
 		QObject::connect(root, &QUaUser::permissionsObjectChanged, this,
 		[ac](QUaPermissions * rootPermissions) {
 			ac->setPermissionsObject(rootPermissions);
+			ac->users()->setPermissionsObject(rootPermissions);
+			ac->roles()->setPermissionsObject(rootPermissions);
+			ac->permissions()->setPermissionsObject(rootPermissions);
 		});
 	}
 	// login root user
@@ -356,6 +382,10 @@ void QUaUserTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialo
 	int res = dialog.exec();
 	if (res != QDialog::Accepted)
 	{
+		if (!this->loggedUser())
+		{
+			this->clearApplication();
+		}
 		return;
 	}
 	// get access control
@@ -390,21 +420,16 @@ void QUaUserTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialo
 
 void QUaUserTableTestDialog::on_pushButtonLogout_clicked()
 {
-	// logout
-	this->setLoggedUser(nullptr);
+	this->logout();
 }
 
-void QUaUserTableTestDialog::bindUserWidgetEdit(QUaUser * user)
+void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 {
 	// disable old connections
 	while (m_connections.count() > 0)
 	{
 		QObject::disconnect(m_connections.takeFirst());
 	}
-	// show apply button
-	ui->pushButtonApply->setEnabled(true);
-	ui->pushButtonApply->setVisible(true);
-	ui->widgetUserEdit->setEnabled(true);
 	// bind common
 	m_connections <<
 	QObject::connect(user, &QObject::destroyed, this,
@@ -413,14 +438,8 @@ void QUaUserTableTestDialog::bindUserWidgetEdit(QUaUser * user)
 		{
 			return;
 		}
-		// clear wdit widget
-		ui->widgetUserEdit->setUserName("");
-		ui->widgetUserEdit->setRole(nullptr);
-		ui->widgetUserEdit->setHash("");
-		ui->widgetUserEdit->setEnabled(false);
-		// disable apply until new chosen
-		ui->pushButtonApply->setEnabled(false);
-		ui->pushButtonApply->setVisible(false);
+		// clear widget
+		this->clearWidgetUserEdit();
 	});
 	// name
 	ui->widgetUserEdit->setUserNameReadOnly(true);
@@ -451,9 +470,16 @@ void QUaUserTableTestDialog::bindUserWidgetEdit(QUaUser * user)
 	// password
 	ui->widgetUserEdit->setPassword("");
 
+	// on click delete
+	m_connections <<
+	QObject::connect(ui->widgetUserEdit, &QUaUserWidgetEdit::deleteClicked, user,
+	[user]() {
+		user->deleteLater();
+	});
+
 	// on click apply
 	m_connections <<
-	QObject::connect(ui->pushButtonApply, &QPushButton::clicked, user,
+	QObject::connect(ui->widgetUserEdit, &QUaUserWidgetEdit::applyClicked, user,
 	[this, user]() {
 		// udpate role
 		user->setRole(ui->widgetUserEdit->role());
@@ -473,4 +499,80 @@ void QUaUserTableTestDialog::bindUserWidgetEdit(QUaUser * user)
 			msgBox.exec();
 		}
 	});
+
+	// set permissions
+	this->setWidgetUserEditPermissions(m_loggedUser);
+}
+
+void QUaUserTableTestDialog::clearApplication()
+{
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+	// clear config
+	ac->clear();
+	// clear user edit widget
+	this->clearWidgetUserEdit();
+}
+
+void QUaUserTableTestDialog::clearWidgetUserEdit()
+{
+	ui->widgetUserEdit->setUserName("");
+	ui->widgetUserEdit->setRole(nullptr);
+	ui->widgetUserEdit->setPassword("");
+	ui->widgetUserEdit->setHash("");
+	ui->widgetUserEdit->setEnabled(false);
+}
+
+void QUaUserTableTestDialog::setWidgetUserEditPermissions(QUaUser * user)
+{
+	ui->widgetUserEdit->setEnabled(true);
+	// if no user then clear
+	if (!user)
+	{
+		this->clearWidgetUserEdit();
+		return;
+	}
+	// permission to delete user or modify role come from user list permissions
+	auto listPerms = user->list()->permissionsObject();
+	if (!listPerms)
+	{
+		// no perms set, means all permissions
+		ui->widgetUserEdit->setDeleteVisible(true);
+		ui->widgetUserEdit->setRoleReadOnly(false);
+	}
+	else
+	{
+		ui->widgetUserEdit->setDeleteVisible(listPerms->canUserWrite(user));
+		ui->widgetUserEdit->setRoleReadOnly(!listPerms->canUserWrite(user));
+	}
+
+	// permission to change password comes from individual user permissions
+	auto dispUser = user->list()->user(ui->widgetUserEdit->userName());
+	if (!dispUser)
+	{
+		this->clearWidgetUserEdit();
+		return;
+	}
+	auto dispPerms = dispUser->permissionsObject();
+	// no perms set, means all permissions
+	if (!dispPerms)
+	{
+		ui->widgetUserEdit->setPasswordVisible(true);
+		return;
+	}
+	if (!dispPerms->canUserRead(user))
+	{
+		this->clearWidgetUserEdit();
+		return;
+	}
+	if (dispPerms->canUserWrite(user))
+	{
+		ui->widgetUserEdit->setPasswordVisible(true);
+	}
+	else
+	{
+		ui->widgetUserEdit->setPasswordVisible(false);
+	}
 }

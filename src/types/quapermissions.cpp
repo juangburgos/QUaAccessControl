@@ -362,24 +362,24 @@ QList<QUaUser*> QUaPermissions::usersCanWrite() const
 
 bool QUaPermissions::canRoleRead(QUaRole * role) const
 {
-	return this->rolesCanRead().contains(role);
+	return role ? this->rolesCanRead().contains(role) : false;
 }
 
 bool QUaPermissions::canRoleWrite(QUaRole * role) const
 {
-	return this->rolesCanWrite().contains(role);
+	return role ? this->rolesCanWrite().contains(role) : false;
 }
 
 bool QUaPermissions::canUserRead(QUaUser * user) const
 {
 	// always consider root user
-	return this->canUserReadDirectly(user) || this->canRoleRead(user->role()) || user->isRootUser();
+	return user ? this->canUserReadDirectly(user) || this->canRoleRead(user->role()) || user->isRootUser() : false;
 }
 
 bool QUaPermissions::canUserWrite(QUaUser * user) const
 {
 	// always consider root user
-	return this->canUserWriteDirectly(user) || this->canRoleWrite(user->role()) || user->isRootUser();
+	return user ? this->canUserWriteDirectly(user) || this->canRoleWrite(user->role()) || user->isRootUser() : false;
 }
 
 bool QUaPermissions::canRoleRead(const QString strRoleName) const
@@ -570,10 +570,10 @@ QList<QUaUser*> QUaPermissions::usersCanWriteDirectly() const
 
 bool QUaPermissions::canUserReadDirectly(QUaUser * user) const
 {
-	return this->usersCanReadDirectly().contains(user);
+	return user ? this->usersCanReadDirectly().contains(user) : false;
 }
 
 bool QUaPermissions::canUserWriteDirectly(QUaUser * user) const
 {
-	return this->usersCanWriteDirectly().contains(user);
+	return user ? this->usersCanWriteDirectly().contains(user) : false;
 }

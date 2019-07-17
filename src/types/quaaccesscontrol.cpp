@@ -59,6 +59,13 @@ QString QUaAccessControl::setXmlConfig(QString strXmlConfig)
 	return strError;
 }
 
+void QUaAccessControl::clear()
+{
+	this->permissions()->clear();
+	this->roles()->clear();
+	this->users()->clear();
+}
+
 QUaUserList * QUaAccessControl::users() const
 {
 	return this->browseChild<QUaUserList>("Users");

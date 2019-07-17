@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>254</width>
-    <height>229</height>
+    <width>252</width>
+    <height>227</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,6 +36,16 @@
    <item row="0" column="1">
     <widget class="QLineEdit" name="lineEditUserName"/>
    </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelRole">
+     <property name="text">
+      <string>Role : </string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QUaAcReadOnlyComboBox" name="comboBoxRole"/>
+   </item>
    <item row="2" column="0">
     <widget class="QLabel" name="labelPassword">
      <property name="text">
@@ -60,15 +70,63 @@
    <item row="3" column="1">
     <widget class="QPlainTextEdit" name="plainTextEditHash"/>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="labelRole">
-     <property name="text">
-      <string>Role : </string>
+   <item row="4" column="0" colspan="2">
+    <widget class="QFrame" name="frameEditActions">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item row="0" column="0" colspan="3">
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="pushButtonDelete">
+        <property name="text">
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>85</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="pushButtonApply">
+        <property name="text">
+         <string>Apply</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QUaAcReadOnlyComboBox" name="comboBoxRole"/>
    </item>
   </layout>
  </widget>

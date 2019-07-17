@@ -47,10 +47,15 @@ private:
 	void      setLoggedUser(QUaUser * user);
 
 	void login();
+	void logout();
 	void showCreateRootUserDialog (QUaAcCommonDialog &dialog);
 	void showUserCredentialsDialog(QUaAcCommonDialog &dialog);
 
-	void bindUserWidgetEdit(QUaUser * user);
+	void clearApplication();
+
+	void bindWidgetUserEdit(QUaUser * user);
+	void clearWidgetUserEdit();
+	void setWidgetUserEditPermissions(QUaUser * user);
 };
 
 #endif // QUAUSERTABLETESTDIALOG_H

@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include <QStandardItemModel>
-#include <QSortFilterProxyModel>
+#include <QUaAcCommonWidgets>
 
 namespace Ui {
 class QUaUserTable;
@@ -21,7 +21,8 @@ public:
     explicit QUaUserTable(QWidget *parent = nullptr);
     ~QUaUserTable();
 
-	// TODO : pass in logged user (permissions, disable everything if no logged user)
+	bool isAddVisible() const;
+	void setAddVisible(const bool &isVisible);
 
 	QUaAccessControl * accessControl() const;
 	void setAccessControl(QUaAccessControl * ac);
@@ -31,22 +32,25 @@ public:
 	{
 		Name      = 0,
 		Role      = 1,
-		Actions   = 2,
-		Invalid   = 3
+		Invalid   = 2
 	};
 	Q_ENUM(Headers)
 
 signals:
 	void userSelectionChanged(QUaUser * userPrev, QUaUser * userCurr);
 
+public slots:
+	void on_loggedUserChanged(QUaUser * user);
+
 private slots:
     void on_pushButtonAdd_clicked();
 
 private:
     Ui::QUaUserTable *ui;
-	QUaAccessControl    * m_ac;
-	QStandardItemModel    m_modelUsers;
-	QSortFilterProxyModel m_proxyUsers;
+	QUaAccessControl     * m_ac;
+	QStandardItemModel     m_modelUsers;
+	QUaAcLambdaFilterProxy m_proxyUsers;
+	QUaUser              * m_loggedUser;
 
 	void showNewUserDialog(QUaAcCommonDialog &dialog);
 	QStandardItem *  handleUserAdded(QUaUser * user);

@@ -3,10 +3,12 @@
 
 #include <QMessageBox>
 #include <QMetaEnum>
+#include <QPainter>
 
 #include <QUaAccessControl>
 #include <QUaUser>
 #include <QUaRole>
+#include <QUaPermissions>
 
 #include <QUaAcCommonDialog>
 #include <QUaUserWidgetEdit>
@@ -19,6 +21,7 @@ QUaUserTable::QUaUserTable(QWidget *parent) :
 {
     ui->setupUi(this);
 	m_ac = nullptr;
+	m_loggedUser = nullptr;
 	// setup add button
 	ui->pushButtonAdd->setEnabled(false); // disable until ac is set
 	ui->pushButtonAdd->setFocusPolicy(Qt::FocusPolicy::NoFocus);
@@ -32,6 +35,42 @@ QUaUserTable::QUaUserTable(QWidget *parent) :
 	m_modelUsers.setHorizontalHeaderLabels(alarmHeaders);
 	// setup user sort filter
 	m_proxyUsers.setSourceModel(&m_modelUsers);
+	m_proxyUsers.setFilterAcceptsRow([this](int sourceRow, const QModelIndex & sourceParent) {
+		Q_UNUSED(sourceParent);
+		// if no logged user, then no show
+		if (!m_loggedUser)
+		{
+			return false;
+		}
+		// get any item
+		auto iName = m_modelUsers.item(sourceRow, (int)Headers::Name);
+		// no item, nothing to do
+		if (!iName)
+		{
+			return false;
+		}
+		// get user permissions
+		auto user  = iName->data(QUaUserTable::PointerRole).value<QUaUser*>();
+		Q_CHECK_PTR(user);
+		if (!user)
+		{
+			return false;
+		}
+		// if no permissions, then full access
+		auto perms = user->permissionsObject();
+		if (!perms)
+		{
+			return true;
+		}
+		// if no can read, then no show
+		if (!perms->canUserRead(m_loggedUser))
+		{
+			return false;
+		}
+		// return yes can read
+		return true;
+	});
+
 	// setup user table
 	ui->tableViewUsers->setModel(&m_proxyUsers);
 	ui->tableViewUsers->setAlternatingRowColors(true);
@@ -69,6 +108,17 @@ QUaUserTable::~QUaUserTable()
     delete ui;
 }
 
+bool QUaUserTable::isAddVisible() const
+{
+	return ui->pushButtonAdd->isEnabled();
+}
+
+void QUaUserTable::setAddVisible(const bool & isVisible)
+{
+	ui->pushButtonAdd->setEnabled(isVisible);
+	ui->pushButtonAdd->setVisible(isVisible);
+}
+
 QUaAccessControl * QUaUserTable::accessControl() const
 {
 	return m_ac;
@@ -91,7 +141,7 @@ void QUaUserTable::setAccessControl(QUaAccessControl * ac)
 	// subscribe to user added
 	// NOTE : needs to be a queued connection because we want to wait until browseName is set
 	QObject::connect(m_ac->users(), &QUaUserList::userAdded, this,
-		[this](QUaUser * user) {
+	[this](QUaUser * user) {
 		Q_CHECK_PTR(user);
 		// add to gui
 		auto item = this->handleUserAdded(user);
@@ -111,6 +161,32 @@ void QUaUserTable::setAccessControl(QUaAccessControl * ac)
 	}
 }
 
+void QUaUserTable::on_loggedUserChanged(QUaUser * user)
+{
+	m_loggedUser = user;
+	// update table filter
+	m_proxyUsers.resetFilter();
+
+	// update add user permissions (from user list)
+
+	// cannot add users if no access control exists
+	// or if no user logged in 
+	if (!m_ac || !user)
+	{
+		
+		this->setAddVisible(false);
+		return;
+	}
+	auto perms = m_ac->users()->permissionsObject();
+	if (!perms)
+	{
+		this->setAddVisible(true);
+		return;
+	}
+	// if permissions for user list allow to write, then can add users
+	this->setAddVisible(perms->canUserWrite(user));
+}
+
 void QUaUserTable::on_pushButtonAdd_clicked()
 {
 	if (!m_ac)
@@ -119,6 +195,7 @@ void QUaUserTable::on_pushButtonAdd_clicked()
 	}
 	// setup widget
 	QUaUserWidgetEdit * widgetNewUser = new QUaUserWidgetEdit;
+	widgetNewUser->setActionsVisible(false);
 	widgetNewUser->setHashVisible(false);
 	widgetNewUser->setRoleList(m_ac->roles());
 	// NOTE : dialog takes ownershit
@@ -171,9 +248,10 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 
 	// name column
 	auto iName = new QStandardItem(user->getName());
-	parent->setChild(row, (int)Headers::Name, iName);
 	// set data
 	iName->setData(QVariant::fromValue(user), QUaUserTable::PointerRole);
+	// add after data
+	parent->setChild(row, (int)Headers::Name, iName);
 
 	// role column
 	QString strRole = "";
@@ -183,9 +261,10 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 		strRole = role->getName();
 	}
 	auto iRole = new QStandardItem(strRole);
-	parent->setChild(row, (int)Headers::Role, iRole);
 	// set data
 	iRole->setData(QVariant::fromValue(user), QUaUserTable::PointerRole);
+	// add after data
+	parent->setChild(row, (int)Headers::Role, iRole);
 	// updates
 	QObject::connect(user, &QUaUser::roleChanged, this,
 	[iRole](QUaRole * role) {
@@ -197,35 +276,7 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 		iRole->setText(strRole);
 	});
 
-	// actions column
-	auto iActs = new QStandardItem();
-	parent->setChild(row, (int)Headers::Actions, iActs);
-	// set data
-	iActs->setData(QVariant::fromValue(user), QUaUserTable::PointerRole   );
-	// widgets
-	QWidget     *pWidget = new QWidget;
-	QHBoxLayout *pLayout = new QHBoxLayout;
-	QSpacerItem *pSpacer = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
-	QPushButton *pButDel = new QPushButton;
-	// delete button
-	pButDel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-	pButDel->setText(tr("Delete"));
-	pButDel->setObjectName("Delete");
-	pButDel->setFocusPolicy(Qt::FocusPolicy::NoFocus);
-	QObject::connect(pButDel, &QPushButton::clicked, user,
-	[user]() {
-		Q_CHECK_PTR(user);
-		user->remove();
-		// NOTE : removed from tree on &QObject::destroyed callback below
-	});
-	// layout
-	pLayout->addSpacerItem(pSpacer);
-	pLayout->addWidget(pButDel);
-	pLayout->setContentsMargins(5, 0, 5, 0);
-	pWidget->setLayout(pLayout);
-	ui->tableViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iActs->index()), pWidget);
-
-	// ua delete
+	// romev row if deleted
 	// NOTE : set this as receiver, so callback is not called if this has been deleted
 	QObject::connect(user, &QObject::destroyed, this,
 	[this, iName]() {

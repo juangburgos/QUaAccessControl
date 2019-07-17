@@ -11,6 +11,9 @@ QUaUserWidgetEdit::QUaUserWidgetEdit(QWidget *parent) :
     ui(new Ui::QUaUserWidgetEdit)
 {
     ui->setupUi(this);
+	// forward signals
+	QObject::connect(ui->pushButtonDelete, &QPushButton::clicked, this, &QUaUserWidgetEdit::deleteClicked);
+	QObject::connect(ui->pushButtonApply , &QPushButton::clicked, this, &QUaUserWidgetEdit::applyClicked );
 	// setup combo model
 	m_proxyCombo.setSourceModel(&m_modelCombo);
 	// setup combo
@@ -86,6 +89,28 @@ void QUaUserWidgetEdit::setPasswordVisible(const bool & isVisible)
 	ui->lineEditPass->setVisible(isVisible);
 	ui->labelPassword->setEnabled(isVisible);
 	ui->labelPassword->setVisible(isVisible);
+}
+
+bool QUaUserWidgetEdit::areActionsVisible() const
+{
+	return ui->frameEditActions->isEnabled();
+}
+
+void QUaUserWidgetEdit::setActionsVisible(const bool & isVisible)
+{
+	ui->frameEditActions->setEnabled(isVisible);
+	ui->frameEditActions->setVisible(isVisible);
+}
+
+bool QUaUserWidgetEdit::isDeleteVisible() const
+{
+	return ui->pushButtonDelete->isEnabled();
+}
+
+void QUaUserWidgetEdit::setDeleteVisible(const bool & isVisible)
+{
+	ui->pushButtonDelete->setEnabled(isVisible);
+	ui->pushButtonDelete->setVisible(isVisible);
 }
 
 void QUaUserWidgetEdit::setRoleList(const QUaRoleList * listRoles)

@@ -36,6 +36,12 @@ public:
 	bool isPasswordVisible() const;
 	void setPasswordVisible(const bool &isVisible);
 
+	bool areActionsVisible() const;
+	void setActionsVisible(const bool &isVisible);
+
+	bool isDeleteVisible() const;
+	void setDeleteVisible(const bool &isVisible);
+
 	void setRoleList(const QUaRoleList * listRoles);
 
 	QString userName() const;
@@ -49,6 +55,10 @@ public:
 
 	QString hash() const;
 	void    setHash(const QString &strHexHash);
+
+signals:
+	void deleteClicked();
+	void applyClicked();
 
 private:
     Ui::QUaUserWidgetEdit *ui;

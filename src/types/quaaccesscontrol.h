@@ -24,6 +24,8 @@ public:
 
 	Q_INVOKABLE QString setXmlConfig(QString strXmlConfig);
 
+	Q_INVOKABLE void clear();
+
 	// UA variables
 
 	QUaUserList        * users() const;

@@ -42,3 +42,28 @@ void QUaAcReadOnlyComboBox::wheelEvent(QWheelEvent * e)
 	}
 	QComboBox::wheelEvent(e);
 }
+
+/*---------------------------------------------------------------------------------------------
+*/
+
+QUaAcLambdaFilterProxy::QUaAcLambdaFilterProxy(QObject *parent/* = 0*/)
+	: QSortFilterProxyModel(parent)
+{
+
+}
+
+void QUaAcLambdaFilterProxy::resetFilter()
+{
+	this->invalidateFilter();
+}
+
+bool QUaAcLambdaFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex & sourceParent) const
+{
+	return m_filterAcceptsRow ? m_filterAcceptsRow(sourceRow, sourceParent) : QSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent);
+}
+
+bool QUaAcLambdaFilterProxy::lessThan(const QModelIndex & left, const QModelIndex & right) const
+{
+	return m_lessThan ? m_lessThan(left, right) : QSortFilterProxyModel::lessThan(left, right);
+}
+
