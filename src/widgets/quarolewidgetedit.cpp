@@ -20,12 +20,12 @@ QUaRoleWidgetEdit::QUaRoleWidgetEdit(QWidget *parent) :
 	// setup table
 	// setup users table model
 	m_modelUsers.setColumnCount((int)Headers::Invalid);
-	QStringList alarmHeaders;
+	QStringList userHeaders;
 	for (int i = (int)Headers::Name; i < (int)Headers::Invalid; i++)
 	{
-		alarmHeaders << QString(QMetaEnum::fromType<Headers>().valueToKey(i));
+		userHeaders << QString(QMetaEnum::fromType<Headers>().valueToKey(i));
 	}
-	m_modelUsers.setHorizontalHeaderLabels(alarmHeaders);
+	m_modelUsers.setHorizontalHeaderLabels(userHeaders);
 	// setup user sort filter
 	m_proxyUsers.setSourceModel(&m_modelUsers);
 	// setup user table

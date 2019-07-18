@@ -27,12 +27,12 @@ QUaRoleTable::QUaRoleTable(QWidget *parent) :
 	ui->pushButtonAdd->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 	// setup users table model
 	m_modelRoles.setColumnCount((int)Headers::Invalid);
-	QStringList alarmHeaders;
+	QStringList roleHeaders;
 	for (int i = (int)Headers::Name; i < (int)Headers::Invalid; i++)
 	{
-		alarmHeaders << QString(QMetaEnum::fromType<Headers>().valueToKey(i));
+		roleHeaders << QString(QMetaEnum::fromType<Headers>().valueToKey(i));
 	}
-	m_modelRoles.setHorizontalHeaderLabels(alarmHeaders);
+	m_modelRoles.setHorizontalHeaderLabels(roleHeaders);
 	// setup user sort filter
 	m_proxyRoles.setSourceModel(&m_modelRoles);
 	m_proxyRoles.setFilterAcceptsRow([this](int sourceRow, const QModelIndex & sourceParent) {

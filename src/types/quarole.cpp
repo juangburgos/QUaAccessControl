@@ -13,9 +13,9 @@ QUaRole::QUaRole(QUaServer *server)
 
 void QUaRole::remove()
 {
+	this->deleteLater();
 	// NOTE : destroyed signal is too late
 	emit this->list()->roleRemoved(this);
-	this->deleteLater();
 }
 
 QString QUaRole::getName() const

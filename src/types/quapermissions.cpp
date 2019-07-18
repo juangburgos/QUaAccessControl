@@ -18,9 +18,9 @@ QUaPermissions::QUaPermissions(QUaServer *server)
 
 void QUaPermissions::remove()
 {
+	this->deleteLater();
 	// NOTE : destroyed signal is too late
 	emit this->list()->permissionsRemoved(this);
-	this->deleteLater();
 }
 
 QString QUaPermissions::addRoleCanRead(QList<QString> strRolePath)

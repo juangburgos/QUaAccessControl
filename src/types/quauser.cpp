@@ -27,9 +27,9 @@ QUaProperty * QUaUser::hash() const
 
 void QUaUser::remove()
 {
+	this->deleteLater();
 	// NOTE : destroyed signal is too late
 	emit this->list()->userRemoved(this);
-	this->deleteLater();
 }
 
 QString QUaUser::setPassword(QString strPassword)

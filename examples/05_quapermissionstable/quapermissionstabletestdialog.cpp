@@ -1,5 +1,5 @@
-#include "quaroletabletestdialog.h"
-#include "ui_quaroletabletestdialog.h"
+#include "quapermissionstabletestdialog.h"
+#include "ui_quapermissionstabletestdialog.h"
 
 #include <QMessageAuthenticationCode>
 #include <QFile>
@@ -15,20 +15,20 @@
 #include <QUaPermissions>
 
 #include <QUaAcCommonDialog>
-#include <QUaRoleWidgetEdit>
+#include <QUaPermissionsWidgetEdit>
 #include <QUaUserWidgetEdit>
 
-QUaRoleTableTestDialog::QUaRoleTableTestDialog(QWidget *parent) :
+QUaPermissionsTableTestDialog::QUaPermissionsTableTestDialog(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::QUaRoleTableTestDialog)
+    ui(new Ui::QUaPermissionsTableTestDialog)
 {
     ui->setupUi(this);
 	m_deleting = false;
 	// hide apply button until some valid object selected
-	ui->widgetRoleEdit->setEnabled(false);
+	ui->widgetPermissionsEdit->setEnabled(false);
 	// logged in user
 	m_loggedUser = nullptr;
-	QObject::connect(this, &QUaRoleTableTestDialog::loggedUserChanged, this, &QUaRoleTableTestDialog::on_loggedUserChanged);
+	QObject::connect(this, &QUaPermissionsTableTestDialog::loggedUserChanged, this, &QUaPermissionsTableTestDialog::on_loggedUserChanged);
 	// app secret
 	m_strSecret = "my_secret";
 	// setup access control information model
@@ -113,24 +113,35 @@ QUaRoleTableTestDialog::QUaRoleTableTestDialog(QWidget *parent) :
 		}
 		permissions->deleteLater();
 	});
+	// setup auto add new role permissions
+	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsAdded,
+	[ac](QUaPermissions * perms) {
+		// return if permissions already has permissions
+		if (perms->hasPermissionsObject())
+		{
+			return;
+		}
+		// assign to itself
+		perms->setPermissionsObject(perms);
+	});
 
 	// set ac to table
-	QObject::connect(this, &QUaRoleTableTestDialog::loggedUserChanged, ui->widgetRoleTable, &QUaRoleTable::on_loggedUserChanged);
-	ui->widgetRoleTable->setAccessControl(ac);
+	QObject::connect(this, &QUaPermissionsTableTestDialog::loggedUserChanged, ui->widgetPermissionsTable, &QUaPermissionsTable::on_loggedUserChanged);
+	ui->widgetPermissionsTable->setAccessControl(ac);
 
 	// handle table events (user selection)
 	// change widgets
-	QObject::connect(ui->widgetRoleTable, &QUaRoleTable::roleSelectionChanged, this,
-	[this](QUaRole * rolePrev, QUaRole * roleCurr)
+	QObject::connect(ui->widgetPermissionsTable, &QUaPermissionsTable::permissionsSelectionChanged, this,
+	[this](QUaPermissions * permsPrev, QUaPermissions * permsCurr)
 	{
-		Q_UNUSED(rolePrev);
+		Q_UNUSED(permsPrev);
 		// early exit
-		if (!roleCurr || m_deleting)
+		if (!permsCurr || m_deleting)
 		{
 			return;
 		}
 		// bind widget for current selection
-		this->bindWidgetRoleEdit(roleCurr);
+		this->bindWidgetPermissionsEdit(permsCurr);
 	});
 
 	// start server
@@ -140,13 +151,13 @@ QUaRoleTableTestDialog::QUaRoleTableTestDialog(QWidget *parent) :
 	this->logout();
 }
 
-QUaRoleTableTestDialog::~QUaRoleTableTestDialog()
+QUaPermissionsTableTestDialog::~QUaPermissionsTableTestDialog()
 {
 	m_deleting = true;
     delete ui;
 }
 
-void QUaRoleTableTestDialog::on_pushButtonImport_clicked()
+void QUaPermissionsTableTestDialog::on_pushButtonImport_clicked()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -197,6 +208,8 @@ void QUaRoleTableTestDialog::on_pushButtonImport_clicked()
 		// compare computed key with loaded key
 		if (byteKey == keyComputed)
 		{
+			// clear old config
+			this->clearApplication();
 			// try load config
 			auto strError = ac->setXmlConfig(byteContents);
 			if (strError.contains("Error"))
@@ -210,7 +223,7 @@ void QUaRoleTableTestDialog::on_pushButtonImport_clicked()
 		}
 		else
 		{
-			msgBox.setText(tr("Corrupted file %1. Contents does not match key stored in %2.").arg(strConfigFileName).arg(strKeyFileName));
+			msgBox.setText(tr("Corrupted file %1.\nContents do not match key stored in %2.").arg(strConfigFileName).arg(strKeyFileName));
 			msgBox.exec();
 		}
 	}
@@ -221,7 +234,7 @@ void QUaRoleTableTestDialog::on_pushButtonImport_clicked()
 	}
 }
 
-void QUaRoleTableTestDialog::on_pushButtonExport_clicked()
+void QUaPermissionsTableTestDialog::on_pushButtonExport_clicked()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -279,20 +292,20 @@ void QUaRoleTableTestDialog::on_pushButtonExport_clicked()
 	fileKey.close();
 }
 
-void QUaRoleTableTestDialog::on_pushButtonLogin_clicked()
+void QUaPermissionsTableTestDialog::on_pushButtonLogin_clicked()
 {
 	this->login();
 }
 
-void QUaRoleTableTestDialog::on_pushButtonLogout_clicked()
+void QUaPermissionsTableTestDialog::on_pushButtonLogout_clicked()
 {
 	this->logout();
 }
 
-void QUaRoleTableTestDialog::on_loggedUserChanged(QUaUser * user)
+void QUaPermissionsTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->setWidgetRoleEditPermissions(user);
+	this->setWidgetPermissionsEditPermissions(user);
 	// update ui
 	if (!user)
 	{
@@ -300,7 +313,7 @@ void QUaRoleTableTestDialog::on_loggedUserChanged(QUaUser * user)
 		ui->lineEditLoggedUser->setText("");
 		ui->pushButtonLogout->setEnabled(false);
 		// clear user edit widget
-		this->clearWidgetRoleEdit();
+		this->clearWidgetPermissionsEdit();
 		return;
 	}
 	// logged in user
@@ -308,18 +321,18 @@ void QUaRoleTableTestDialog::on_loggedUserChanged(QUaUser * user)
 	ui->pushButtonLogout->setEnabled(true);
 }
 
-QUaUser * QUaRoleTableTestDialog::loggedUser() const
+QUaUser * QUaPermissionsTableTestDialog::loggedUser() const
 {
 	return m_loggedUser;
 }
 
-void QUaRoleTableTestDialog::setLoggedUser(QUaUser * user)
+void QUaPermissionsTableTestDialog::setLoggedUser(QUaUser * user)
 {
 	m_loggedUser = user;
 	emit this->loggedUserChanged(m_loggedUser);
 }
 
-void QUaRoleTableTestDialog::login()
+void QUaPermissionsTableTestDialog::login()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -355,13 +368,13 @@ void QUaRoleTableTestDialog::login()
 	this->showUserCredentialsDialog(dialog);
 }
 
-void QUaRoleTableTestDialog::logout()
+void QUaPermissionsTableTestDialog::logout()
 {
 	// logout
 	this->setLoggedUser(nullptr);
 }
 
-void QUaRoleTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
+void QUaPermissionsTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
 {
 	int res = dialog.exec();
 	if (res != QDialog::Accepted)
@@ -415,7 +428,7 @@ void QUaRoleTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog
 	this->setLoggedUser(root);
 }
 
-void QUaRoleTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialog)
+void QUaPermissionsTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialog)
 {
 	int res = dialog.exec();
 	if (res != QDialog::Accepted)
@@ -456,7 +469,7 @@ void QUaRoleTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialo
 	this->setLoggedUser(user);
 }
 
-void QUaRoleTableTestDialog::clearApplication()
+void QUaPermissionsTableTestDialog::clearApplication()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -465,18 +478,23 @@ void QUaRoleTableTestDialog::clearApplication()
 	// clear config
 	ac->clear();
 	// clear user edit widget
-	this->clearWidgetRoleEdit();
+	this->clearWidgetPermissionsEdit();
 }
 
-void QUaRoleTableTestDialog::clearWidgetRoleEdit()
+void QUaPermissionsTableTestDialog::clearWidgetPermissionsEdit()
 {
-	ui->widgetRoleEdit->setRoleName("");
-	ui->widgetRoleEdit->setUsers(QStringList());
-	ui->widgetRoleEdit->setEnabled(false);
+	ui->widgetPermissionsEdit->setId("");
+	ui->widgetPermissionsEdit->setRoleAccessMap(QUaRoleAccessMap());
+	ui->widgetPermissionsEdit->setUserAccessMap(QUaUserAccessMap());
+	ui->widgetPermissionsEdit->setEnabled(false);
 }
 
-void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
+void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * perms)
 {
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
 	// disable old connections
 	while (m_connections.count() > 0)
 	{
@@ -484,107 +502,178 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 	}
 	// bind common
 	m_connections <<
-	QObject::connect(role, &QObject::destroyed, this,
+	QObject::connect(perms, &QObject::destroyed, this,
 	[this]() {
 		if (m_deleting)
 		{
 			return;
 		}
 		// clear widget
-		this->clearWidgetRoleEdit();
+		this->clearWidgetPermissionsEdit();
 	});
 	// name
-	ui->widgetRoleEdit->setRoleNameReadOnly(true);
-	ui->widgetRoleEdit->setRoleName(role->getName());
-	// users
-	QStringList listUsers;
-	for (auto user : role->users())
+	ui->widgetPermissionsEdit->setIdReadOnly(true);
+	ui->widgetPermissionsEdit->setId(perms->getId());
+
+	// roles (all)
+	QUaRoleAccessMap mapRoles;
+	auto roles = ac->roles()->roles();
+	for (auto role : roles)
 	{
-		QString strUserName = user->getName();
-		listUsers << strUserName;
-		// suscribe used destroyed
-		m_connections <<
-		QObject::connect(user, &QObject::destroyed, this,
-		[this, strUserName]() {
-			if (m_deleting)
-			{
-				return;
-			}
-			ui->widgetRoleEdit->removeUser(strUserName);
-		});
+		mapRoles[role->getName()] = {
+			perms->canRoleRead(role),
+			perms->canRoleWrite(role)
+		};
 	}
-	ui->widgetRoleEdit->setUsers(listUsers);
-	// subscribe user added
-	m_connections <<
-	QObject::connect(role, &QUaRole::userAdded, this,
-	[this](QUaUser * user) {
-		if (m_deleting)
+	ui->widgetPermissionsEdit->setRoleAccessMap(mapRoles);
+
+	// users (all)
+	QUaUserAccessMap mapUsers;
+	auto users = ac->users()->users();
+	for (auto user : users)
+	{
+		mapUsers[user->getName()] = {
+			perms->canUserReadDirectly (user),
+			perms->canUserWriteDirectly(user),
+			perms->canRoleRead (user->role()),
+			perms->canRoleWrite(user->role())
+		};
+	}
+	ui->widgetPermissionsEdit->setUserAccessMap(mapUsers);
+
+	// role updates
+	auto updateRole = [this, perms](QUaRole * role) {
+		// role table
+		ui->widgetPermissionsEdit->updateRoleAccess(
+			role->getName(),
+			{ perms->canRoleRead(role), perms->canRoleWrite(role) }
+		);
+		// user table
+		auto users = role->users();
+		for (auto user : users)
 		{
-			return;
+			ui->widgetPermissionsEdit->updateUserAccess(
+				user->getName(), 
+				{
+				perms->canUserReadDirectly (user),
+				perms->canUserWriteDirectly(user),
+				perms->canRoleRead (user->role()),
+				perms->canRoleWrite(user->role())
+				}
+			);
 		}
-		ui->widgetRoleEdit->addUser(user->getName());
-	});
-	// subscribe user removed
+	};
+	m_connections << QObject::connect(perms, &QUaPermissions::canReadRoleAdded   , this, updateRole, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canReadRoleRemoved , this, updateRole, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canWriteRoleAdded  , this, updateRole, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canWriteRoleRemoved, this, updateRole, Qt::QueuedConnection);
+
+	// user updates
+	auto updateUser = [this, perms](QUaUser * user) {
+		ui->widgetPermissionsEdit->updateUserAccess(
+			user->getName(), 
+			{
+			perms->canUserReadDirectly (user),
+			perms->canUserWriteDirectly(user),
+			perms->canRoleRead (user->role()),
+			perms->canRoleWrite(user->role())
+			}
+		);
+	};
+	m_connections << QObject::connect(perms, &QUaPermissions::canReadUserAdded   , this, updateUser, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canReadUserRemoved , this, updateUser, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canWriteUserAdded  , this, updateUser, Qt::QueuedConnection);
+	m_connections << QObject::connect(perms, &QUaPermissions::canWriteUserRemoved, this, updateUser, Qt::QueuedConnection);
+
+	// on user or role added/removed
+	auto resetPermsWidget = [this, perms]() {
+		this->bindWidgetPermissionsEdit(perms);
+	};
+	// NOTE : queued to wait until user/role has name or has actually been deleted
+	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleAdded  , this, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, this, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->users(), &QUaUserList::userAdded  , this, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->users(), &QUaUserList::userRemoved, this, resetPermsWidget, Qt::QueuedConnection);
+
+	// on click apply
 	m_connections <<
-	QObject::connect(role, &QUaRole::userRemoved, this,
-	[this](QUaUser * user) {
-		if (m_deleting)
+	QObject::connect(ui->widgetPermissionsEdit, &QUaPermissionsWidgetEdit::applyClicked, perms,
+	[this, ac, perms]() {
+		// update roles access
+		auto roleMap = ui->widgetPermissionsEdit->roleAccessMap();
+		QUaRoleAccessIter i(roleMap);
+		while (i.hasNext())
 		{
-			return;
+			i.next();		
+			auto role = ac->roles()->role(i.key());
+			Q_CHECK_PTR(role);
+			i.value().canRead  ? perms->addRoleCanRead (role) : perms->removeRoleCanRead (role);
+			i.value().canWrite ? perms->addRoleCanWrite(role) : perms->removeRoleCanWrite(role);
 		}
-		ui->widgetRoleEdit->removeUser(user->getName());
+		// update users access
+		auto userMap = ui->widgetPermissionsEdit->userAccessMap();
+		QUaUserAccessIter k(userMap);
+		while (k.hasNext())
+		{
+			k.next();
+			auto user = ac->users()->user(k.key());
+			Q_CHECK_PTR(user);
+			k.value().canUserRead  ? perms->addUserCanRead (user) : perms->removeUserCanRead (user);
+			k.value().canUserWrite ? perms->addUserCanWrite(user) : perms->removeUserCanWrite(user);
+		}
 	});
+
 	// on click delete
 	m_connections <<
-	QObject::connect(ui->widgetRoleEdit, &QUaRoleWidgetEdit::deleteClicked, role,
-	[role]() {
-		role->deleteLater();
+	QObject::connect(ui->widgetPermissionsEdit, &QUaPermissionsWidgetEdit::deleteClicked, perms,
+	[perms]() {
+		perms->deleteLater();
 	});
 
 	// set permissions
-	this->setWidgetRoleEditPermissions(m_loggedUser);
+	this->setWidgetPermissionsEditPermissions(m_loggedUser);
 }
 
-void QUaRoleTableTestDialog::setWidgetRoleEditPermissions(QUaUser * user)
+void QUaPermissionsTableTestDialog::setWidgetPermissionsEditPermissions(QUaUser * user)
 {
-	ui->widgetRoleEdit->setEnabled(true);
+	ui->widgetPermissionsEdit->setEnabled(true);
 	// if no user then clear
 	if (!user)
 	{
-		this->clearWidgetRoleEdit();
+		this->clearWidgetPermissionsEdit();
 		return;
 	}
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
 	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
 	Q_CHECK_PTR(ac);
-	// permission to delete role and see users come from role list permissions
-	auto dispRole  = ac->roles()->role(ui->widgetRoleEdit->roleName());
-	if (!dispRole)
+	// permission to delete permissions and see role/user access come from role list permissions
+	auto dispPerms = ac->permissions()->permission(ui->widgetPermissionsEdit->id());
+	if (!dispPerms)
 	{
-		this->clearWidgetRoleEdit();
+		this->clearWidgetPermissionsEdit();
 		return;
 	}
-	auto listPerms = dispRole->list()->permissionsObject();
+	auto listPerms = dispPerms->list()->permissionsObject();
 	if (!listPerms)
 	{
 		// no perms set, means all permissions
-		ui->widgetRoleEdit->setActionsVisible(true);
-		ui->widgetRoleEdit->setUserListVisible(true);
+		ui->widgetPermissionsEdit->setActionsVisible(true);
+		ui->widgetPermissionsEdit->setAccessVisible(true);
 	}
 	else
 	{
-		ui->widgetRoleEdit->setActionsVisible(listPerms->canUserWrite(user));
-		ui->widgetRoleEdit->setUserListVisible(listPerms->canUserRead(user));
+		ui->widgetPermissionsEdit->setActionsVisible(listPerms->canUserWrite(user));
+		ui->widgetPermissionsEdit->setAccessVisible(listPerms->canUserRead(user));
 	}
-	auto dispPerms = dispRole->permissionsObject();
-	// no perms set, means all permissions (only read apply to role, nothing to modify)
-	if (!dispPerms)
+	auto dispPermsPerms = dispPerms->permissionsObject();
+	// no perms set, means all permissions (only read apply to perms, nothing else left to modify)
+	if (!dispPermsPerms)
 	{
 		return;
 	}
-	if (!dispPerms->canUserRead(user))
+	if (!dispPermsPerms->canUserRead(user))
 	{
-		this->clearWidgetRoleEdit();
+		this->clearWidgetPermissionsEdit();
 	}
 }
