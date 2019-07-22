@@ -23,7 +23,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 	m_deleting = false;
-	// hide apply button until some valid object selected
+	// disable until some valid object selected
 	ui->widgetUserEdit->setEnabled(false);
 	ui->widgetUserEdit->setRepeatVisible(true);
 	// logged in user

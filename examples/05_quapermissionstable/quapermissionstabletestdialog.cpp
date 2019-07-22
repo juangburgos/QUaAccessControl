@@ -24,7 +24,7 @@ QUaPermissionsTableTestDialog::QUaPermissionsTableTestDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 	m_deleting = false;
-	// hide apply button until some valid object selected
+	// disable until some valid object selected
 	ui->widgetPermissionsEdit->setEnabled(false);
 	// logged in user
 	m_loggedUser = nullptr;

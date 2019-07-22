@@ -2,3 +2,7 @@
 	path = libs/QUaServer.git
 	url = https://github.com/juangburgos/QUaServer.git
 	branch = master
+[submodule "libs/QAdvancedDocking.git"]
+	path = libs/QAdvancedDocking.git
+	url = https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git
+	branch = master
