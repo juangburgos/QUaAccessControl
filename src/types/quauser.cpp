@@ -59,26 +59,23 @@ QString QUaUser::setPassword(QString strPassword)
 	return "Success";
 }
 
-QString QUaUser::setRole(QList<QString> strRolePath)
+QString QUaUser::setRole(QString strRoleNodeId)
 {
-	// get target node
-	QUaNode * node = this->server()->browsePath(strRolePath);
+	// check if exists
+	QUaNode * node = this->server()->nodeById(strRoleNodeId);
+	if (!node)
+	{
+		return tr("%1 : Unexisting node with NodeId %2.")
+			.arg("Error")
+			.arg(strRoleNodeId);
+	}
+	// try to cast
 	QUaRole * role = dynamic_cast<QUaRole*>(node);
 	if (!role)
 	{
-		node = this->list()->accessControl()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		node = this->list()->accessControl()->roles()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		return tr("%1 : Unexisting node in browse path %2.")
+		return tr("%1 : Node with NodeId %2 is not a role.")
 			.arg("Error")
-			.arg(strRolePath.join("/"));
+			.arg(strRoleNodeId);
 	}
 	// use c++ api
 	this->setRole(role);
@@ -181,14 +178,14 @@ QDomElement QUaUser::toDomElement(QDomDocument & domDoc) const
 	// set parmissions if any
 	if (this->hasPermissionsObject())
 	{
-		elem.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elem.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// set all attributes
 	elem.setAttribute("Name", this->getName());
 	elem.setAttribute("Hash", QString(this->getHash().toHex()));
 	if (this->hasRole())
 	{
-		elem.setAttribute("Role", this->role()->nodeBrowsePath().join("/"));
+		elem.setAttribute("Role", this->role()->nodeId());
 	}
 	// return element
 	return elem;
@@ -201,8 +198,7 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 	// load hash (raw)
 	this->setHash(QByteArray::fromHex(domElem.attribute("Hash").toUtf8()));
@@ -212,22 +208,5 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 		// having no role is acceptable, so no error or warning is required
 		return;
 	}
-	auto strRolePath = domElem.attribute("Role").split("/");
-	QUaNode * node = this->server()->browsePath(strRolePath);
-	QUaRole * role = dynamic_cast<QUaRole*>(node);
-	if (!role)
-	{
-		node = this->server()->objectsFolder()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		strError += tr("%1 : Unexisting node in browse path %2. Could not add role to user %3.\n")
-			.arg("Error")
-			.arg(strRolePath.join("/"))
-			.arg(this->getName());
-		return;
-	}
-	// add reference
-	this->addReference(QUaUser::UserHasRoleRefType, role);
+	strError += this->setRole(domElem.attribute("Role"));
 }

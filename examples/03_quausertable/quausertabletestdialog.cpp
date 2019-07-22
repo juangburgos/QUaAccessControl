@@ -25,6 +25,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 	m_deleting = false;
 	// hide apply button until some valid object selected
 	ui->widgetUserEdit->setEnabled(false);
+	ui->widgetUserEdit->setRepeatVisible(true);
 	// logged in user
 	m_loggedUser = nullptr;
 	QObject::connect(this, &QUaUserTableTestDialog::loggedUserChanged, this, &QUaUserTableTestDialog::on_loggedUserChanged);
@@ -61,7 +62,7 @@ QUaUserTableTestDialog::QUaUserTableTestDialog(QWidget *parent) :
 		// add user-only permissions
 		auto permissionsList = ac->permissions();
 		// create instance
-		QString strPermId = QString("only_%1").arg(user->getName());
+		QString strPermId = QString("onlyuser_%1").arg(user->getName());
 		permissionsList->addPermissions(strPermId);
 		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
 		Q_CHECK_PTR(permissions);
@@ -296,11 +297,24 @@ void QUaUserTableTestDialog::login()
 	// if no users yet, create root user
 	if (listUsers->users().count() <= 0)
 	{
+		// ask user if create new config
+		auto res = QMessageBox::question(
+			this, 
+			tr("No Config Loaded"), 
+			tr("There is no configuration loaded.\nWould you like to create a new one?"), 
+			QMessageBox::StandardButton::Ok,
+			QMessageBox::StandardButton::Cancel
+		);
+		if (res != QMessageBox::StandardButton::Ok)
+		{
+			return;
+		}
 		// setup new user widget
 		auto widgetNewUser = new QUaUserWidgetEdit;
 		widgetNewUser->setActionsVisible(false);
 		widgetNewUser->setRoleVisible(false);
 		widgetNewUser->setHashVisible(false);
+		widgetNewUser->setRepeatVisible(true);
 		// setup dialog
 		QUaAcCommonDialog dialog;
 		dialog.setWindowTitle(tr("Create Root User"));
@@ -346,6 +360,14 @@ void QUaUserTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog
 	// get user data
 	QString strUserName = widgetNewUser->userName().trimmed();
 	QString strPassword = widgetNewUser->password().trimmed();
+	QString strRepeat   = widgetNewUser->repeat().trimmed();
+	// check pass and repeat
+	if (strPassword.compare(strRepeat, Qt::CaseSensitive) != 0)
+	{
+		QMessageBox::critical(this, tr("Create Root User Error"), tr("Passwords do not match."), QMessageBox::StandardButton::Ok);
+		this->showCreateRootUserDialog(dialog);
+		return;
+	}
 	// check
 	QString strError = listUsers->addUser(strUserName, strPassword);
 	if (strError.contains("Error"))
@@ -389,7 +411,11 @@ void QUaUserTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialo
 	{
 		if (!this->loggedUser())
 		{
-			this->clearApplication();
+			// logged out user
+			ui->lineEditLoggedUser->setText("");
+			ui->pushButtonLogout->setEnabled(false);
+			// clear user edit widget
+			this->clearWidgetUserEdit();
 		}
 		return;
 	}
@@ -494,7 +520,19 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 	// on click delete
 	m_connections <<
 	QObject::connect(ui->widgetUserEdit, &QUaUserWidgetEdit::deleteClicked, user,
-	[user]() {
+	[this, user]() {
+		// ask for confirmation
+		auto res = QMessageBox::warning(
+			this, 
+			tr("Delete User Confirmation"), 
+			tr("Are you sure you want to delete user %1?").arg(user->getName()), 
+			QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No
+		);
+		if (res != QMessageBox::StandardButton::Yes)
+		{
+			return;
+		}
+		// delete
 		user->deleteLater();
 	});
 
@@ -505,19 +543,22 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 		// udpate role
 		user->setRole(ui->widgetUserEdit->role());
 		// update password (if non empty)
-		QString strNewPass = ui->widgetUserEdit->password();
+		QString strNewPass = ui->widgetUserEdit->password().trimmed();
+		QString strRepeat  = ui->widgetUserEdit->repeat().trimmed();
 		if (strNewPass.isEmpty())
 		{
+			return;
+		}
+		// check pass and repeat
+		if (strNewPass.compare(strRepeat, Qt::CaseSensitive) != 0)
+		{
+			QMessageBox::critical(this, tr("Edit User Error"), tr("Passwords do not match."), QMessageBox::StandardButton::Ok);
 			return;
 		}
 		QString strError = user->setPassword(strNewPass);
 		if (strError.contains("Error"))
 		{
-			QMessageBox msgBox;
-			msgBox.setWindowTitle("Error Updating User");
-			msgBox.setIcon(QMessageBox::Critical);
-			msgBox.setText(tr("Invalid new password. %1").arg(strError));
-			msgBox.exec();
+			QMessageBox::critical(this, tr("Edit User Error"), tr("Invalid new password. %1").arg(strError), QMessageBox::StandardButton::Ok);
 		}
 	});
 

@@ -9,21 +9,22 @@ QUaBaseObjectProtected::QUaBaseObjectProtected(QUaServer *server)
 
 }
 
-QString QUaBaseObjectProtected::setPermissions(QList<QString> strPermissionsPath)
+QString QUaBaseObjectProtected::setPermissions(QString strPermissionsNodeId)
 {
 	// get target node
-	QUaNode * node = this->server()->browsePath(strPermissionsPath);
+	QUaNode * node = this->server()->nodeById(strPermissionsNodeId);
+	if (!node)
+	{
+		return tr("%1 : Unexisting node with NodeId %2.")
+			.arg("Error")
+			.arg(strPermissionsNodeId);
+	}
 	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
 	if (!permissions)
 	{
-		node = this->server()->objectsFolder()->browsePath(strPermissionsPath);
-		permissions = dynamic_cast<QUaPermissions*>(node);
-	}
-	if (!permissions)
-	{
-		return tr("%1 : Unexisting node in browse path %2.")
+		return tr("%1 : Node with NodeId %2 is not a permissions instance.")
 			.arg("Error")
-			.arg(strPermissionsPath.join("/"));
+			.arg(strPermissionsNodeId);
 	}
 	// use c++ api
 	this->setPermissionsObject(permissions);

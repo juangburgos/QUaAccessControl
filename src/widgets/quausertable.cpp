@@ -197,6 +197,7 @@ void QUaUserTable::on_pushButtonAdd_clicked()
 	widgetNewUser->setActionsVisible(false);
 	widgetNewUser->setHashVisible(false);
 	widgetNewUser->setRoleList(m_ac->roles());
+	widgetNewUser->setRepeatVisible(true);
 	// NOTE : dialog takes ownershit
 	QUaAcCommonDialog dialog;
 	dialog.setWindowTitle(tr("New User"));
@@ -218,7 +219,15 @@ void QUaUserTable::showNewUserDialog(QUaAcCommonDialog & dialog)
 	// get user data
 	QString strUserName = widgetNewUser->userName().trimmed();
 	QString strPassword = widgetNewUser->password().trimmed();
-	// check
+	QString strRepeat   = widgetNewUser->repeat().trimmed();
+	// check pass and repeat
+	if (strPassword.compare(strRepeat, Qt::CaseSensitive) != 0)
+	{
+		QMessageBox::critical(this, tr("Create New User Error"), tr("Passwords do not match."), QMessageBox::StandardButton::Ok);
+		this->showNewUserDialog(dialog);
+		return;
+	}
+	// check exists
 	auto listUsers = m_ac->users();
 	QString strError = listUsers->addUser(strUserName, strPassword);
 	if (strError.contains("Error"))

@@ -36,6 +36,9 @@ public:
 	bool isPasswordVisible() const;
 	void setPasswordVisible(const bool &isVisible);
 
+	bool isRepeatVisible() const;
+	void setRepeatVisible(const bool &isVisible);
+
 	bool areActionsVisible() const;
 	void setActionsVisible(const bool &isVisible);
 
@@ -52,6 +55,9 @@ public:
 
 	QString password() const;
 	void    setPassword(const QString &strPassword);
+
+	QString repeat() const;
+	void    setRepeat(const QString &strRepeat);
 
 	QString hash() const;
 	void    setHash(const QString &strHexHash);

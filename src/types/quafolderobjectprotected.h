@@ -13,7 +13,7 @@ public:
 
 	// UA methods
 
-	Q_INVOKABLE QString setPermissions(QList<QString> strPermissionsPath);
+	Q_INVOKABLE QString setPermissions(QString strPermissionsNodeId);
 
 	Q_INVOKABLE void    clearPermissions();
 

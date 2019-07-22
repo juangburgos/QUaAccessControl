@@ -45,7 +45,7 @@ QDomElement QUaRole::toDomElement(QDomDocument & domDoc) const
 	// set parmissions if any
 	if (this->hasPermissionsObject())
 	{
-		elem.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elem.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// set all attributes
 	elem.setAttribute("Name", this->getName());
@@ -61,8 +61,7 @@ void QUaRole::fromDomElement(QDomElement & domElem, QString & strError)
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 }
 

@@ -36,8 +36,13 @@ QString QUaUserList::addUser(QString strName, QString strPassword)
 	{
 		return  tr("%1 : User Password cannot contain less than 6 characters.\n").arg("Error");
 	}
+	// check if nodeId exists
+	QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
+	if (this->server()->nodeById(strNodeId))
+	{
+		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(strNodeId);
+	}
 	// create instance
-	QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
 	auto user = this->addChild<QUaUser>(strNodeId);
 	// check
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
@@ -112,7 +117,7 @@ QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHas
 	{
 		return strError;
 	}
-	QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
+	QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
 	auto user = this->addChild<QUaUser>(strNodeId);
 	// check
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
@@ -150,7 +155,7 @@ QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
 	// set parmissions if any
 	if (this->hasPermissionsObject())
 	{
-		elemUsers.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elemUsers.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// loop users and add them
 	auto users = this->users();
@@ -190,7 +195,7 @@ void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 			continue;
 		}
 		// NOTE : cannot use QUaUserList::addUser because server does not store passwords
-		QString strNodeId = QString("ns=1;s=users/%1").arg(strName);
+		QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
 		auto user = this->addChild<QUaUser>(strNodeId);
 		// check
 		Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
@@ -209,8 +214,7 @@ void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QString & strEr
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 	// add user elems
 	QDomNodeList listUsers = domElem.elementsByTagName(QUaUser::staticMetaObject.className());

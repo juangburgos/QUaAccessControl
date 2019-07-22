@@ -23,10 +23,10 @@ void QUaPermissions::remove()
 	emit this->list()->permissionsRemoved(this);
 }
 
-QString QUaPermissions::addRoleCanRead(QList<QString> strRolePath)
+QString QUaPermissions::addRoleCanRead(QString strRoleNodeId)
 {
 	QString strError;
-	auto role = this->findRole(strRolePath, strError);
+	auto role = this->findRole(strRoleNodeId, strError);
 	if (!role)
 	{
 		return strError;
@@ -35,10 +35,10 @@ QString QUaPermissions::addRoleCanRead(QList<QString> strRolePath)
 	return "Success";
 }
 
-QString QUaPermissions::removeRoleCanRead(QList<QString> strRolePath)
+QString QUaPermissions::removeRoleCanRead(QString strRoleNodeId)
 {
 	QString strError;
-	auto role = this->findRole(strRolePath, strError);
+	auto role = this->findRole(strRoleNodeId, strError);
 	if (!role)
 	{
 		return strError;
@@ -47,10 +47,10 @@ QString QUaPermissions::removeRoleCanRead(QList<QString> strRolePath)
 	return "Success";
 }
 
-QString QUaPermissions::addRoleCanWrite(QList<QString> strRolePath)
+QString QUaPermissions::addRoleCanWrite(QString strRoleNodeId)
 {
 	QString strError;
-	auto role = this->findRole(strRolePath, strError);
+	auto role = this->findRole(strRoleNodeId, strError);
 	if (!role)
 	{
 		return strError;
@@ -59,10 +59,10 @@ QString QUaPermissions::addRoleCanWrite(QList<QString> strRolePath)
 	return "Success";
 }
 
-QString QUaPermissions::removeRoleCanWrite(QList<QString> strRolePath)
+QString QUaPermissions::removeRoleCanWrite(QString strRoleNodeId)
 {
 	QString strError;
-	auto role = this->findRole(strRolePath, strError);
+	auto role = this->findRole(strRoleNodeId, strError);
 	if (!role)
 	{
 		return strError;
@@ -71,10 +71,10 @@ QString QUaPermissions::removeRoleCanWrite(QList<QString> strRolePath)
 	return "Success";
 }
 
-QString QUaPermissions::addUserCanRead(QList<QString> strUserPath)
+QString QUaPermissions::addUserCanRead(QString strUserNodeId)
 {
 	QString strError;
-	auto user = this->findUser(strUserPath, strError);
+	auto user = this->findUser(strUserNodeId, strError);
 	if (!user)
 	{
 		return strError;
@@ -83,10 +83,10 @@ QString QUaPermissions::addUserCanRead(QList<QString> strUserPath)
 	return "Success";
 }
 
-QString QUaPermissions::removeUserCanRead(QList<QString> strUserPath)
+QString QUaPermissions::removeUserCanRead(QString strUserNodeId)
 {
 	QString strError;
-	auto user = this->findUser(strUserPath, strError);
+	auto user = this->findUser(strUserNodeId, strError);
 	if (!user)
 	{
 		return strError;
@@ -95,10 +95,10 @@ QString QUaPermissions::removeUserCanRead(QList<QString> strUserPath)
 	return "Success";
 }
 
-QString QUaPermissions::addUserCanWrite(QList<QString> strUserPath)
+QString QUaPermissions::addUserCanWrite(QString strUserNodeId)
 {
 	QString strError;
-	auto user = this->findUser(strUserPath, strError);
+	auto user = this->findUser(strUserNodeId, strError);
 	if (!user)
 	{
 		return strError;
@@ -107,10 +107,10 @@ QString QUaPermissions::addUserCanWrite(QList<QString> strUserPath)
 	return "Success";
 }
 
-QString QUaPermissions::removeUserCanWrite(QList<QString> strUserPath)
+QString QUaPermissions::removeUserCanWrite(QString strUserNodeId)
 {
 	QString strError;
-	auto user = this->findUser(strUserPath, strError);
+	auto user = this->findUser(strUserNodeId, strError);
 	if (!user)
 	{
 		return strError;
@@ -124,58 +124,44 @@ QString QUaPermissions::getId() const
 	return this->browseName();
 }
 
-QUaRole * QUaPermissions::findRole(const QList<QString> &strRolePath, QString &strError) const
+QUaRole * QUaPermissions::findRole(const QString &strRoleNodeId, QString &strError) const
 {
-	QUaNode * node = this->server()->browsePath(strRolePath);
+	QUaNode * node = this->server()->nodeById(strRoleNodeId);
+	if (!node)
+	{
+		strError += tr("%1 : Unexisting node with NodeId %2.")
+			.arg("Error")
+			.arg(strRoleNodeId);
+		return nullptr;
+	}
 	QUaRole * role = dynamic_cast<QUaRole*>(node);
 	if (!role)
 	{
-		node = this->server()->objectsFolder()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		node = this->list()->accessControl()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		node = this->list()->accessControl()->roles()->browsePath(strRolePath);
-		role = dynamic_cast<QUaRole*>(node);
-	}
-	if (!role)
-	{
-		strError += tr("%1 : Unexisting node in browse path %2. Could not add Role to Permissions.\n")
+		strError += tr("%1 : Node with NodeId %2 is not a role.")
 			.arg("Error")
-			.arg(strRolePath.join("/"));
+			.arg(strRoleNodeId);
+		return nullptr;
 	}
 	return role;
 }
 
-QUaUser * QUaPermissions::findUser(const QList<QString>& strUserPath, QString & strError) const
+QUaUser * QUaPermissions::findUser(const QString &strUserNodeId, QString & strError) const
 {
-	QUaNode * node = this->server()->browsePath(strUserPath);
+	QUaNode * node = this->server()->nodeById(strUserNodeId);
+	if (!node)
+	{
+		strError += tr("%1 : Unexisting node with NodeId %2.")
+			.arg("Error")
+			.arg(strUserNodeId);
+		return nullptr;
+	}
 	QUaUser * user = dynamic_cast<QUaUser*>(node);
 	if (!user)
 	{
-		node = this->server()->objectsFolder()->browsePath(strUserPath);
-		user = dynamic_cast<QUaUser*>(node);
-	}
-	if (!user)
-	{
-		node = this->list()->accessControl()->browsePath(strUserPath);
-		user = dynamic_cast<QUaUser*>(node);
-	}
-	if (!user)
-	{
-		node = this->list()->accessControl()->users()->browsePath(strUserPath);
-		user = dynamic_cast<QUaUser*>(node);
-	}
-	if (!user)
-	{
-		strError += tr("%1 : Unexisting node in browse path %2. Could not add User to Permissions.\n")
+		strError += tr("%1 : Node with NodeId %2 is not a user.")
 			.arg("Error")
-			.arg(strUserPath.join("/"));
+			.arg(strUserNodeId);
+		return nullptr;
 	}
 	return user;
 }
@@ -442,7 +428,7 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 	// set parmissions if any
 	if (this->hasPermissionsObject())
 	{
-		elem.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elem.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// set all attributes
 	elem.setAttribute("Id", this->getId());
@@ -456,7 +442,7 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 		for (int i = 0; i < rolesRead.count(); i++)
 		{
 			QDomElement elemRead = domDoc.createElement("Role");
-			elemRead.setAttribute("BrowsePath", rolesRead.at(i)->nodeBrowsePath().join("/"));
+			elemRead.setAttribute("NodeId", rolesRead.at(i)->nodeId());
 			elemReadList.appendChild(elemRead);
 		}
 	}
@@ -467,7 +453,7 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 		for (int i = 0; i < usersRead.count(); i++)
 		{
 			QDomElement elemRead = domDoc.createElement("User");
-			elemRead.setAttribute("BrowsePath", usersRead.at(i)->nodeBrowsePath().join("/"));
+			elemRead.setAttribute("NodeId", usersRead.at(i)->nodeId());
 			elemReadList.appendChild(elemRead);
 		}
 	}
@@ -481,7 +467,7 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 		for (int i = 0; i < rolesWrite.count(); i++)
 		{
 			QDomElement elemWrite = domDoc.createElement("Role");
-			elemWrite.setAttribute("BrowsePath", rolesWrite.at(i)->nodeBrowsePath().join("/"));
+			elemWrite.setAttribute("NodeId", rolesWrite.at(i)->nodeId());
 			elemWriteList.appendChild(elemWrite);
 		}
 	}
@@ -492,7 +478,7 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 		for (int i = 0; i < usersWrite.count(); i++)
 		{
 			QDomElement elemWrite = domDoc.createElement("User");
-			elemWrite.setAttribute("BrowsePath", usersWrite.at(i)->nodeBrowsePath().join("/"));
+			elemWrite.setAttribute("NodeId", usersWrite.at(i)->nodeId());
 			elemWriteList.appendChild(elemWrite);
 		}
 	}
@@ -507,8 +493,7 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 	// can read
 	QDomElement elemReadList = domElem.firstChildElement("CanReadList");
@@ -520,8 +505,7 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listReadRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strRolePath  = elem.attribute("BrowsePath").split("/");
-			strError += this->addRoleCanRead(strRolePath);
+			strError += this->addRoleCanRead(elem.attribute("NodeId"));
 		}
 		// can read users
 		QDomNodeList listReadUsers = elemReadList.elementsByTagName("User");
@@ -529,8 +513,7 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listReadUsers.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strUserPath = elem.attribute("BrowsePath").split("/");
-			strError += this->addUserCanRead(strUserPath);
+			strError += this->addUserCanRead(elem.attribute("NodeId"));
 		}
 	}
 	// can write
@@ -543,8 +526,7 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listWriteRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strRolePath = elem.attribute("BrowsePath").split("/");
-			strError += this->addRoleCanWrite(strRolePath);
+			strError += this->addRoleCanWrite(elem.attribute("NodeId"));
 		}
 		// can write users
 		QDomNodeList listWriteUsers = elemWriteList.elementsByTagName("User");
@@ -552,8 +534,7 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listWriteUsers.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			auto strUserPath = elem.attribute("BrowsePath").split("/");
-			strError += this->addUserCanWrite(strUserPath);
+			strError += this->addUserCanWrite(elem.attribute("NodeId"));
 		}
 	}
 }

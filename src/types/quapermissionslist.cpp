@@ -42,8 +42,13 @@ QString QUaPermissionsList::addPermissions(QString strId)
 	{
 		return  tr("%1 : Permissions Id already exists.\n").arg("Error");
 	}
+	// check if nodeId exists
+	QString strNodeId = QString("ns=1;s=permissions.%1").arg(strId);
+	if (this->server()->nodeById(strNodeId))
+	{
+		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(strNodeId);
+	}
 	// create instance
-	QString strNodeId = QString("ns=1;s=permissions/%1").arg(strId);
 	auto permissions = this->addChild<QUaPermissions>(strNodeId);
 	// check
 	Q_ASSERT_X(permissions, "addPermissions", "Is NodeId repeated or invalid?");
@@ -130,7 +135,7 @@ QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const
 	// set parmissions if any
 	if (this->hasPermissionsObject())
 	{
-		elemPerms.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elemPerms.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// loop users and add them
 	auto permissions = this->permissionsList();
@@ -172,8 +177,7 @@ void QUaPermissionsList::fromDomElementConfigure(QDomElement & domElem, QString 
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 	// add perm elems
 	QDomNodeList listPerms = domElem.elementsByTagName(QUaPermissions::staticMetaObject.className());

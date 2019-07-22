@@ -342,11 +342,24 @@ void QUaPermissionsTableTestDialog::login()
 	// if no users yet, create root user
 	if (listUsers->users().count() <= 0)
 	{
+		// ask user if create new config
+		auto res = QMessageBox::question(
+			this,
+			tr("No Config Loaded"),
+			tr("There is no configuration loaded.\nWould you like to create a new one?"),
+			QMessageBox::StandardButton::Ok,
+			QMessageBox::StandardButton::Cancel
+		);
+		if (res != QMessageBox::StandardButton::Ok)
+		{
+			return;
+		}
 		// setup new user widget
 		auto widgetNewUser = new QUaUserWidgetEdit;
 		widgetNewUser->setActionsVisible(false);
 		widgetNewUser->setRoleVisible(false);
 		widgetNewUser->setHashVisible(false);
+		widgetNewUser->setRepeatVisible(true);
 		// setup dialog
 		QUaAcCommonDialog dialog;
 		dialog.setWindowTitle(tr("Create Root User"));
@@ -392,6 +405,14 @@ void QUaPermissionsTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog &
 	// get user data
 	QString strUserName = widgetNewUser->userName().trimmed();
 	QString strPassword = widgetNewUser->password().trimmed();
+	QString strRepeat   = widgetNewUser->repeat().trimmed();
+	// check pass and repeat
+	if (strPassword.compare(strRepeat, Qt::CaseSensitive) != 0)
+	{
+		QMessageBox::critical(this, tr("Create Root User Error"), tr("Passwords do not match."), QMessageBox::StandardButton::Ok);
+		this->showCreateRootUserDialog(dialog);
+		return;
+	}
 	// check
 	QString strError = listUsers->addUser(strUserName, strPassword);
 	if (strError.contains("Error"))
@@ -435,7 +456,11 @@ void QUaPermissionsTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog 
 	{
 		if (!this->loggedUser())
 		{
-			this->clearApplication();
+			// logged out user
+			ui->lineEditLoggedUser->setText("");
+			ui->pushButtonLogout->setEnabled(false);
+			// clear user edit widget
+			this->clearWidgetPermissionsEdit();
 		}
 		return;
 	}
@@ -475,6 +500,11 @@ void QUaPermissionsTableTestDialog::clearApplication()
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
 	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
 	Q_CHECK_PTR(ac);
+	// disable old connections
+	while (m_connections.count() > 0)
+	{
+		QObject::disconnect(m_connections.takeFirst());
+	}
 	// clear config
 	ac->clear();
 	// clear user edit widget
@@ -635,7 +665,19 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 	// on click delete
 	m_connections <<
 	QObject::connect(ui->widgetPermissionsEdit, &QUaPermissionsWidgetEdit::deleteClicked, perms,
-	[perms]() {
+	[this, perms]() {
+		// ask for confirmation
+		auto res = QMessageBox::warning(
+			this,
+			tr("Delete Permissions Confirmation"),
+			tr("Are you sure you want to delete permissions object %1?").arg(perms->getId()),
+			QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No
+		);
+		if (res != QMessageBox::StandardButton::Yes)
+		{
+			return;
+		}
+		// delete
 		perms->deleteLater();
 	});
 

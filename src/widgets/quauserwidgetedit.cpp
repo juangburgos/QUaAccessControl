@@ -25,6 +25,8 @@ QUaUserWidgetEdit::QUaUserWidgetEdit(QWidget *parent) :
 	completer->setFilterMode(Qt::MatchContains);
 	ui->comboBoxRole->setCompleter(completer);
 	ui->comboBoxRole->setInsertPolicy(QComboBox::NoInsert);
+	// inital state
+	this->setRepeatVisible(false);
 }
 
 QUaUserWidgetEdit::~QUaUserWidgetEdit()
@@ -89,6 +91,19 @@ void QUaUserWidgetEdit::setPasswordVisible(const bool & isVisible)
 	ui->lineEditPass->setVisible(isVisible);
 	ui->labelPassword->setEnabled(isVisible);
 	ui->labelPassword->setVisible(isVisible);
+}
+
+bool QUaUserWidgetEdit::isRepeatVisible() const
+{
+	return ui->lineEditRepeat->isEnabled();
+}
+
+void QUaUserWidgetEdit::setRepeatVisible(const bool & isVisible)
+{
+	ui->lineEditRepeat->setEnabled(isVisible);
+	ui->lineEditRepeat->setVisible(isVisible);
+	ui->labelRepeat->setEnabled(isVisible);
+	ui->labelRepeat->setVisible(isVisible);
 }
 
 bool QUaUserWidgetEdit::areActionsVisible() const
@@ -201,6 +216,16 @@ QString QUaUserWidgetEdit::password() const
 void QUaUserWidgetEdit::setPassword(const QString & strPassword)
 {
 	ui->lineEditPass->setText(strPassword);
+}
+
+QString QUaUserWidgetEdit::repeat() const
+{
+	return ui->lineEditRepeat->text();
+}
+
+void QUaUserWidgetEdit::setRepeat(const QString & strRepeat)
+{
+	ui->lineEditRepeat->setText(strRepeat);
 }
 
 QString QUaUserWidgetEdit::hash() const

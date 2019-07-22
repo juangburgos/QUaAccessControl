@@ -329,11 +329,24 @@ void QUaRoleTableTestDialog::login()
 	// if no users yet, create root user
 	if (listUsers->users().count() <= 0)
 	{
+		// ask user if create new config
+		auto res = QMessageBox::question(
+			this,
+			tr("No Config Loaded"),
+			tr("There is no configuration loaded.\nWould you like to create a new one?"),
+			QMessageBox::StandardButton::Ok,
+			QMessageBox::StandardButton::Cancel
+		);
+		if (res != QMessageBox::StandardButton::Ok)
+		{
+			return;
+		}
 		// setup new user widget
 		auto widgetNewUser = new QUaUserWidgetEdit;
 		widgetNewUser->setActionsVisible(false);
 		widgetNewUser->setRoleVisible(false);
 		widgetNewUser->setHashVisible(false);
+		widgetNewUser->setRepeatVisible(true);
 		// setup dialog
 		QUaAcCommonDialog dialog;
 		dialog.setWindowTitle(tr("Create Root User"));
@@ -379,6 +392,14 @@ void QUaRoleTableTestDialog::showCreateRootUserDialog(QUaAcCommonDialog & dialog
 	// get user data
 	QString strUserName = widgetNewUser->userName().trimmed();
 	QString strPassword = widgetNewUser->password().trimmed();
+	QString strRepeat   = widgetNewUser->repeat().trimmed();
+	// check pass and repeat
+	if (strPassword.compare(strRepeat, Qt::CaseSensitive) != 0)
+	{
+		QMessageBox::critical(this, tr("Create Root User Error"), tr("Passwords do not match."), QMessageBox::StandardButton::Ok);
+		this->showCreateRootUserDialog(dialog);
+		return;
+	}
 	// check
 	QString strError = listUsers->addUser(strUserName, strPassword);
 	if (strError.contains("Error"))
@@ -422,7 +443,11 @@ void QUaRoleTableTestDialog::showUserCredentialsDialog(QUaAcCommonDialog & dialo
 	{
 		if (!this->loggedUser())
 		{
-			this->clearApplication();
+			// logged out user
+			ui->lineEditLoggedUser->setText("");
+			ui->pushButtonLogout->setEnabled(false);
+			// clear user edit widget
+			this->clearWidgetRoleEdit();
 		}
 		return;
 	}
@@ -537,7 +562,19 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 	// on click delete
 	m_connections <<
 	QObject::connect(ui->widgetRoleEdit, &QUaRoleWidgetEdit::deleteClicked, role,
-	[role]() {
+	[this, role]() {
+		// ask for confirmation
+		auto res = QMessageBox::warning(
+			this,
+			tr("Delete Role Confirmation"),
+			tr("Are you sure you want to delete role %1?").arg(role->getName()),
+			QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No
+		);
+		if (res != QMessageBox::StandardButton::Yes)
+		{
+			return;
+		}
+		// delete
 		role->deleteLater();
 	});
 

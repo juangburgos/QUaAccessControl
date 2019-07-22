@@ -33,7 +33,7 @@ public:
 	// overwrite password, does not care about old password
 	Q_INVOKABLE QString setPassword(QString strPassword);
 
-	Q_INVOKABLE QString setRole(QList<QString> strRolePath);
+	Q_INVOKABLE QString setRole(QString strRoleNodeId);
 
 	Q_INVOKABLE void    clearRole();
 

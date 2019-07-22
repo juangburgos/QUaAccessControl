@@ -21,21 +21,21 @@ public:
 
 	Q_INVOKABLE void remove();
 
-	Q_INVOKABLE QString addRoleCanRead(QList<QString> strRolePath);
+	Q_INVOKABLE QString addRoleCanRead(QString strRoleNodeId);
 
-	Q_INVOKABLE QString removeRoleCanRead(QList<QString> strRolePath);
+	Q_INVOKABLE QString removeRoleCanRead(QString strRoleNodeId);
 
-	Q_INVOKABLE QString addRoleCanWrite(QList<QString> strRolePath);
+	Q_INVOKABLE QString addRoleCanWrite(QString strRoleNodeId);
 
-	Q_INVOKABLE QString removeRoleCanWrite(QList<QString> strRolePath);
+	Q_INVOKABLE QString removeRoleCanWrite(QString strRoleNodeId);
 
-	Q_INVOKABLE QString addUserCanRead(QList<QString> strUserPath);
+	Q_INVOKABLE QString addUserCanRead(QString strUserNodeId);
 
-	Q_INVOKABLE QString removeUserCanRead(QList<QString> strUserPath);
+	Q_INVOKABLE QString removeUserCanRead(QString strUserNodeId);
 
-	Q_INVOKABLE QString addUserCanWrite(QList<QString> strUserPath);
+	Q_INVOKABLE QString addUserCanWrite(QString strUserNodeId);
 
-	Q_INVOKABLE QString removeUserCanWrite(QList<QString> strUserPath);
+	Q_INVOKABLE QString removeUserCanWrite(QString strUserNodeId);
 
 	// C++ API
 
@@ -98,8 +98,8 @@ signals:
 public slots:
 
 private:
-	QUaRole * findRole(const QList<QString> &strRolePath, QString &strError) const;
-	QUaUser * findUser(const QList<QString> &strUserPath, QString &strError) const;
+	QUaRole * findRole(const QString &strRoleNodeId, QString &strError) const;
+	QUaUser * findUser(const QString &strUserNodeId, QString &strError) const;
 
 };
 

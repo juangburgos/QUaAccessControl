@@ -135,12 +135,12 @@ QDomElement QUaAccessControl::toDomElement(QDomDocument & domDoc) const
 	// set permissions if any
 	if (this->hasPermissionsObject())
 	{
-		elemAc.setAttribute("Permissions", this->permissionsObject()->nodeBrowsePath().join("/"));
+		elemAc.setAttribute("Permissions", this->permissionsObject()->nodeId());
 	}
 	// set root user if any
 	if (this->hasRootUser())
 	{
-		elemAc.setAttribute("RootUser", this->rootUser()->nodeBrowsePath().join("/"));
+		elemAc.setAttribute("RootUser", this->rootUser()->nodeId());
 	}
 	// attach roles, users and permissions
 	QDomElement elemRoles = this->roles()->toDomElement(domDoc);
@@ -192,32 +192,27 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		auto strPermsPath = domElem.attribute("Permissions").split("/");
-		strError += this->setPermissions(strPermsPath);
+		strError += this->setPermissions(domElem.attribute("Permissions"));
 	}
 
 	// load root user if any
 	if (domElem.hasAttribute("RootUser") && !domElem.attribute("RootUser").isEmpty())
 	{
-		auto strRootUserPath = domElem.attribute("RootUser").split("/");
 		// get target node
-		QUaNode * node = this->server()->browsePath(strRootUserPath);
+		QUaNode * node = this->server()->nodeById(domElem.attribute("RootUser"));
+		if (!node)
+		{
+			strError += tr("%1 : Unexisting node with NodeId %2.")
+				.arg("Error")
+				.arg(domElem.attribute("RootUser"));
+			return;
+		}
 		QUaUser * user = dynamic_cast<QUaUser*>(node);
 		if (!user)
 		{
-			node = this->browsePath(strRootUserPath);
-			user = dynamic_cast<QUaUser*>(node);
-		}
-		if (!user)
-		{
-			node = this->users()->browsePath(strRootUserPath);
-			user = dynamic_cast<QUaUser*>(node);
-		}
-		if (!user)
-		{
-			strError += tr("%1 : Unexisting node in browse path %2.")
+			strError += tr("%1 : Node with NodeId %2 is not a user.")
 				.arg("Error")
-				.arg(strRootUserPath.join("/"));
+				.arg(domElem.attribute("RootUser"));
 		}
 		else
 		{
