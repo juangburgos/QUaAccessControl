@@ -585,6 +585,15 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 	m_connections << QObject::connect(perms, &QUaPermissions::canWriteUserAdded  , this, updateUser, Qt::QueuedConnection);
 	m_connections << QObject::connect(perms, &QUaPermissions::canWriteUserRemoved, this, updateUser, Qt::QueuedConnection);
 
+	// user changes role
+	for (auto user : users)
+	{
+		m_connections << QObject::connect(user, &QUaUser::roleChanged, this, 
+		[updateUser, user]() {
+			updateUser(user);
+		}, Qt::QueuedConnection);;
+	}
+
 	// on user or role added/removed
 	auto resetPermsWidget = [this, perms]() {
 		this->bindWidgetPermissionsEdit(perms);
