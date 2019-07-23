@@ -9,6 +9,10 @@
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QMessageBox>
+#include <QInputDialog>
+
+#include <QDockWidget>
+#include <QLabel>
 
 #include <QUaAccessControl>
 #include <QUaUser>
@@ -24,31 +28,50 @@
 #include <QUaRoleWidgetEdit>
 #include <QUaPermissionsWidgetEdit>
 
+QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
+QString QUaAcFullUi::m_strEmpty     = QObject::tr("Empty"   );
+QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
+
+QString QUaAcFullUi::m_strHelpMenu       = QObject::tr("HelpMenu");
+QString QUaAcFullUi::m_strLayoutListMenu = QObject::tr("LayoutListMenu");
+QString QUaAcFullUi::m_strTopDock        = QObject::tr("TopDock");
+
 QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::QUaAcFullUi),
 	m_strTitle("%1 - QUaUserAccess GUI")
 {
     ui->setupUi(this);
-	this->setWindowTitle(m_strTitle.arg(tr("Untitled")));
 	// initial values
-	m_deleting   = false;
-	m_strSecret  = "my_secret";
-	m_loggedUser = nullptr;
+	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
+	m_deleting    = false;
+	m_strSecret   = "my_secret";
+	m_loggedUser  = nullptr;
+	m_dockManager = new QAdDockManager(this);
+	// setup menu bar
+	this->setupMenuBar();
+	// setup native docks
+	this->setupNativeDocks();
+	// signals and slots
+	QObject::connect(this, &QUaAcFullUi::layoutAdded         , this, &QUaAcFullUi::on_layoutAdded         );
+	QObject::connect(this, &QUaAcFullUi::layoutRemoved       , this, &QUaAcFullUi::on_layoutRemoved       );
+	QObject::connect(this, &QUaAcFullUi::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	// setup opc ua information model and server
 	this->setupInfoModel();
 	// create all widgets
-	this->createWidgetsInDocks();
+	this->saveLayout(QUaAcFullUi::m_strEmpty, m_dockManager->saveState());
+	this->createAcWidgetsDocks();
+	this->saveLayout(QUaAcFullUi::m_strDefault, m_dockManager->saveState());
 	// setup widgets
 	this->setupUserWidgets();
 	this->setupRoleWidgets();
 	this->setupPermsWidgets();
-	// setup menu bar
-	this->setupMenuBar();
 	// handle user changed
 	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, this, &QUaAcFullUi::on_loggedUserChanged);
 	// intially logged out
 	this->logout();
+	// initially empty
+	this->setCurrentLayout(QUaAcFullUi::m_strEmpty);
 }
 
 QUaAcFullUi::~QUaAcFullUi()
@@ -62,7 +85,7 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 	// get menu bar widgets
 	auto logginBar = dynamic_cast<QMenuBar*>(this->menuBar()->cornerWidget());
 	Q_CHECK_PTR(logginBar);
-	auto menuHelp = logginBar->findChild<QMenu*>("menuHelp");
+	auto menuHelp = logginBar->findChild<QMenu*>(QUaAcFullUi::m_strHelpMenu);
 	Q_CHECK_PTR(menuHelp);
 	Q_ASSERT(menuHelp->actions().count() == 1);
 	QAction * actLogInOut = menuHelp->actions().at(0);
@@ -87,294 +110,13 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 	actLogInOut->setText(tr("Logout"));
 }
 
-void QUaAcFullUi::setupInfoModel()
+void QUaAcFullUi::on_newConfig()
 {
-	// setup access control information model
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	auto ac = objsFolder->addChild<QUaAccessControl>();
-	ac->setDisplayName("AccessControl");
-	ac->setBrowseName("AccessControl");
-
-	// disable anon login
-	m_server.setAnonymousLoginAllowed(false);
-	// define custom user validation 
-	auto listUsers = ac->users();
-	m_server.setUserValidationCallback(
-		[listUsers](const QString &strUserName, const QString &strPassword) {
-		auto user = listUsers->user(strUserName);
-		if (!user)
-		{
-			return false;
-		}
-		return user->isPasswordValid(strPassword);
-	});
-
-	// setup auto add new user permissions
-	QObject::connect(ac->users(), &QUaUserList::userAdded,
-	[ac](QUaUser * user) {
-		// return if user already has permissions
-		if (user->hasPermissionsObject())
-		{
-			return;
-		}
-		// add user-only permissions
-		auto permissionsList = ac->permissions();
-		// create instance
-		QString strPermId = QString("onlyuser_%1").arg(user->getName());
-		permissionsList->addPermissions(strPermId);
-		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
-		Q_CHECK_PTR(permissions);
-		// set user can read write
-		permissions->addUserCanWrite(user);
-		permissions->addUserCanRead (user);
-		// set user's permissions
-		user->setPermissionsObject(permissions);		
-	});
-	QObject::connect(ac->users(), &QUaUserList::userRemoved, 
-	[ac](QUaUser * user) {
-		// remove user-only permissions
-		auto permissions = user->permissionsObject();
-		if (!permissions)
-		{
-			return;
-		}
-		permissions->remove();
-	});
-	// setup auto add new role permissions
-	QObject::connect(ac->roles(), &QUaRoleList::roleAdded,
-	[ac](QUaRole * role) {
-		// return if role already has permissions
-		if (role->hasPermissionsObject())
-		{
-			return;
-		}
-		// add role-only permissions
-		auto permissionsList = ac->permissions();
-		// create instance
-		QString strPermId = QString("onlyrole_%1").arg(role->getName());
-		permissionsList->addPermissions(strPermId);
-		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
-		Q_CHECK_PTR(permissions);
-		// set role can read write
-		permissions->addRoleCanWrite(role); // not used
-		permissions->addRoleCanRead (role);
-		// set role's permissions
-		role->setPermissionsObject(permissions);
-	});
-	QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, 
-	[ac](QUaRole * role) {
-		// remove role-only permissions
-		auto permissions = role->permissionsObject();
-		if (!permissions)
-		{
-			return;
-		}
-		permissions->remove();
-	});
-	// setup auto add new role permissions
-	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsAdded,
-	[ac](QUaPermissions * perms) {
-		// return if permissions already has permissions
-		if (perms->hasPermissionsObject())
-		{
-			return;
-		}
-		// assign to itself
-		perms->setPermissionsObject(perms);
-	});
-
-	// start server
-	m_server.start();
+	this->on_closeConfig();
+	this->login();
 }
 
-void QUaAcFullUi::createWidgetsInDocks()
-{
-	// instantiate dock manager
-	m_dockManager = new QAdDockManager(this);
-
-	// NOTE : it seems layout gets formed as widgets get added, building upon the last state,
-	//        the area type (left, right, top, etc.) of the first widget added is irrelevant,
-	//        the area of the second widget added defines its location wrt to the first widget,
-	//        now the first and second widget form a new area altogether, so the area of the third
-	//        widget defines its location wrt to this new area (first + second) and so on.
-	//        so as we add widgets we 'pivot' wrt the agroupation of all previous widgets.
-	//        to change the 'pivot' we must use the returned area and pass it as the last argument,
-	//        then all widgets added with this 'pivot' will be positioned wrt that widget
-	int dockMargins = 6;
-
-	auto pDockUsersTable = new QAdDockWidget(tr("Users"), this);
-	m_userTable = new QUaUserTable(pDockUsersTable);
-	pDockUsersTable->setWidget(m_userTable);
-	m_dockManager->addDockWidget(QAd::CenterDockWidgetArea, pDockUsersTable);
-	m_userTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockRolesTable = new QAdDockWidget(tr("Roles"), this);
-	m_roleTable = new QUaRoleTable(pDockRolesTable);
-	pDockRolesTable->setWidget(m_roleTable);
-	m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockRolesTable);
-	m_roleTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockPermsTable = new QAdDockWidget(tr("Permissions"), this);
-	m_permsTable = new QUaPermissionsTable(pDockPermsTable);
-	pDockPermsTable->setWidget(m_permsTable);
-	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsTable);
-	m_permsTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockUserEdit = new QAdDockWidget(tr("User Edit"), this);
-	m_userWidget = new QUaUserWidgetEdit(pDockUserEdit);
-	pDockUserEdit->setWidget(m_userWidget);
-	auto userArea =
-	m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockUserEdit);
-	m_userWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockRoleEdit = new QAdDockWidget(tr("Role Edit"), this);
-	m_roleWidget = new QUaRoleWidgetEdit(pDockRoleEdit);
-	pDockRoleEdit->setWidget(m_roleWidget);
-	auto roleArea =
-	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockRoleEdit, userArea);
-	m_roleWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockPermsEdit = new QAdDockWidget(tr("Permissions Edit"), this);
-	m_permsWidget = new QUaPermissionsWidgetEdit(pDockPermsEdit);
-	pDockPermsEdit->setWidget(m_permsWidget);
-	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsEdit, roleArea);
-	m_permsWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-}
-
-void QUaAcFullUi::setupUserWidgets()
-{
-	Q_CHECK_PTR(m_userTable);
-	Q_CHECK_PTR(m_userWidget);
-	// disable until some valid object selected
-	m_userWidget->setEnabled(false);
-	m_userWidget->setRepeatVisible(true);
-
-	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
-	auto listUsers = ac->users();
-
-	// set ac to table
-	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_userTable, &QUaUserTable::on_loggedUserChanged);
-	m_userTable->setAccessControl(ac);
-
-	// handle table events (user selection)
-	// change widgets
-	QObject::connect(m_userTable, &QUaUserTable::userSelectionChanged, this,
-	[this](QUaUser * userPrev, QUaUser * userCurr)
-	{
-		Q_UNUSED(userPrev);
-		// early exit
-		if (!userCurr || m_deleting)
-		{
-			return;
-		}
-		// bind widget for current selection
-		this->bindWidgetUserEdit(userCurr);
-	});
-
-	// setup user edit widget
-	m_userWidget->setRoleList(ac->roles());
-}
-
-void QUaAcFullUi::setupRoleWidgets()
-{
-	Q_CHECK_PTR(m_roleTable);
-	Q_CHECK_PTR(m_roleWidget);
-	// disable until some valid object selected
-	m_roleWidget->setEnabled(false);
-
-	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
-	auto listUsers = ac->users();
-
-	// set ac to table
-	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_roleTable, &QUaRoleTable::on_loggedUserChanged);
-	m_roleTable->setAccessControl(ac);
-
-	// handle table events (user selection)
-	// change widgets
-	QObject::connect(m_roleTable, &QUaRoleTable::roleSelectionChanged, this,
-		[this](QUaRole * rolePrev, QUaRole * roleCurr)
-	{
-		Q_UNUSED(rolePrev);
-		// early exit
-		if (!roleCurr || m_deleting)
-		{
-			return;
-		}
-		// bind widget for current selection
-		this->bindWidgetRoleEdit(roleCurr);
-	});
-}
-
-void QUaAcFullUi::setupPermsWidgets()
-{
-	Q_CHECK_PTR(m_permsTable);
-	Q_CHECK_PTR(m_permsWidget);
-	// disable until some valid object selected
-	m_permsWidget->setEnabled(false);
-
-	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
-	auto listUsers = ac->users();
-
-	// set ac to table
-	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_permsTable, &QUaPermissionsTable::on_loggedUserChanged);
-	m_permsTable->setAccessControl(ac);
-
-	// handle table events (user selection)
-	// change widgets
-	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsSelectionChanged, this,
-	[this](QUaPermissions * permsPrev, QUaPermissions * permsCurr)
-	{
-		Q_UNUSED(permsPrev);
-		// early exit
-		if (!permsCurr || m_deleting)
-		{
-			return;
-		}
-		// bind widget for current selection
-		this->bindWidgetPermissionsEdit(permsCurr);
-	});
-}
-
-void QUaAcFullUi::setupMenuBar()
-{
-	// file open, save, close
-	QMenu *menuFile = this->menuBar()->addMenu(tr("File"));
-	menuFile->addAction(tr("Open" ), this, &QUaAcFullUi::openFile );
-	menuFile->addAction(tr("Save" ), this, &QUaAcFullUi::saveFile );
-	menuFile->addAction(tr("Close"), this, &QUaAcFullUi::closeFile);
-
-	// setup top right loggin menu
-	auto logginBar  = new QMenuBar(this->menuBar());
-	QMenu *menuHelp = new QMenu(tr("Please Login"), logginBar);
-	menuHelp->setObjectName("menuHelp");
-	logginBar->addMenu(menuHelp);
-	this->menuBar()->setCornerWidget(logginBar);
-	// add logon/logout action
-	QAction * actLogInOut = menuHelp->addAction(tr("Login"));
-	// setup action events
-	QObject::connect(actLogInOut, &QAction::triggered, this,
-	[this]() {
-		if (this->loggedUser())
-		{
-			this->logout();
-		}
-		else
-		{
-			this->login();
-		}
-	});
-}
-
-void QUaAcFullUi::openFile()
+void QUaAcFullUi::on_openConfig()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -397,7 +139,7 @@ void QUaAcFullUi::openFile()
 	QString strKeyFileName = QString("%1/%2.key").arg(QFileInfo(strConfigFileName).absoluteDir().absolutePath()).arg(QFileInfo(strConfigFileName).baseName());
 	// create files
 	QFile fileConfig(strConfigFileName);
-	QFile fileKey   (strKeyFileName);
+	QFile fileKey(strKeyFileName);
 	// exists
 	if (!fileConfig.exists())
 	{
@@ -415,7 +157,7 @@ void QUaAcFullUi::openFile()
 	{
 		// load config
 		auto byteContents = fileConfig.readAll();
-		auto byteKey      = fileKey.readAll();
+		auto byteKey = fileKey.readAll();
 		// compute key
 		QByteArray keyComputed = QMessageAuthenticationCode::hash(
 			byteContents,
@@ -426,7 +168,7 @@ void QUaAcFullUi::openFile()
 		if (byteKey == keyComputed)
 		{
 			// close old file
-			this->closeFile();
+			this->on_closeConfig();
 			// try load config
 			auto strError = ac->setXmlConfig(byteContents);
 			if (strError.contains("Error"))
@@ -453,7 +195,7 @@ void QUaAcFullUi::openFile()
 	}
 }
 
-void QUaAcFullUi::saveFile()
+void QUaAcFullUi::on_saveConfig()
 {
 	// get access control
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
@@ -513,12 +255,8 @@ void QUaAcFullUi::saveFile()
 	fileKey.close();
 }
 
-void QUaAcFullUi::closeFile()
+void QUaAcFullUi::on_closeConfig()
 {
-	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
 	// disable old connections
 	while (m_connsUserWidget.count() > 0)
 	{
@@ -532,17 +270,460 @@ void QUaAcFullUi::closeFile()
 	{
 		QObject::disconnect(m_connsPermsWidget.takeFirst());
 	}
-	// clear config
-	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
-	ac->clearInmediatly();
 	// clear user edit widget
 	this->clearWidgetUserEdit();
 	this->clearWidgetRoleEdit();
 	this->clearWidgetPermissionsEdit();
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+	// clear config
+	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
+	ac->clearInmediatly();
 	// logout
 	this->logout();
 	// update title
-	this->setWindowTitle(m_strTitle.arg(tr("Untitled")));
+	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
+}
+
+void QUaAcFullUi::on_saveLayout()
+{
+	// check is empty
+	if (this->currentLayout().compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
+	{
+		this->on_saveAsLayout();
+		return;
+	}
+	this->saveLayout(this->currentLayout(), m_dockManager->saveState());
+}
+
+void QUaAcFullUi::on_saveAsLayout()
+{
+	bool ok;
+	QString strLayout = QInputDialog::getText(
+		this,
+		tr("Save Layout As..."),
+		tr("Layout Name :"),
+		QLineEdit::Normal,
+		"",
+		&ok
+	);
+	if (!ok && strLayout.isEmpty())
+	{
+		return;
+	}
+
+	// TODO : validate text format ?
+
+	// check is empty
+	if (strLayout.compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
+	{
+		QMessageBox::critical(
+			this,
+			tr("Layout Name Error"),
+			tr("Layout cannot be named %1.").arg(QUaAcFullUi::m_strEmpty),
+			QMessageBox::StandardButton::Ok
+		);
+		this->on_saveAsLayout();
+		return;
+	}
+	// check exists
+	if (this->layoutExists(strLayout))
+	{
+		auto res = QMessageBox::question(
+			this,
+			tr("Save Layout"),
+			tr("Layout %1 exists.\nWould you like to overwrite it?").arg(strLayout),
+			QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+		if (res != QMessageBox::StandardButton::Yes)
+		{
+			return;
+		}
+	}
+	this->saveLayout(strLayout, m_dockManager->saveState());
+	// set new layout
+	this->setCurrentLayout(strLayout);
+}
+
+void QUaAcFullUi::on_removeLayout()
+{
+	// check is empty
+	if (this->currentLayout().compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
+	{
+		QMessageBox::critical(
+			this,
+			tr("Remove Layout Error"),
+			tr("Cannot remove %1 layout.").arg(QUaAcFullUi::m_strEmpty),
+			QMessageBox::StandardButton::Ok
+		);
+		return;
+	}
+	this->removeLayout(this->currentLayout());
+	// initially empty
+	this->setCurrentLayout(QUaAcFullUi::m_strEmpty);
+}
+
+void QUaAcFullUi::on_layoutAdded(const QString & strLayout)
+{
+	QMenu *menuLayoutList = this->menuBar()->findChild<QMenu*>(QUaAcFullUi::m_strLayoutListMenu);
+	Q_CHECK_PTR(menuLayoutList);
+	menuLayoutList->addAction(strLayout, this,
+		[this, strLayout]() {
+		this->setCurrentLayout(strLayout);
+	})->setObjectName(strLayout);
+}
+
+void QUaAcFullUi::on_layoutRemoved(const QString & strLayout)
+{
+	QMenu *menuLayoutList = this->menuBar()->findChild<QMenu*>(QUaAcFullUi::m_strLayoutListMenu);
+	Q_CHECK_PTR(menuLayoutList);
+	QAction * layoutAction = menuLayoutList->findChild<QAction*>(strLayout);
+	Q_CHECK_PTR(layoutAction);
+	menuLayoutList->removeAction(layoutAction);
+}
+
+void QUaAcFullUi::on_currentLayoutChanged(const QString & strLayout)
+{
+	// display current layout name in top native dock
+	QDockWidget *dockTop = this->findChild<QDockWidget*>(QUaAcFullUi::m_strTopDock);
+	Q_CHECK_PTR(dockTop);
+	QLabel      *pLabel = dockTop->findChild<QLabel*>();
+	Q_CHECK_PTR(pLabel);
+	pLabel->setText(strLayout);
+}
+
+void QUaAcFullUi::setupInfoModel()
+{
+	// setup access control information model
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	auto ac = objsFolder->addChild<QUaAccessControl>();
+	ac->setDisplayName("AccessControl");
+	ac->setBrowseName("AccessControl");
+
+	// disable anon login
+	m_server.setAnonymousLoginAllowed(false);
+	// define custom user validation 
+	auto listUsers = ac->users();
+	m_server.setUserValidationCallback(
+		[listUsers](const QString &strUserName, const QString &strPassword) {
+		auto user = listUsers->user(strUserName);
+		if (!user)
+		{
+			return false;
+		}
+		return user->isPasswordValid(strPassword);
+	});
+
+	// setup auto add new user permissions
+	QObject::connect(ac->users(), &QUaUserList::userAdded,
+		[ac](QUaUser * user) {
+		// return if user already has permissions
+		if (user->hasPermissionsObject())
+		{
+			return;
+		}
+		// add user-only permissions
+		auto permissionsList = ac->permissions();
+		// create instance
+		QString strPermId = QString("onlyuser_%1").arg(user->getName());
+		permissionsList->addPermissions(strPermId);
+		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
+		Q_CHECK_PTR(permissions);
+		// set user can read write
+		permissions->addUserCanWrite(user);
+		permissions->addUserCanRead(user);
+		// set user's permissions
+		user->setPermissionsObject(permissions);
+	});
+	QObject::connect(ac->users(), &QUaUserList::userRemoved,
+		[ac](QUaUser * user) {
+		// remove user-only permissions
+		auto permissions = user->permissionsObject();
+		if (!permissions)
+		{
+			return;
+		}
+		permissions->remove();
+	});
+	// setup auto add new role permissions
+	QObject::connect(ac->roles(), &QUaRoleList::roleAdded,
+		[ac](QUaRole * role) {
+		// return if role already has permissions
+		if (role->hasPermissionsObject())
+		{
+			return;
+		}
+		// add role-only permissions
+		auto permissionsList = ac->permissions();
+		// create instance
+		QString strPermId = QString("onlyrole_%1").arg(role->getName());
+		permissionsList->addPermissions(strPermId);
+		auto permissions = permissionsList->browseChild<QUaPermissions>(strPermId);
+		Q_CHECK_PTR(permissions);
+		// set role can read write
+		permissions->addRoleCanWrite(role); // not used
+		permissions->addRoleCanRead(role);
+		// set role's permissions
+		role->setPermissionsObject(permissions);
+	});
+	QObject::connect(ac->roles(), &QUaRoleList::roleRemoved,
+		[ac](QUaRole * role) {
+		// remove role-only permissions
+		auto permissions = role->permissionsObject();
+		if (!permissions)
+		{
+			return;
+		}
+		permissions->remove();
+	});
+	// setup auto add new role permissions
+	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsAdded,
+		[ac](QUaPermissions * perms) {
+		// return if permissions already has permissions
+		if (perms->hasPermissionsObject())
+		{
+			return;
+		}
+		// assign to itself
+		perms->setPermissionsObject(perms);
+	});
+
+	// start server
+	m_server.start();
+}
+
+void QUaAcFullUi::createAcWidgetsDocks()
+{
+	// NOTE : it seems layout gets formed as widgets get added, building upon the last state,
+	//        the area type (left, right, top, etc.) of the first widget added is irrelevant,
+	//        the area of the second widget added defines its location wrt to the first widget,
+	//        now the first and second widget form a new area altogether, so the area of the third
+	//        widget defines its location wrt to this new area (first + second) and so on.
+	//        so as we add widgets we 'pivot' wrt the agroupation of all previous widgets.
+	//        to change the 'pivot' we must use the returned area and pass it as the last argument,
+	//        then all widgets added with this 'pivot' will be positioned wrt that widget
+	int dockMargins = 6;
+
+	auto pDockUsersTable = new QAdDockWidget(tr("Users"), this);
+	m_userTable = new QUaUserTable(pDockUsersTable);
+	pDockUsersTable->setWidget(m_userTable);
+	m_dockManager->addDockWidget(QAd::CenterDockWidgetArea, pDockUsersTable);
+	m_userTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+
+	auto pDockRolesTable = new QAdDockWidget(tr("Roles"), this);
+	m_roleTable = new QUaRoleTable(pDockRolesTable);
+	pDockRolesTable->setWidget(m_roleTable);
+	m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockRolesTable);
+	m_roleTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+
+	auto pDockPermsTable = new QAdDockWidget(tr("Permissions"), this);
+	m_permsTable = new QUaPermissionsTable(pDockPermsTable);
+	pDockPermsTable->setWidget(m_permsTable);
+	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsTable);
+	m_permsTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+
+	auto pDockUserEdit = new QAdDockWidget(tr("User Edit"), this);
+	m_userWidget = new QUaUserWidgetEdit(pDockUserEdit);
+	pDockUserEdit->setWidget(m_userWidget);
+	auto userArea =
+		m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockUserEdit);
+	m_userWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+
+	auto pDockRoleEdit = new QAdDockWidget(tr("Role Edit"), this);
+	m_roleWidget = new QUaRoleWidgetEdit(pDockRoleEdit);
+	pDockRoleEdit->setWidget(m_roleWidget);
+	auto roleArea =
+		m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockRoleEdit, userArea);
+	m_roleWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+
+	auto pDockPermsEdit = new QAdDockWidget(tr("Permissions Edit"), this);
+	m_permsWidget = new QUaPermissionsWidgetEdit(pDockPermsEdit);
+	pDockPermsEdit->setWidget(m_permsWidget);
+	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsEdit, roleArea);
+	m_permsWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+}
+
+void QUaAcFullUi::setupUserWidgets()
+{
+	Q_CHECK_PTR(m_userTable);
+	Q_CHECK_PTR(m_userWidget);
+	// disable until some valid object selected
+	m_userWidget->setEnabled(false);
+	m_userWidget->setRepeatVisible(true);
+
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+
+	// set ac to table
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_userTable, &QUaUserTable::on_loggedUserChanged);
+	m_userTable->setAccessControl(ac);
+
+	// handle table events (user selection)
+	// change widgets
+	QObject::connect(m_userTable, &QUaUserTable::userSelectionChanged, this,
+		[this](QUaUser * userPrev, QUaUser * userCurr)
+	{
+		Q_UNUSED(userPrev);
+		// early exit
+		if (!userCurr || m_deleting)
+		{
+			return;
+		}
+		// bind widget for current selection
+		this->bindWidgetUserEdit(userCurr);
+	});
+
+	// setup user edit widget
+	m_userWidget->setRoleList(ac->roles());
+}
+
+void QUaAcFullUi::setupRoleWidgets()
+{
+	Q_CHECK_PTR(m_roleTable);
+	Q_CHECK_PTR(m_roleWidget);
+	// disable until some valid object selected
+	m_roleWidget->setEnabled(false);
+
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+
+	// set ac to table
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_roleTable, &QUaRoleTable::on_loggedUserChanged);
+	m_roleTable->setAccessControl(ac);
+
+	// handle table events (user selection)
+	// change widgets
+	QObject::connect(m_roleTable, &QUaRoleTable::roleSelectionChanged, this,
+		[this](QUaRole * rolePrev, QUaRole * roleCurr)
+	{
+		Q_UNUSED(rolePrev);
+		// early exit
+		if (!roleCurr || m_deleting)
+		{
+			return;
+		}
+		// bind widget for current selection
+		this->bindWidgetRoleEdit(roleCurr);
+	});
+}
+
+void QUaAcFullUi::setupPermsWidgets()
+{
+	Q_CHECK_PTR(m_permsTable);
+	Q_CHECK_PTR(m_permsWidget);
+	// disable until some valid object selected
+	m_permsWidget->setEnabled(false);
+
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+
+	// set ac to table
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_permsTable, &QUaPermissionsTable::on_loggedUserChanged);
+	m_permsTable->setAccessControl(ac);
+
+	// handle table events (user selection)
+	// change widgets
+	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsSelectionChanged, this,
+		[this](QUaPermissions * permsPrev, QUaPermissions * permsCurr)
+	{
+		Q_UNUSED(permsPrev);
+		// early exit
+		if (!permsCurr || m_deleting)
+		{
+			return;
+		}
+		// bind widget for current selection
+		this->bindWidgetPermissionsEdit(permsCurr);
+	});
+}
+
+void QUaAcFullUi::setupMenuBar()
+{
+	// file open, save, close
+	QMenu *menuFile = this->menuBar()->addMenu(tr("File"));
+	menuFile->addAction(tr("New"), this, &QUaAcFullUi::on_newConfig);
+	menuFile->addAction(tr("Open"), this, &QUaAcFullUi::on_openConfig);
+	menuFile->addSeparator();
+	menuFile->addAction(tr("Save"), this, &QUaAcFullUi::on_saveConfig);
+	menuFile->addSeparator();
+	menuFile->addAction(tr("Close"), this, &QUaAcFullUi::on_closeConfig);
+
+	// TODO : native docks show/hide
+	//        e.g. top dock (current layout), left/right dock (widget tree)
+	QMenu *menuView = this->menuBar()->addMenu(tr("View"));
+
+	// TODO : dock widgets
+	QMenu *menuWidgets   = this->menuBar()->addMenu(tr("Widgets"));
+	QMenu *menuAcWidgets = menuWidgets->addMenu(tr("Access Control"));
+
+	// TODO : add permissions to dock widgets
+
+	// user defined layouts
+	QMenu *menuLayouts = this->menuBar()->addMenu(tr("Layouts"));
+	QMenu *menuLayoutList = menuLayouts->addMenu(tr("Open"));
+	menuLayoutList->setObjectName(QUaAcFullUi::m_strLayoutListMenu);
+	menuLayouts->addSeparator();
+	menuLayouts->addAction(tr("Save"), this, &QUaAcFullUi::on_saveLayout);
+	menuLayouts->addAction(tr("Save As..."), this, &QUaAcFullUi::on_saveAsLayout);
+	menuLayouts->addSeparator();
+	menuLayouts->addAction(tr("Remove"), this, &QUaAcFullUi::on_removeLayout);
+
+	// TODO : add permissions to layouts?
+
+	// setup top right loggin menu
+	auto logginBar = new QMenuBar(this->menuBar());
+	QMenu *menuHelp = new QMenu(tr("Login"), logginBar);
+	menuHelp->setObjectName(QUaAcFullUi::m_strHelpMenu);
+	logginBar->addMenu(menuHelp);
+	this->menuBar()->setCornerWidget(logginBar);
+	// add logon/logout action
+	QAction * actLogInOut = menuHelp->addAction(tr("Login"));
+	// setup action events
+	QObject::connect(actLogInOut, &QAction::triggered, this,
+	[this]() {
+		if (this->loggedUser())
+		{
+			this->logout();
+		}
+		else
+		{
+			this->login();
+		}
+	});
+}
+
+void QUaAcFullUi::setupNativeDocks()
+{
+	// top dock - current layout name
+	QDockWidget *dockTop = new QDockWidget(this);
+	dockTop->setObjectName(QUaAcFullUi::m_strTopDock);
+	dockTop->setAllowedAreas(Qt::TopDockWidgetArea);
+	dockTop->setFeatures(QDockWidget::NoDockWidgetFeatures);
+	dockTop->setFloating(false);
+	dockTop->setTitleBarWidget(new QWidget());
+	this->addDockWidget(Qt::TopDockWidgetArea, dockTop);
+	// widget
+	QWidget     *pWidget  = new QWidget;
+	QHBoxLayout *pLayout  = new QHBoxLayout;
+	QSpacerItem *pSpacer1 = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
+	QLabel      *pLabel   = new QLabel;
+	QSpacerItem *pSpacer2 = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
+	pLabel->setText(tr("Layout Name"));
+	// layout
+	pLayout->addSpacerItem(pSpacer1);
+	pLayout->addWidget(pLabel);
+	pLayout->addSpacerItem(pSpacer2);
+	pLayout->setContentsMargins(0, 9, 0, 6);
+	pWidget->setLayout(pLayout);
+
+	dockTop->setWidget(pWidget);
 }
 
 QUaUser * QUaAcFullUi::loggedUser() const
@@ -1244,3 +1425,51 @@ void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
 		this->clearWidgetPermissionsEdit();
 	}
 }
+
+QString QUaAcFullUi::currentLayout() const
+{
+	return m_currLayout;
+}
+
+bool QUaAcFullUi::layoutExists(const QString &strLayout) const
+{
+	return m_mapLayouts.contains(strLayout);
+}
+
+void QUaAcFullUi::saveLayout(const QString & strLayout, const QByteArray & byteState)
+{
+	if (this->layoutExists(strLayout))
+	{
+		m_mapLayouts[strLayout] = byteState;
+		emit this->layoutUpdated(strLayout);
+	}
+	else
+	{
+		m_mapLayouts.insert(strLayout, byteState);
+		emit this->layoutAdded(strLayout);
+	}
+}
+
+void QUaAcFullUi::removeLayout(const QString & strLayout)
+{
+	Q_ASSERT(this->layoutExists(strLayout));
+	if (!this->layoutExists(strLayout))
+	{
+		return;
+	}
+	m_mapLayouts.remove(strLayout);
+	emit this->layoutRemoved(strLayout);
+}
+
+void QUaAcFullUi::setCurrentLayout(const QString & strLayout)
+{
+	Q_ASSERT(this->layoutExists(strLayout));
+	if (!this->layoutExists(strLayout))
+	{
+		return;
+	}
+	m_currLayout = strLayout;
+	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout));
+	emit this->currentLayoutChanged(m_currLayout);
+}
+

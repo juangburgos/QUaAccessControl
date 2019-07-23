@@ -30,6 +30,9 @@ class QUaUserWidgetEdit;
 class QUaRoleWidgetEdit;
 class QUaPermissionsWidgetEdit;
 
+typedef QMap<QString, QByteArray> QUaAcLayouts;
+typedef QMapIterator<QString, QByteArray> QUaAcLayoutsIter;
+
 class QUaAcFullUi : public QMainWindow
 {
     Q_OBJECT
@@ -41,19 +44,41 @@ public:
 signals:
 	void loggedUserChanged(QUaUser * user);
 
+	void layoutAdded         (const QString &strLayout);
+	void layoutUpdated       (const QString &strLayout);
+	void layoutRemoved       (const QString &strLayout);
+	void currentLayoutChanged(const QString &strLayout);
+
 private slots:
 	void on_loggedUserChanged(QUaUser * user);
 
+	void on_newConfig();
+	void on_openConfig();
+	void on_saveConfig();
+	void on_closeConfig();
+
+	void on_saveLayout();
+	void on_saveAsLayout();
+	void on_removeLayout();
+
+	void on_layoutAdded         (const QString &strLayout);
+	void on_layoutRemoved       (const QString &strLayout);
+	void on_currentLayoutChanged(const QString &strLayout);
+
 private:
     Ui::QUaAcFullUi *ui;
-	// opc ua
-	QUaServer   m_server    ;
-	bool        m_deleting  ;
-	QString     m_strSecret ;
-	QString     m_strTitle  ;
-	QUaUser   * m_loggedUser;
-	// widgets
-	QAdDockManager           * m_dockManager;
+
+	// window members
+	QUaServer        m_server     ;
+	bool             m_deleting   ;
+	QString          m_strSecret  ;
+	QString          m_strTitle   ;
+	QUaUser        * m_loggedUser ;
+	QAdDockManager * m_dockManager;
+	QUaAcLayouts     m_mapLayouts ;
+	QString          m_currLayout ;
+
+	// ac widgets
 	QUaUserTable             * m_userTable  ;
 	QUaRoleTable             * m_roleTable  ;
 	QUaPermissionsTable      * m_permsTable ;
@@ -62,15 +87,12 @@ private:
 	QUaPermissionsWidgetEdit * m_permsWidget;
 
 	void setupInfoModel      ();
-	void createWidgetsInDocks();
+	void createAcWidgetsDocks();
 	void setupUserWidgets    ();
 	void setupRoleWidgets    ();
 	void setupPermsWidgets   ();
 	void setupMenuBar        ();
-
-	void openFile();
-	void saveFile();
-	void closeFile();
+	void setupNativeDocks    ();
 
 	QUaUser * loggedUser() const;
 	void      setLoggedUser(QUaUser * user);
@@ -94,6 +116,21 @@ private:
 	void clearWidgetPermissionsEdit();
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
 	void setWidgetPermissionsEditPermissions(QUaUser * user);
+
+	QString currentLayout() const;
+	bool layoutExists    (const QString &strLayout) const;
+	void saveLayout      (const QString &strLayout, const QByteArray &byteState);
+	void removeLayout    (const QString &strLayout);
+	void setCurrentLayout(const QString &strLayout);
+
+	static QString m_strUntitiled;
+	static QString m_strEmpty;
+	static QString m_strDefault;
+
+	// to find children
+	static QString m_strHelpMenu;
+	static QString m_strLayoutListMenu;
+	static QString m_strTopDock;
 };
 
 #endif // QUAACFULLUI_H
