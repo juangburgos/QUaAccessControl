@@ -128,6 +128,25 @@ void QUaAccessControl::clearRootUser()
 	return;
 }
 
+void QUaAccessControl::clearInmediatly()
+{
+	auto permsList = this->permissions()->permissionsList();
+	for (auto perms : permsList)
+	{
+		delete perms;
+	}
+	auto roles = this->roles()->roles();
+	for (auto role : roles)
+	{
+		delete role;
+	}
+	auto users = this->users()->users();
+	for (auto user : users)
+	{
+		delete user;
+	}
+}
+
 QDomElement QUaAccessControl::toDomElement(QDomDocument & domDoc) const
 {
 	// add ac element

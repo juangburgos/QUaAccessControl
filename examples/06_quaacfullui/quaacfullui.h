@@ -2,6 +2,7 @@
 #define QUAACFULLUI_H
 
 #include <QMainWindow>
+#include <QMenuBar>
 
 namespace Ui {
 class QUaAcFullUi;
@@ -10,6 +11,8 @@ class QUaAcFullUi;
 #include <QUaServer>
 
 class QUaUser;
+class QUaRole;
+class QUaPermissions;
 class QUaAcCommonDialog;
 
 #include <DockManager.h>
@@ -44,10 +47,11 @@ private slots:
 private:
     Ui::QUaAcFullUi *ui;
 	// opc ua
-	QUaServer   m_server;
-	bool        m_deleting;
-	QString     m_strSecret;
-	QUaUser    *m_loggedUser;
+	QUaServer   m_server    ;
+	bool        m_deleting  ;
+	QString     m_strSecret ;
+	QString     m_strTitle  ;
+	QUaUser   * m_loggedUser;
 	// widgets
 	QAdDockManager           * m_dockManager;
 	QUaUserTable             * m_userTable  ;
@@ -57,11 +61,39 @@ private:
 	QUaRoleWidgetEdit        * m_roleWidget ;
 	QUaPermissionsWidgetEdit * m_permsWidget;
 
-	void setupInfoModel();
+	void setupInfoModel      ();
 	void createWidgetsInDocks();
-	void setupUserWidgets();
-	void setupRoleWidgets();
-	void setupPermsWidgets();
+	void setupUserWidgets    ();
+	void setupRoleWidgets    ();
+	void setupPermsWidgets   ();
+	void setupMenuBar        ();
+
+	void openFile();
+	void saveFile();
+	void closeFile();
+
+	QUaUser * loggedUser() const;
+	void      setLoggedUser(QUaUser * user);
+
+	void login ();
+	void logout();
+	void showCreateRootUserDialog (QUaAcCommonDialog &dialog);
+	void showUserCredentialsDialog(QUaAcCommonDialog &dialog);
+
+	QList<QMetaObject::Connection> m_connsUserWidget;
+	void clearWidgetUserEdit();
+	void bindWidgetUserEdit(QUaUser * user);
+	void setWidgetUserEditPermissions(QUaUser * user);
+
+	QList<QMetaObject::Connection> m_connsRoleWidget;
+	void clearWidgetRoleEdit();
+	void bindWidgetRoleEdit(QUaRole * role);
+	void setWidgetRoleEditPermissions(QUaUser * user);
+
+	QList<QMetaObject::Connection> m_connsPermsWidget;
+	void clearWidgetPermissionsEdit();
+	void bindWidgetPermissionsEdit(QUaPermissions * perms);
+	void setWidgetPermissionsEditPermissions(QUaUser * user);
 };
 
 #endif // QUAACFULLUI_H

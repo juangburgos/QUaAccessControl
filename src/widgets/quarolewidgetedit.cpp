@@ -106,7 +106,7 @@ QStringList QUaRoleWidgetEdit::users() const
 void QUaRoleWidgetEdit::setUsers(const QStringList & listUsers)
 {
 	// cleanup first
-	m_modelUsers.clear();
+	m_modelUsers.removeRows(0, m_modelUsers.rowCount());
 	for (auto userName : listUsers)
 	{
 		this->addUser(userName);

@@ -262,10 +262,12 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 	parent->setChild(row, (int)Headers::Name, iName);
 
 	// role column
+	QMetaObject::Connection roleDestConn;
 	QString strRole = "";
 	QUaRole * role = user->role();
 	if (role)
 	{
+		// role name
 		strRole = role->getName();
 	}
 	auto iRole = new QStandardItem(strRole);
@@ -274,14 +276,29 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 	// add after data
 	parent->setChild(row, (int)Headers::Role, iRole);
 	// updates
+	if (role)
+	{
+		// subscribe role delete
+		roleDestConn = QObject::connect(role, &QObject::destroyed, user,
+			[user, iRole]() {
+			QString strRole = "";
+			if (user->role())
+			{
+				strRole = user->role()->getName();
+			}
+			iRole->setText(strRole);
+		});
+	}
 	QObject::connect(user, &QUaUser::roleChanged, this,
-	[iRole](QUaRole * role) {
+	[iRole, roleDestConn](QUaRole * role) {
 		QString strRole = "";
 		if (role)
 		{
 			strRole = role->getName();
 		}
 		iRole->setText(strRole);
+		// disconnect
+		QObject::disconnect(roleDestConn);
 	});
 
 	// remove row if deleted

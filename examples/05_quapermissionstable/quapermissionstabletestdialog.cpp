@@ -80,7 +80,7 @@ QUaPermissionsTableTestDialog::QUaPermissionsTableTestDialog(QWidget *parent) :
 		{
 			return;
 		}
-		permissions->deleteLater();
+		permissions->remove();
 	});
 	// setup auto add new role permissions
 	QObject::connect(ac->roles(), &QUaRoleList::roleAdded,
@@ -111,7 +111,7 @@ QUaPermissionsTableTestDialog::QUaPermissionsTableTestDialog(QWidget *parent) :
 		{
 			return;
 		}
-		permissions->deleteLater();
+		permissions->remove();
 	});
 	// setup auto add new role permissions
 	QObject::connect(ac->permissions(), &QUaPermissionsList::permissionsAdded,
@@ -621,7 +621,7 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 		m_connections << QObject::connect(user, &QUaUser::roleChanged, this, 
 		[updateUser, user]() {
 			updateUser(user);
-		}, Qt::QueuedConnection);;
+		}, Qt::QueuedConnection);
 	}
 
 	// on user or role added/removed
@@ -629,10 +629,10 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 		this->bindWidgetPermissionsEdit(perms);
 	};
 	// NOTE : queued to wait until user/role has name or has actually been deleted
-	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleAdded  , this, resetPermsWidget, Qt::QueuedConnection);
-	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, this, resetPermsWidget, Qt::QueuedConnection);
-	m_connections << QObject::connect(ac->users(), &QUaUserList::userAdded  , this, resetPermsWidget, Qt::QueuedConnection);
-	m_connections << QObject::connect(ac->users(), &QUaUserList::userRemoved, this, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleAdded  , perms, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->roles(), &QUaRoleList::roleRemoved, perms, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->users(), &QUaUserList::userAdded  , perms, resetPermsWidget, Qt::QueuedConnection);
+	m_connections << QObject::connect(ac->users(), &QUaUserList::userRemoved, perms, resetPermsWidget, Qt::QueuedConnection);
 
 	// on click apply
 	m_connections <<
@@ -678,7 +678,7 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 			return;
 		}
 		// delete
-		perms->deleteLater();
+		perms->remove();
 	});
 
 	// set permissions

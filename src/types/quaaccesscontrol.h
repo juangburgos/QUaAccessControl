@@ -40,6 +40,7 @@ public:
 	QUaUser  * rootUser() const;
 	void       setRootUser(QUaUser * rootUser);
 	void       clearRootUser();
+	void       clearInmediatly();
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;

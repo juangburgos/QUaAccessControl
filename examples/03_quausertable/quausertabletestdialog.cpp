@@ -466,6 +466,7 @@ void QUaUserTableTestDialog::clearWidgetUserEdit()
 	ui->widgetUserEdit->setUserName("");
 	ui->widgetUserEdit->setRole(nullptr);
 	ui->widgetUserEdit->setPassword("");
+	ui->widgetUserEdit->setRepeat("");
 	ui->widgetUserEdit->setHash("");
 	ui->widgetUserEdit->setEnabled(false);
 }
@@ -492,7 +493,8 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 	ui->widgetUserEdit->setUserNameReadOnly(true);
 	ui->widgetUserEdit->setUserName(user->getName());
 	// role
-	ui->widgetUserEdit->setRole(user->role());
+	auto role = user->role();
+	ui->widgetUserEdit->setRole(role);
 	m_connections <<
 	QObject::connect(user, &QUaUser::roleChanged, this,
 	[this](QUaRole * role) {
@@ -501,6 +503,15 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 			return;
 		}
 		ui->widgetUserEdit->setRole(role);
+	});
+	m_connections <<
+	QObject::connect(role, &QObject::destroyed, user,
+	[this, user]() {
+		if (m_deleting)
+		{
+			return;
+		}
+		ui->widgetUserEdit->setRole(user->role());
 	});
 	// hash
 	ui->widgetUserEdit->setHash(user->getHash().toHex());
@@ -516,6 +527,7 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 
 	// password
 	ui->widgetUserEdit->setPassword("");
+	ui->widgetUserEdit->setRepeat("");
 
 	// on click delete
 	m_connections <<
@@ -533,7 +545,7 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 			return;
 		}
 		// delete
-		user->deleteLater();
+		user->remove();
 	});
 
 	// on click apply

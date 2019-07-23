@@ -80,7 +80,7 @@ QUaRoleTableTestDialog::QUaRoleTableTestDialog(QWidget *parent) :
 		{
 			return;
 		}
-		permissions->deleteLater();
+		permissions->remove();
 	});
 	// setup auto add new role permissions
 	QObject::connect(ac->roles(), &QUaRoleList::roleAdded,
@@ -111,7 +111,7 @@ QUaRoleTableTestDialog::QUaRoleTableTestDialog(QWidget *parent) :
 		{
 			return;
 		}
-		permissions->deleteLater();
+		permissions->remove();
 	});
 
 	// set ac to table
@@ -547,7 +547,18 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 		{
 			return;
 		}
-		ui->widgetRoleEdit->addUser(user->getName());
+		QString strUserName = user->getName();
+		ui->widgetRoleEdit->addUser(strUserName);
+		// suscribe used destroyed
+		m_connections <<
+		QObject::connect(user, &QObject::destroyed, this,
+		[this, strUserName]() {
+			if (m_deleting)
+			{
+				return;
+			}
+			ui->widgetRoleEdit->removeUser(strUserName);
+		});
 	});
 	// subscribe user removed
 	m_connections <<
@@ -575,7 +586,7 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 			return;
 		}
 		// delete
-		role->deleteLater();
+		role->remove();
 	});
 
 	// set permissions
