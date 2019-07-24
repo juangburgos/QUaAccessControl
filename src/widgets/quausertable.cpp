@@ -290,7 +290,7 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 		});
 	}
 	QObject::connect(user, &QUaUser::roleChanged, this,
-	[iRole, roleDestConn](QUaRole * role) {
+	[this, iRole, roleDestConn](QUaRole * role) {
 		QString strRole = "";
 		if (role)
 		{

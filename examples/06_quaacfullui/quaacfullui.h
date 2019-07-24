@@ -4,24 +4,18 @@
 #include <QMainWindow>
 #include <QMenuBar>
 
+#include <QUaServer>
+
+#include <QUaAcDocking>
+
 namespace Ui {
 class QUaAcFullUi;
 }
-
-#include <QUaServer>
 
 class QUaUser;
 class QUaRole;
 class QUaPermissions;
 class QUaAcCommonDialog;
-
-#include <DockManager.h>
-#include <DockWidget.h>
-#include <DockAreaWidget.h>
-
-namespace QAd = ads;
-typedef QAd::CDockManager QAdDockManager;
-typedef QAd::CDockWidget  QAdDockWidget;
 
 class QUaUserTable;
 class QUaRoleTable;
@@ -29,9 +23,6 @@ class QUaPermissionsTable;
 class QUaUserWidgetEdit;
 class QUaRoleWidgetEdit;
 class QUaPermissionsWidgetEdit;
-
-typedef QMap<QString, QByteArray> QUaAcLayouts;
-typedef QMapIterator<QString, QByteArray> QUaAcLayoutsIter;
 
 class QUaAcFullUi : public QMainWindow
 {
@@ -44,11 +35,6 @@ public:
 signals:
 	void loggedUserChanged(QUaUser * user);
 
-	void layoutAdded         (const QString &strLayout);
-	void layoutUpdated       (const QString &strLayout);
-	void layoutRemoved       (const QString &strLayout);
-	void currentLayoutChanged(const QString &strLayout);
-
 private slots:
 	void on_loggedUserChanged(QUaUser * user);
 
@@ -56,10 +42,6 @@ private slots:
 	void on_openConfig();
 	void on_saveConfig();
 	void on_closeConfig();
-
-	void on_saveLayout();
-	void on_saveAsLayout();
-	void on_removeLayout();
 
 	void on_layoutAdded         (const QString &strLayout);
 	void on_layoutRemoved       (const QString &strLayout);
@@ -74,9 +56,7 @@ private:
 	QString          m_strSecret  ;
 	QString          m_strTitle   ;
 	QUaUser        * m_loggedUser ;
-	QAdDockManager * m_dockManager;
-	QUaAcLayouts     m_mapLayouts ;
-	QString          m_currLayout ;
+	QUaAcDocking   * m_dockManager;
 
 	// ac widgets
 	QUaUserTable             * m_userTable  ;
@@ -117,14 +97,7 @@ private:
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
 	void setWidgetPermissionsEditPermissions(QUaUser * user);
 
-	QString currentLayout() const;
-	bool layoutExists    (const QString &strLayout) const;
-	void saveLayout      (const QString &strLayout, const QByteArray &byteState);
-	void removeLayout    (const QString &strLayout);
-	void setCurrentLayout(const QString &strLayout);
-
 	static QString m_strUntitiled;
-	static QString m_strEmpty;
 	static QString m_strDefault;
 
 	// to find children

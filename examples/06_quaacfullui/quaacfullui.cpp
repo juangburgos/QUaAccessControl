@@ -29,7 +29,6 @@
 #include <QUaPermissionsWidgetEdit>
 
 QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
-QString QUaAcFullUi::m_strEmpty     = QObject::tr("Empty"   );
 QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
 
 QString QUaAcFullUi::m_strHelpMenu       = QObject::tr("HelpMenu");
@@ -38,30 +37,29 @@ QString QUaAcFullUi::m_strTopDock        = QObject::tr("TopDock");
 
 QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::QUaAcFullUi),
-	m_strTitle("%1 - QUaUserAccess GUI")
+    ui(new Ui::QUaAcFullUi)
 {
     ui->setupUi(this);
 	// initial values
-	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
+	m_strTitle    = QString("%1 - QUaUserAccess GUI");
 	m_deleting    = false;
 	m_strSecret   = "my_secret";
 	m_loggedUser  = nullptr;
-	m_dockManager = new QAdDockManager(this);
+	m_dockManager = new QUaAcDocking(this);
+	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
 	// setup menu bar
 	this->setupMenuBar();
 	// setup native docks
 	this->setupNativeDocks();
 	// signals and slots
-	QObject::connect(this, &QUaAcFullUi::layoutAdded         , this, &QUaAcFullUi::on_layoutAdded         );
-	QObject::connect(this, &QUaAcFullUi::layoutRemoved       , this, &QUaAcFullUi::on_layoutRemoved       );
-	QObject::connect(this, &QUaAcFullUi::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded         , this, &QUaAcFullUi::on_layoutAdded         );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved       , this, &QUaAcFullUi::on_layoutRemoved       );
+	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	// setup opc ua information model and server
 	this->setupInfoModel();
 	// create all widgets
-	this->saveLayout(QUaAcFullUi::m_strEmpty, m_dockManager->saveState());
 	this->createAcWidgetsDocks();
-	this->saveLayout(QUaAcFullUi::m_strDefault, m_dockManager->saveState());
+	m_dockManager->saveCurrentLayout(QUaAcFullUi::m_strDefault);
 	// setup widgets
 	this->setupUserWidgets();
 	this->setupRoleWidgets();
@@ -71,7 +69,7 @@ QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
 	// intially logged out
 	this->logout();
 	// initially empty
-	this->setCurrentLayout(QUaAcFullUi::m_strEmpty);
+	m_dockManager->setEmptyLayout();
 }
 
 QUaAcFullUi::~QUaAcFullUi()
@@ -97,7 +95,7 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 	if (!user)
 	{
 		// update menubar : logged out user
-		menuHelp->setTitle(tr("Please Login"));
+		menuHelp->setTitle(tr("Login Here"));
 		actLogInOut->setText(tr("Login"));
 		// clear edit widgets
 		this->clearWidgetUserEdit();
@@ -287,90 +285,13 @@ void QUaAcFullUi::on_closeConfig()
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
 }
 
-void QUaAcFullUi::on_saveLayout()
-{
-	// check is empty
-	if (this->currentLayout().compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
-	{
-		this->on_saveAsLayout();
-		return;
-	}
-	this->saveLayout(this->currentLayout(), m_dockManager->saveState());
-}
-
-void QUaAcFullUi::on_saveAsLayout()
-{
-	bool ok;
-	QString strLayout = QInputDialog::getText(
-		this,
-		tr("Save Layout As..."),
-		tr("Layout Name :"),
-		QLineEdit::Normal,
-		"",
-		&ok
-	);
-	if (!ok && strLayout.isEmpty())
-	{
-		return;
-	}
-
-	// TODO : validate text format ?
-
-	// check is empty
-	if (strLayout.compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
-	{
-		QMessageBox::critical(
-			this,
-			tr("Layout Name Error"),
-			tr("Layout cannot be named %1.").arg(QUaAcFullUi::m_strEmpty),
-			QMessageBox::StandardButton::Ok
-		);
-		this->on_saveAsLayout();
-		return;
-	}
-	// check exists
-	if (this->layoutExists(strLayout))
-	{
-		auto res = QMessageBox::question(
-			this,
-			tr("Save Layout"),
-			tr("Layout %1 exists.\nWould you like to overwrite it?").arg(strLayout),
-			QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
-		if (res != QMessageBox::StandardButton::Yes)
-		{
-			return;
-		}
-	}
-	this->saveLayout(strLayout, m_dockManager->saveState());
-	// set new layout
-	this->setCurrentLayout(strLayout);
-}
-
-void QUaAcFullUi::on_removeLayout()
-{
-	// check is empty
-	if (this->currentLayout().compare(QUaAcFullUi::m_strEmpty, Qt::CaseInsensitive) == 0)
-	{
-		QMessageBox::critical(
-			this,
-			tr("Remove Layout Error"),
-			tr("Cannot remove %1 layout.").arg(QUaAcFullUi::m_strEmpty),
-			QMessageBox::StandardButton::Ok
-		);
-		return;
-	}
-	this->removeLayout(this->currentLayout());
-	// initially empty
-	this->setCurrentLayout(QUaAcFullUi::m_strEmpty);
-}
-
 void QUaAcFullUi::on_layoutAdded(const QString & strLayout)
 {
 	QMenu *menuLayoutList = this->menuBar()->findChild<QMenu*>(QUaAcFullUi::m_strLayoutListMenu);
 	Q_CHECK_PTR(menuLayoutList);
 	menuLayoutList->addAction(strLayout, this,
-		[this, strLayout]() {
-		this->setCurrentLayout(strLayout);
+	[this, strLayout]() {
+		m_dockManager->setCurrentLayout(strLayout);
 	})->setObjectName(strLayout);
 }
 
@@ -505,42 +426,30 @@ void QUaAcFullUi::createAcWidgetsDocks()
 	//        then all widgets added with this 'pivot' will be positioned wrt that widget
 	int dockMargins = 6;
 
-	auto pDockUsersTable = new QAdDockWidget(tr("Users"), this);
-	m_userTable = new QUaUserTable(pDockUsersTable);
-	pDockUsersTable->setWidget(m_userTable);
-	m_dockManager->addDockWidget(QAd::CenterDockWidgetArea, pDockUsersTable);
+	m_userTable = new QUaUserTable(this);
+	m_dockManager->addDockWidget("UsersTable", QAd::CenterDockWidgetArea, m_userTable);
 	m_userTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
-
-	auto pDockRolesTable = new QAdDockWidget(tr("Roles"), this);
-	m_roleTable = new QUaRoleTable(pDockRolesTable);
-	pDockRolesTable->setWidget(m_roleTable);
-	m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockRolesTable);
+	
+	m_roleTable = new QUaRoleTable(this);
+	m_dockManager->addDockWidget("RolesTable", QAd::RightDockWidgetArea, m_roleTable);
 	m_roleTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
 
-	auto pDockPermsTable = new QAdDockWidget(tr("Permissions"), this);
-	m_permsTable = new QUaPermissionsTable(pDockPermsTable);
-	pDockPermsTable->setWidget(m_permsTable);
-	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsTable);
-	m_permsTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+	m_permsTable = new QUaPermissionsTable(this);
+	m_dockManager->addDockWidget("PermissionsTable", QAd::BottomDockWidgetArea, m_permsTable);
+	m_permsTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);	
 
-	auto pDockUserEdit = new QAdDockWidget(tr("User Edit"), this);
-	m_userWidget = new QUaUserWidgetEdit(pDockUserEdit);
-	pDockUserEdit->setWidget(m_userWidget);
+	m_userWidget = new QUaUserWidgetEdit(this);
 	auto userArea =
-		m_dockManager->addDockWidget(QAd::RightDockWidgetArea, pDockUserEdit);
+		m_dockManager->addDockWidget("UserEdit", QAd::RightDockWidgetArea, m_userWidget);
 	m_userWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
 
-	auto pDockRoleEdit = new QAdDockWidget(tr("Role Edit"), this);
-	m_roleWidget = new QUaRoleWidgetEdit(pDockRoleEdit);
-	pDockRoleEdit->setWidget(m_roleWidget);
+	m_roleWidget = new QUaRoleWidgetEdit(this);
 	auto roleArea =
-		m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockRoleEdit, userArea);
+		m_dockManager->addDockWidget("RoleEdit", QAd::BottomDockWidgetArea, m_roleWidget, userArea);
 	m_roleWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
 
-	auto pDockPermsEdit = new QAdDockWidget(tr("Permissions Edit"), this);
-	m_permsWidget = new QUaPermissionsWidgetEdit(pDockPermsEdit);
-	pDockPermsEdit->setWidget(m_permsWidget);
-	m_dockManager->addDockWidget(QAd::BottomDockWidgetArea, pDockPermsEdit, roleArea);
+	m_permsWidget = new QUaPermissionsWidgetEdit(this);
+	m_dockManager->addDockWidget("PermissionsEdit", QAd::BottomDockWidgetArea, m_permsWidget, roleArea);
 	m_permsWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
 }
 
@@ -670,10 +579,10 @@ void QUaAcFullUi::setupMenuBar()
 	QMenu *menuLayoutList = menuLayouts->addMenu(tr("Open"));
 	menuLayoutList->setObjectName(QUaAcFullUi::m_strLayoutListMenu);
 	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Save"), this, &QUaAcFullUi::on_saveLayout);
-	menuLayouts->addAction(tr("Save As..."), this, &QUaAcFullUi::on_saveAsLayout);
+	menuLayouts->addAction(tr("Save"      ), m_dockManager, &QUaAcDocking::on_saveLayout);
+	menuLayouts->addAction(tr("Save As..."), m_dockManager, &QUaAcDocking::on_saveAsLayout);
 	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Remove"), this, &QUaAcFullUi::on_removeLayout);
+	menuLayouts->addAction(tr("Remove"    ), m_dockManager, &QUaAcDocking::on_removeLayout);
 
 	// TODO : add permissions to layouts?
 
@@ -1426,50 +1335,4 @@ void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
 	}
 }
 
-QString QUaAcFullUi::currentLayout() const
-{
-	return m_currLayout;
-}
-
-bool QUaAcFullUi::layoutExists(const QString &strLayout) const
-{
-	return m_mapLayouts.contains(strLayout);
-}
-
-void QUaAcFullUi::saveLayout(const QString & strLayout, const QByteArray & byteState)
-{
-	if (this->layoutExists(strLayout))
-	{
-		m_mapLayouts[strLayout] = byteState;
-		emit this->layoutUpdated(strLayout);
-	}
-	else
-	{
-		m_mapLayouts.insert(strLayout, byteState);
-		emit this->layoutAdded(strLayout);
-	}
-}
-
-void QUaAcFullUi::removeLayout(const QString & strLayout)
-{
-	Q_ASSERT(this->layoutExists(strLayout));
-	if (!this->layoutExists(strLayout))
-	{
-		return;
-	}
-	m_mapLayouts.remove(strLayout);
-	emit this->layoutRemoved(strLayout);
-}
-
-void QUaAcFullUi::setCurrentLayout(const QString & strLayout)
-{
-	Q_ASSERT(this->layoutExists(strLayout));
-	if (!this->layoutExists(strLayout))
-	{
-		return;
-	}
-	m_currLayout = strLayout;
-	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout));
-	emit this->currentLayoutChanged(m_currLayout);
-}
 
