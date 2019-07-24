@@ -43,8 +43,6 @@ private slots:
 	void on_saveConfig();
 	void on_closeConfig();
 
-	void on_layoutAdded         (const QString &strLayout);
-	void on_layoutRemoved       (const QString &strLayout);
 	void on_currentLayoutChanged(const QString &strLayout);
 
 private:
@@ -102,7 +100,6 @@ private:
 
 	// to find children
 	static QString m_strHelpMenu;
-	static QString m_strLayoutListMenu;
 	static QString m_strTopDock;
 };
 

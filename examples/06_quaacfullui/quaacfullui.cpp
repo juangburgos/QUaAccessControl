@@ -32,7 +32,6 @@ QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
 QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
 
 QString QUaAcFullUi::m_strHelpMenu       = QObject::tr("HelpMenu");
-QString QUaAcFullUi::m_strLayoutListMenu = QObject::tr("LayoutListMenu");
 QString QUaAcFullUi::m_strTopDock        = QObject::tr("TopDock");
 
 QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
@@ -51,15 +50,12 @@ QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
 	this->setupMenuBar();
 	// setup native docks
 	this->setupNativeDocks();
-	// signals and slots
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded         , this, &QUaAcFullUi::on_layoutAdded         );
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved       , this, &QUaAcFullUi::on_layoutRemoved       );
 	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	// setup opc ua information model and server
 	this->setupInfoModel();
 	// create all widgets
 	this->createAcWidgetsDocks();
-	m_dockManager->saveCurrentLayout(QUaAcFullUi::m_strDefault);
+	m_dockManager->saveLayout(QUaAcFullUi::m_strDefault);
 	// setup widgets
 	this->setupUserWidgets();
 	this->setupRoleWidgets();
@@ -283,25 +279,6 @@ void QUaAcFullUi::on_closeConfig()
 	this->logout();
 	// update title
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
-}
-
-void QUaAcFullUi::on_layoutAdded(const QString & strLayout)
-{
-	QMenu *menuLayoutList = this->menuBar()->findChild<QMenu*>(QUaAcFullUi::m_strLayoutListMenu);
-	Q_CHECK_PTR(menuLayoutList);
-	menuLayoutList->addAction(strLayout, this,
-	[this, strLayout]() {
-		m_dockManager->setCurrentLayout(strLayout);
-	})->setObjectName(strLayout);
-}
-
-void QUaAcFullUi::on_layoutRemoved(const QString & strLayout)
-{
-	QMenu *menuLayoutList = this->menuBar()->findChild<QMenu*>(QUaAcFullUi::m_strLayoutListMenu);
-	Q_CHECK_PTR(menuLayoutList);
-	QAction * layoutAction = menuLayoutList->findChild<QAction*>(strLayout);
-	Q_CHECK_PTR(layoutAction);
-	menuLayoutList->removeAction(layoutAction);
 }
 
 void QUaAcFullUi::on_currentLayoutChanged(const QString & strLayout)
@@ -569,20 +546,18 @@ void QUaAcFullUi::setupMenuBar()
 	QMenu *menuView = this->menuBar()->addMenu(tr("View"));
 
 	// TODO : dock widgets
-	QMenu *menuWidgets   = this->menuBar()->addMenu(tr("Widgets"));
-	QMenu *menuAcWidgets = menuWidgets->addMenu(tr("Access Control"));
-
+	this->menuBar()->addMenu(m_dockManager->widgetsMenu());
+	
 	// TODO : add permissions to dock widgets
 
 	// user defined layouts
 	QMenu *menuLayouts = this->menuBar()->addMenu(tr("Layouts"));
-	QMenu *menuLayoutList = menuLayouts->addMenu(tr("Open"));
-	menuLayoutList->setObjectName(QUaAcFullUi::m_strLayoutListMenu);
+	menuLayouts->addMenu(m_dockManager->layoutsMenu());
 	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Save"      ), m_dockManager, &QUaAcDocking::on_saveLayout);
-	menuLayouts->addAction(tr("Save As..."), m_dockManager, &QUaAcDocking::on_saveAsLayout);
+	menuLayouts->addAction(tr("Save"      ), m_dockManager, &QUaAcDocking::saveCurrentLayout  );
+	menuLayouts->addAction(tr("Save As..."), m_dockManager, &QUaAcDocking::saveAsCurrentLayout);
 	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Remove"    ), m_dockManager, &QUaAcDocking::on_removeLayout);
+	menuLayouts->addAction(tr("Remove"    ), m_dockManager, &QUaAcDocking::removeCurrentLayout);
 
 	// TODO : add permissions to layouts?
 
