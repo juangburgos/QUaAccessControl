@@ -2,11 +2,23 @@
 
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QLayout>
+
+#include <QUaAccessControl>
+#include <QUaUser>
+#include <QUaRole>
+#include <QUaPermissions>
+
+#include <QAdDockWidgetWrapper>
 
 QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
 
-QUaAcDocking::QUaAcDocking(QMainWindow *parent) : QObject(parent)
+QUaAcDocking::QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac)
+	: QObject(parent), m_ac(ac)
 {
+	Q_CHECK_PTR(parent);
+	Q_CHECK_PTR(ac);
+	m_loggedUser  = nullptr;
 	m_dockManager = new QAdDockManager(parent);
 	m_widgetsMenu = new QMenu(tr("Widgets"), m_dockManager);
 	m_layoutsMenu = new QMenu(tr("Layouts"), m_dockManager);
@@ -31,8 +43,18 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 		// TODO : remove old, put new?
 		return nullptr;
 	}
+	// create dock
 	auto pDock = new QAdDockWidget(strWidgetName, m_dockManager);
-	pDock->setWidget(widget);
+	// create wrapper
+	QAdDockWidgetWrapper * wrapper = new QAdDockWidgetWrapper(pDock);
+	wrapper->setEditBarVisible(false);
+	// set widget in wrapper
+	wrapper->setWidget(widget);
+	// set wrapper in dock
+	pDock->setWidget(wrapper);
+	// fix margins
+	wrapper->layout()->setContentsMargins(3, 3, 3, 3);
+	// add dock
 	auto wAreaNew = m_dockManager->addDockWidget(dockArea, pDock, widgetArea); 
 	emit this->widgetAdded(strWidgetName);
 	return wAreaNew;
@@ -54,9 +76,39 @@ bool QUaAcDocking::hasDockWidget(const QString & strWidgetName)
 	return m_dockManager->dockWidgetsMap().contains(strWidgetName);
 }
 
+QList<QString> QUaAcDocking::widgetNames() const
+{
+	return m_dockManager->dockWidgetsMap().keys();
+}
+
 QMenu * QUaAcDocking::widgetsMenu()
 {
 	return m_widgetsMenu;
+}
+
+bool QUaAcDocking::hasWidgetPermissions(const QString & strWidgetName) const
+{
+	return m_mapWidgetPerms.contains(strWidgetName);
+}
+
+QUaPermissions * QUaAcDocking::widgetPermissions(const QString & strWidgetName) const
+{
+	return m_mapWidgetPerms.value(strWidgetName, nullptr);
+}
+
+void QUaAcDocking::setWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
+{
+	if (!permissions)
+	{
+		m_mapWidgetPerms.remove(strWidgetName);
+		return;
+	}
+	// set permissions
+	m_mapWidgetPerms[strWidgetName] = permissions;
+	// update permissions
+	this->updateWidgetPermissions(strWidgetName, permissions);
+	// emit
+	emit this->widgetPermissionsChanged(strWidgetName, permissions);
 }
 
 QString QUaAcDocking::currentLayout() const
@@ -89,14 +141,29 @@ void QUaAcDocking::saveCurrentLayoutInternal(const QString & strLayoutName)
 {
 	if (this->hasLayout(strLayoutName))
 	{
-		m_mapLayouts[strLayoutName] = m_dockManager->saveState();
+		m_mapLayouts[strLayoutName].byteState = m_dockManager->saveState();
 		emit this->layoutUpdated(strLayoutName);
 	}
 	else
 	{
-		m_mapLayouts.insert(strLayoutName, m_dockManager->saveState());
+		m_mapLayouts.insert(strLayoutName, { m_dockManager->saveState(), nullptr });
 		emit this->layoutAdded(strLayoutName);
 	}
+}
+
+void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
+{
+	// update widget permissions iff current user valid
+	auto widget = m_dockManager->findDockWidget(strWidgetName);
+	Q_ASSERT(widget);
+	Q_ASSERT(widget->toggleViewAction());
+	auto wrapper = dynamic_cast<QAdDockWidgetWrapper*>(widget->widget());
+	Q_ASSERT(wrapper);
+	// read
+	widget->toggleViewAction()->setVisible(permissions ? permissions->canUserRead(m_loggedUser) : m_loggedUser ? true : false);
+	widget->toggleView(permissions ? permissions->canUserRead(m_loggedUser) && !widget->isClosed() : m_loggedUser ? !widget->isClosed() : false);
+	// write (set permissions)
+	wrapper->setEditBarVisible(permissions ? permissions->canUserWrite(m_loggedUser) : m_loggedUser ? true : false);
 }
 
 void QUaAcDocking::removeLayout(const QString & strLayoutName)
@@ -117,9 +184,30 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	{
 		return;
 	}
+	// uncheck old layout action
+	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(this->currentLayout());
+	Q_CHECK_PTR(layActOld);
+	layActOld->setChecked(false);
+	// set new layout
 	m_currLayout = strLayoutName;
-	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout));
+	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
+	// TODO : is there a way to loop only widgets that belog to state?
+	// update widgets permissions
+	for (auto widgetName : this->widgetNames())
+	{
+		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
+	}
+	// check new layout action
+	QAction * layActNew = m_layoutsMenu->findChild<QAction*>(strLayoutName);
+	Q_CHECK_PTR(layActNew);
+	layActNew->setChecked(true);
+	// emit
 	emit this->currentLayoutChanged(m_currLayout);
+}
+
+QList<QString> QUaAcDocking::layoutNames() const
+{
+	return m_mapLayouts.keys();
 }
 
 QMenu * QUaAcDocking::layoutsMenu()
@@ -127,6 +215,34 @@ QMenu * QUaAcDocking::layoutsMenu()
 	return m_layoutsMenu;
 }
 
+bool QUaAcDocking::hasLayoutPermissions(const QString & strLayoutName) const
+{
+	if (!m_mapLayouts.contains(strLayoutName))
+	{
+		return false;
+	}
+	return m_mapLayouts[strLayoutName].permsObject;
+}
+
+QUaPermissions * QUaAcDocking::layoutPermissions(const QString & strLayoutName) const
+{
+	if (!this->hasLayoutPermissions(strLayoutName))
+	{
+		return nullptr;
+	}
+	return m_mapLayouts[strLayoutName].permsObject;
+}
+
+void QUaAcDocking::setLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
+{
+	Q_ASSERT(m_mapLayouts.contains(strLayoutName));
+	if (!m_mapLayouts.contains(strLayoutName))
+	{
+		return;
+	}
+	m_mapLayouts[strLayoutName].permsObject = permissions;
+	emit this->layoutPermissionsChanged(strLayoutName, permissions);
+}
 
 void QUaAcDocking::saveCurrentLayout()
 {
@@ -217,6 +333,21 @@ void QUaAcDocking::removeCurrentLayout()
 	this->setLayout(QUaAcDocking::m_strEmpty);
 }
 
+void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
+{
+	m_loggedUser = user;
+	// update widgets permissions
+	for (auto widgetName : this->widgetNames())
+	{
+		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
+	}
+
+	// TODO : layouts
+
+	// refresh
+	this->setLayout(this->currentLayout());
+}
+
 void QUaAcDocking::on_widgetAdded(const QString & strWidgetName)
 {
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
@@ -233,10 +364,12 @@ void QUaAcDocking::on_widgetRemoved(const QString & strWidgetName)
 
 void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)
 {
-	m_layoutsMenu->addAction(strLayoutName, this,
+	auto act = m_layoutsMenu->addAction(strLayoutName, this,
 	[this, strLayoutName]() {
 		this->setLayout(strLayoutName);
-	})->setObjectName(strLayoutName);
+	});
+	act->setObjectName(strLayoutName);
+	act->setCheckable(true);
 }
 
 void QUaAcDocking::on_layoutRemoved(const QString & strLayoutName)

@@ -28,6 +28,7 @@
 #include <QUaRoleWidgetEdit>
 #include <QUaPermissionsWidgetEdit>
 
+QString QUaAcFullUi::m_strAppName   = QObject::tr("QUaUserAccess GUI");
 QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
 QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
 
@@ -39,33 +40,35 @@ QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
     ui(new Ui::QUaAcFullUi)
 {
     ui->setupUi(this);
+	QApplication::setApplicationName(QUaAcFullUi::m_strAppName);
 	// initial values
-	m_strTitle    = QString("%1 - QUaUserAccess GUI");
+	m_strTitle    = QString("%1 - %2");
 	m_deleting    = false;
 	m_strSecret   = "my_secret";
 	m_loggedUser  = nullptr;
-	m_dockManager = new QUaAcDocking(this);
-	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
-	// setup menu bar
-	this->setupMenuBar();
+	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
 	// setup native docks
 	this->setupNativeDocks();
-	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	// setup opc ua information model and server
 	this->setupInfoModel();
-	// create all widgets
+	// create default dock widgets
+	QUaAccessControl * ac = this->accessControl();
+	m_dockManager = new QUaAcDocking(this, ac);
+	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	this->createAcWidgetsDocks();
 	m_dockManager->saveLayout(QUaAcFullUi::m_strDefault);
+	m_dockManager->setEmptyLayout(); // initially empty
 	// setup widgets
 	this->setupUserWidgets();
 	this->setupRoleWidgets();
 	this->setupPermsWidgets();
+	// setup menu bar
+	this->setupMenuBar();
 	// handle user changed
-	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, this, &QUaAcFullUi::on_loggedUserChanged);
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, this         , &QUaAcFullUi::on_loggedUserChanged);
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_dockManager, &QUaAcDocking::on_loggedUserChanged);
 	// intially logged out
 	this->logout();
-	// initially empty
-	m_dockManager->setEmptyLayout();
 }
 
 QUaAcFullUi::~QUaAcFullUi()
@@ -113,9 +116,7 @@ void QUaAcFullUi::on_newConfig()
 void QUaAcFullUi::on_openConfig()
 {
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// setup error dialog just in case
 	QMessageBox msgBox;
 	msgBox.setWindowTitle("Error");
@@ -172,7 +173,7 @@ void QUaAcFullUi::on_openConfig()
 				return;
 			}
 			// update title
-			this->setWindowTitle(m_strTitle.arg(strConfigFileName));
+			this->setWindowTitle(m_strTitle.arg(strConfigFileName).arg(QUaAcFullUi::m_strAppName));
 			// login
 			this->login();
 		}
@@ -192,9 +193,7 @@ void QUaAcFullUi::on_openConfig()
 void QUaAcFullUi::on_saveConfig()
 {
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// select file
 	QString strConfigFileName = QFileDialog::getSaveFileName(this, tr("Save File"),
 		QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
@@ -234,7 +233,7 @@ void QUaAcFullUi::on_saveConfig()
 		// save key in file
 		streamKey << key;
 		// update title
-		this->setWindowTitle(m_strTitle.arg(strConfigFileName));
+		this->setWindowTitle(m_strTitle.arg(strConfigFileName).arg(QUaAcFullUi::m_strAppName));
 	}
 	else
 	{
@@ -269,16 +268,14 @@ void QUaAcFullUi::on_closeConfig()
 	this->clearWidgetRoleEdit();
 	this->clearWidgetPermissionsEdit();
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// clear config
 	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
 	ac->clearInmediatly();
 	// logout
 	this->logout();
 	// update title
-	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled));
+	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
 }
 
 void QUaAcFullUi::on_currentLayoutChanged(const QString & strLayout)
@@ -401,33 +398,26 @@ void QUaAcFullUi::createAcWidgetsDocks()
 	//        so as we add widgets we 'pivot' wrt the agroupation of all previous widgets.
 	//        to change the 'pivot' we must use the returned area and pass it as the last argument,
 	//        then all widgets added with this 'pivot' will be positioned wrt that widget
-	int dockMargins = 6;
 
 	m_userTable = new QUaUserTable(this);
-	m_dockManager->addDockWidget("UsersTable", QAd::CenterDockWidgetArea, m_userTable);
-	m_userTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+	m_dockManager->addDockWidget("Users Table", QAd::CenterDockWidgetArea, m_userTable);
 	
 	m_roleTable = new QUaRoleTable(this);
-	m_dockManager->addDockWidget("RolesTable", QAd::RightDockWidgetArea, m_roleTable);
-	m_roleTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+	m_dockManager->addDockWidget("Roles Table", QAd::RightDockWidgetArea, m_roleTable);
 
 	m_permsTable = new QUaPermissionsTable(this);
-	m_dockManager->addDockWidget("PermissionsTable", QAd::BottomDockWidgetArea, m_permsTable);
-	m_permsTable->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);	
+	m_dockManager->addDockWidget("Permissions Table", QAd::BottomDockWidgetArea, m_permsTable);
 
 	m_userWidget = new QUaUserWidgetEdit(this);
 	auto userArea =
-		m_dockManager->addDockWidget("UserEdit", QAd::RightDockWidgetArea, m_userWidget);
-	m_userWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+		m_dockManager->addDockWidget("User Edit", QAd::RightDockWidgetArea, m_userWidget);
 
 	m_roleWidget = new QUaRoleWidgetEdit(this);
 	auto roleArea =
-		m_dockManager->addDockWidget("RoleEdit", QAd::BottomDockWidgetArea, m_roleWidget, userArea);
-	m_roleWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+		m_dockManager->addDockWidget("Role Edit", QAd::BottomDockWidgetArea, m_roleWidget, userArea);
 
 	m_permsWidget = new QUaPermissionsWidgetEdit(this);
-	m_dockManager->addDockWidget("PermissionsEdit", QAd::BottomDockWidgetArea, m_permsWidget, roleArea);
-	m_permsWidget->layout()->setContentsMargins(dockMargins, dockMargins, dockMargins, dockMargins);
+	m_dockManager->addDockWidget("Permissions Edit", QAd::BottomDockWidgetArea, m_permsWidget, roleArea);
 }
 
 void QUaAcFullUi::setupUserWidgets()
@@ -439,9 +429,7 @@ void QUaAcFullUi::setupUserWidgets()
 	m_userWidget->setRepeatVisible(true);
 
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 
 	// set ac to table
 	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_userTable, &QUaUserTable::on_loggedUserChanged);
@@ -474,9 +462,7 @@ void QUaAcFullUi::setupRoleWidgets()
 	m_roleWidget->setEnabled(false);
 
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 
 	// set ac to table
 	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_roleTable, &QUaRoleTable::on_loggedUserChanged);
@@ -506,9 +492,7 @@ void QUaAcFullUi::setupPermsWidgets()
 	m_permsWidget->setEnabled(false);
 
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 
 	// set ac to table
 	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_permsTable, &QUaPermissionsTable::on_loggedUserChanged);
@@ -552,7 +536,9 @@ void QUaAcFullUi::setupMenuBar()
 
 	// user defined layouts
 	QMenu *menuLayouts = this->menuBar()->addMenu(tr("Layouts"));
-	menuLayouts->addMenu(m_dockManager->layoutsMenu());
+	auto layoutListMenu = m_dockManager->layoutsMenu();
+	layoutListMenu->setTitle(tr("Show"));
+	menuLayouts->addMenu(layoutListMenu);
 	menuLayouts->addSeparator();
 	menuLayouts->addAction(tr("Save"      ), m_dockManager, &QUaAcDocking::saveCurrentLayout  );
 	menuLayouts->addAction(tr("Save As..."), m_dockManager, &QUaAcDocking::saveAsCurrentLayout);
@@ -562,7 +548,7 @@ void QUaAcFullUi::setupMenuBar()
 	// TODO : add permissions to layouts?
 
 	// setup top right loggin menu
-	auto logginBar = new QMenuBar(this->menuBar());
+	auto logginBar  = new QMenuBar(this->menuBar());
 	QMenu *menuHelp = new QMenu(tr("Login"), logginBar);
 	menuHelp->setObjectName(QUaAcFullUi::m_strHelpMenu);
 	logginBar->addMenu(menuHelp);
@@ -610,6 +596,15 @@ void QUaAcFullUi::setupNativeDocks()
 	dockTop->setWidget(pWidget);
 }
 
+QUaAccessControl * QUaAcFullUi::accessControl() const
+{
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
+	return ac;
+}
+
 QUaUser * QUaAcFullUi::loggedUser() const
 {
 	return m_loggedUser;
@@ -624,9 +619,7 @@ void QUaAcFullUi::setLoggedUser(QUaUser * user)
 void QUaAcFullUi::login()
 {
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	auto listUsers = ac->users();
 	// if no users yet, create root user
 	if (listUsers->users().count() <= 0)
@@ -684,9 +677,7 @@ void QUaAcFullUi::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
 		return;
 	}
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	auto listUsers = ac->users();
 	// get widget
 	auto widgetNewUser = qobject_cast<QUaUserWidgetEdit*>(dialog.widget());
@@ -750,9 +741,7 @@ void QUaAcFullUi::showUserCredentialsDialog(QUaAcCommonDialog & dialog)
 		return;
 	}
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	auto listUsers = ac->users();
 	// get widget
 	auto widgetNewUser = qobject_cast<QUaUserWidgetEdit*>(dialog.widget());
@@ -1058,9 +1047,7 @@ void QUaAcFullUi::setWidgetRoleEditPermissions(QUaUser * user)
 		return;
 	}
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// permission to delete role and see users come from role list permissions
 	auto dispRole = ac->roles()->role(m_roleWidget->roleName());
 	if (!dispRole)
@@ -1103,9 +1090,7 @@ void QUaAcFullUi::clearWidgetPermissionsEdit()
 void QUaAcFullUi::bindWidgetPermissionsEdit(QUaPermissions * perms)
 {
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// disable old connections
 	while (m_connsPermsWidget.count() > 0)
 	{
@@ -1276,9 +1261,7 @@ void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
 		return;
 	}
 	// get access control
-	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
-	Q_CHECK_PTR(ac);
+	QUaAccessControl * ac = this->accessControl();
 	// permission to delete permissions and see role/user access come from role list permissions
 	auto dispPerms = ac->permissions()->permission(m_permsWidget->id());
 	if (!dispPerms)

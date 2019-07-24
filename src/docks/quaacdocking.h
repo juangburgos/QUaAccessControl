@@ -19,15 +19,28 @@ typedef QAd::CDockWidget     QAdDockWidget;
 typedef QAd::DockWidgetArea  QAdDockArea;
 typedef QAd::CDockAreaWidget QAdDockWidgetArea;
 
-typedef QByteArray QUaAcLayoutsValue;
+class QUaAccessControl;
+class QUaUser;
+class QUaPermissions;
+
+struct QUaAcLayoutsValue
+{
+	QByteArray      byteState;
+	QUaPermissions *permsObject;
+};
+
+//typedef QByteArray QUaAcLayoutsValue;
 typedef QMap<QString, QUaAcLayoutsValue> QUaAcLayouts;
 typedef QMapIterator<QString, QUaAcLayoutsValue> QUaAcLayoutsIter;
+
+typedef QMap<QString, QUaPermissions*> QUaAcWidgetPerms;
+typedef QMapIterator<QString, QUaPermissions*> QUaAcWidgetPermsIter;
 
 class QUaAcDocking : public QObject
 {
     Q_OBJECT
 public:
-    explicit QUaAcDocking(QMainWindow *parent);
+    explicit QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac);
 
 	// widget management
 
@@ -42,7 +55,14 @@ public:
 
 	bool hasDockWidget(const QString &strWidgetName);
 
+	QList<QString> widgetNames() const;
+
 	QMenu * widgetsMenu();
+
+	bool              hasWidgetPermissions(const QString &strWidgetName) const;
+	QUaPermissions  * widgetPermissions   (const QString &strWidgetName) const;
+	void              setWidgetPermissions(const QString &strWidgetName,
+		                                   QUaPermissions * permissions);
 
 	// layout management
 
@@ -53,21 +73,32 @@ public:
 	void    removeLayout  (const QString &strLayoutName);
 	void    setLayout     (const QString &strLayoutName);
 
+	QList<QString> layoutNames() const;
+
 	QMenu * layoutsMenu();
 
-signals:
-	void widgetAdded         (const QString &strWidgetName);
-	void widgetRemoved       (const QString &strWidgetName);
+	bool              hasLayoutPermissions(const QString &strLayoutName) const;
+	QUaPermissions  * layoutPermissions   (const QString &strLayoutName) const;
+	void              setLayoutPermissions(const QString &strLayoutName,
+		                                   QUaPermissions * permissions);
 
-	void layoutAdded         (const QString &strLayoutName);
-	void layoutUpdated       (const QString &strLayoutName);
-	void layoutRemoved       (const QString &strLayoutName);
-	void currentLayoutChanged(const QString &strLayoutName);
+signals:
+	void widgetAdded             (const QString &strWidgetName);
+	void widgetRemoved           (const QString &strWidgetName);
+	void widgetPermissionsChanged(const QString &strWidgetName, QUaPermissions * permissions);
+
+	void layoutAdded             (const QString &strLayoutName);
+	void layoutUpdated           (const QString &strLayoutName);
+	void layoutRemoved           (const QString &strLayoutName);
+	void currentLayoutChanged    (const QString &strLayoutName);
+	void layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
 
 public slots:
 	void saveCurrentLayout  ();
 	void saveAsCurrentLayout();
 	void removeCurrentLayout();
+
+	void on_loggedUserChanged(QUaUser * user);
 
 private slots:
 	void on_widgetAdded  (const QString &strWidgetName);
@@ -78,13 +109,18 @@ private slots:
 
 private:
 	QAdDockManager * m_dockManager;
+	QUaAcWidgetPerms m_mapWidgetPerms;
 	QUaAcLayouts     m_mapLayouts;
 	QString          m_currLayout;
 
 	QMenu          * m_widgetsMenu;
 	QMenu          * m_layoutsMenu;
 
+	QUaAccessControl * m_ac;
+	QUaUser          * m_loggedUser;
+
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
+	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
 
 	static QString m_strEmpty;
 };

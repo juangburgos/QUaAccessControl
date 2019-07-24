@@ -72,6 +72,8 @@ private:
 	void setupMenuBar        ();
 	void setupNativeDocks    ();
 
+	QUaAccessControl * accessControl() const;
+
 	QUaUser * loggedUser() const;
 	void      setLoggedUser(QUaUser * user);
 
@@ -95,6 +97,8 @@ private:
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
 	void setWidgetPermissionsEditPermissions(QUaUser * user);
 
+
+	static QString m_strAppName;
 	static QString m_strUntitiled;
 	static QString m_strDefault;
 
