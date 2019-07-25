@@ -436,9 +436,8 @@ void QUaAcDocking::setupPermsModel()
 	iInvalidParam->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
 	// add all existing perms
 	auto perms = listPerms->permissionsList();
-	for (int i = 0; i < perms.count(); i++)
+	for (auto perm : perms)
 	{
-		auto perm = perms.at(i);
 		row = parent->rowCount();
 		auto iPerm = new QStandardItem(perm->getId());
 		parent->setChild(row, col, iPerm);

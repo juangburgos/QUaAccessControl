@@ -43,8 +43,6 @@ private slots:
 	void on_saveConfig();
 	void on_closeConfig();
 
-	void on_currentLayoutChanged(const QString &strLayout);
-
 private:
     Ui::QUaAcFullUi *ui;
 
@@ -96,7 +94,6 @@ private:
 	void clearWidgetPermissionsEdit();
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
 	void setWidgetPermissionsEditPermissions(QUaUser * user);
-
 
 	static QString m_strAppName;
 	static QString m_strUntitiled;

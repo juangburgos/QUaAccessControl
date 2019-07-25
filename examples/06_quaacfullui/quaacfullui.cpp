@@ -28,6 +28,8 @@
 #include <QUaRoleWidgetEdit>
 #include <QUaPermissionsWidgetEdit>
 
+#include <QAdDockLayoutBar>
+
 QString QUaAcFullUi::m_strAppName   = QObject::tr("QUaUserAccess GUI");
 QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
 QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
@@ -47,17 +49,16 @@ QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
 	m_strSecret   = "my_secret";
 	m_loggedUser  = nullptr;
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
-	// setup native docks
-	this->setupNativeDocks();
 	// setup opc ua information model and server
 	this->setupInfoModel();
 	// create default dock widgets
 	QUaAccessControl * ac = this->accessControl();
 	m_dockManager = new QUaAcDocking(this, ac);
-	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged, this, &QUaAcFullUi::on_currentLayoutChanged);
 	this->createAcWidgetsDocks();
 	m_dockManager->saveLayout(QUaAcFullUi::m_strDefault);
-	m_dockManager->setEmptyLayout(); // initially empty
+	// TODO : initially empty set by this->logout();
+	// setup native docks
+	this->setupNativeDocks();
 	// setup widgets
 	this->setupUserWidgets();
 	this->setupRoleWidgets();
@@ -278,16 +279,6 @@ void QUaAcFullUi::on_closeConfig()
 	this->logout();
 	// update title
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
-}
-
-void QUaAcFullUi::on_currentLayoutChanged(const QString & strLayout)
-{
-	// display current layout name in top native dock
-	QDockWidget *dockTop = this->findChild<QDockWidget*>(QUaAcFullUi::m_strTopDock);
-	Q_CHECK_PTR(dockTop);
-	QLabel      *pLabel = dockTop->findChild<QLabel*>();
-	Q_CHECK_PTR(pLabel);
-	pLabel->setText(strLayout);
 }
 
 void QUaAcFullUi::setupInfoModel()
@@ -599,20 +590,20 @@ void QUaAcFullUi::setupNativeDocks()
 	dockTop->setTitleBarWidget(new QWidget());
 	this->addDockWidget(Qt::TopDockWidgetArea, dockTop);
 	// widget
-	QWidget     *pWidget  = new QWidget;
-	QHBoxLayout *pLayout  = new QHBoxLayout;
-	QSpacerItem *pSpacer1 = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
-	QLabel      *pLabel   = new QLabel;
-	QSpacerItem *pSpacer2 = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
-	pLabel->setText(tr("Layout Name"));
-	// layout
-	pLayout->addSpacerItem(pSpacer1);
-	pLayout->addWidget(pLabel);
-	pLayout->addSpacerItem(pSpacer2);
-	pLayout->setContentsMargins(0, 9, 0, 6);
-	pWidget->setLayout(pLayout);
-
+	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, this->accessControl());
+	pWidget->setLayoutNames(m_dockManager->layoutNames());
 	dockTop->setWidget(pWidget);
+	// subscribe to layouts changes
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded             , pWidget, &QAdDockLayoutBar::on_layoutAdded             );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved           , pWidget, &QAdDockLayoutBar::on_layoutRemoved           );
+	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged    , pWidget, &QAdDockLayoutBar::on_currentLayoutChanged    );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutPermissionsChanged, pWidget, &QAdDockLayoutBar::on_layoutPermissionsChanged);
+	// subscribe to bar events
+	QObject::connect(pWidget, &QAdDockLayoutBar::setLayout           , m_dockManager, &QUaAcDocking::setLayout           );
+	QObject::connect(pWidget, &QAdDockLayoutBar::saveCurrentLayout   , m_dockManager, &QUaAcDocking::saveCurrentLayout   );
+	QObject::connect(pWidget, &QAdDockLayoutBar::saveAsCurrentLayout , m_dockManager, &QUaAcDocking::saveAsCurrentLayout );
+	QObject::connect(pWidget, &QAdDockLayoutBar::removeCurrentLayout , m_dockManager, &QUaAcDocking::removeCurrentLayout );
+	QObject::connect(pWidget, &QAdDockLayoutBar::setLayoutPermissions, m_dockManager, &QUaAcDocking::setLayoutPermissions);
 }
 
 QUaAccessControl * QUaAcFullUi::accessControl() const
