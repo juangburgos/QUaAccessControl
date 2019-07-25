@@ -550,12 +550,10 @@ void QUaAcFullUi::setupMenuBar()
 	//        e.g. top dock (current layout), left/right dock (widget tree)
 	QMenu *menuView = this->menuBar()->addMenu(tr("View"));
 
-	// TODO : dock widgets
+	// user widgets
 	this->menuBar()->addMenu(m_dockManager->widgetsMenu());
-	
-	// TODO : add permissions to dock widgets
 
-	// user defined layouts
+	// user layouts
 	QMenu *menuLayouts = this->menuBar()->addMenu(tr("Layouts"));
 	auto layoutListMenu = m_dockManager->layoutsMenu();
 	layoutListMenu->setTitle(tr("Show"));

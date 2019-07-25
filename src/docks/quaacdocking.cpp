@@ -31,6 +31,8 @@ QUaAcDocking::QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac)
 	QObject::connect(this, &QUaAcDocking::layoutAdded  , this, &QUaAcDocking::on_layoutAdded  );
 	QObject::connect(this, &QUaAcDocking::layoutRemoved, this, &QUaAcDocking::on_layoutRemoved);
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
+	// set permissions model for permissions combo
+	this->setupPermsModel();
 }
 
 QAdDockWidgetArea * QUaAcDocking::addDockWidget(
@@ -76,9 +78,9 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 		}
 		// create permissions widget
 		auto permsTabWidget = new QUaDockWidgetPerms;
-
-		// TODO : configure
-
+		// configure perms widget combo
+		permsTabWidget->setComboModel(&m_modelPerms, &m_proxyPerms);
+		permsTabWidget->setPermissions(this->widgetPermissions(strWidgetName));
 		// set and takes ownership
 		configTabWidget->setPermissionsWidget(permsTabWidget);
 		// dialog
@@ -91,10 +93,8 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 		{
 			return;
 		}
-
-		// TODO : read permissions and set them for widget
-
-		this->setWidgetPermissions(strWidgetName, nullptr);
+		// read permissions and set them for widget
+		this->setWidgetPermissions(strWidgetName, permsTabWidget->permissions());
 		// call apply callback
 		if (editCallback)
 		{
@@ -420,4 +420,51 @@ void QUaAcDocking::on_layoutRemoved(const QString & strLayoutName)
 	QAction * layoutAction = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layoutAction);
 	m_layoutsMenu->removeAction(layoutAction);
+}
+
+void QUaAcDocking::setupPermsModel()
+{
+	// setup combo model
+	m_proxyPerms.setSourceModel(&m_modelPerms);
+	auto listPerms = m_ac->permissions();
+	// add empty/undefined
+	auto parent = m_modelPerms.invisibleRootItem();
+	auto row = parent->rowCount();
+	auto col = 0;
+	auto iInvalidParam = new QStandardItem("");
+	parent->setChild(row, col, iInvalidParam);
+	iInvalidParam->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
+	// add all existing perms
+	auto perms = listPerms->permissionsList();
+	for (int i = 0; i < perms.count(); i++)
+	{
+		auto perm = perms.at(i);
+		row = parent->rowCount();
+		auto iPerm = new QStandardItem(perm->getId());
+		parent->setChild(row, col, iPerm);
+		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
+		// subscribe to destroyed
+		QObject::connect(perm, &QObject::destroyed, this,
+		[this, iPerm]() {
+			Q_CHECK_PTR(iPerm);
+			// remove from model
+			m_modelPerms.removeRows(iPerm->index().row(), 1);
+		});
+	}
+	// subscribe to perm created
+	QObject::connect(listPerms, &QUaPermissionsList::permissionsAdded, this,
+	[this, col](QUaPermissions * perm) {
+		auto parent = m_modelPerms.invisibleRootItem();
+		auto row    = parent->rowCount();
+		auto iPerm  = new QStandardItem(perm->getId());
+		parent->setChild(row, col, iPerm);
+		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
+		// subscribe to destroyed
+		QObject::connect(perm, &QObject::destroyed, this,
+		[this, iPerm]() {
+			Q_CHECK_PTR(iPerm);
+			// remove from model
+			m_modelPerms.removeRows(iPerm->index().row(), 1);
+		});
+	});
 }

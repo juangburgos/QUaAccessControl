@@ -42,6 +42,9 @@ public:
 	bool isIdVisible() const;
 	void setIdVisible(const bool &isVisible);
 
+	bool isAccessReadOnly() const;
+	void setAccessReadOnly(const bool &readOnly);
+
 	bool areAccessVisible() const;
 	void setAccessVisible(const bool &isVisible);
 
@@ -87,6 +90,7 @@ signals:
 
 private:
     Ui::QUaPermissionsWidgetEdit *ui;
+	bool m_accessReadOnly;
 
 	QStandardItemModel    m_modelUsers;
 	QSortFilterProxyModel m_proxyUsers;

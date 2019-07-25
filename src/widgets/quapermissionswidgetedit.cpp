@@ -16,6 +16,7 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
     ui(new Ui::QUaPermissionsWidgetEdit)
 {
     ui->setupUi(this);
+	m_accessReadOnly = false;
 	// forward signals
 	QObject::connect(ui->pushButtonDelete, &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::deleteClicked);
 	QObject::connect(ui->pushButtonApply , &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::applyClicked );
@@ -88,6 +89,22 @@ void QUaPermissionsWidgetEdit::setIdVisible(const bool & isVisible)
 	ui->lineEditId->setEnabled(isVisible);
 	ui->lineEditId->setVisible(isVisible);
 	ui->labelId->setVisible(isVisible);
+}
+
+bool QUaPermissionsWidgetEdit::isAccessReadOnly() const
+{
+	return m_accessReadOnly;
+}
+
+void QUaPermissionsWidgetEdit::setAccessReadOnly(const bool & readOnly)
+{
+	m_accessReadOnly = readOnly;
+	// since read only, no select
+	ui->tableViewRoles->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
+	ui->tableViewUsers->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
+	// TODO : more efficient implementation?
+	this->setRoleAccessMap(this->roleAccessMap());
+	this->setUserAccessMap(this->userAccessMap());
 }
 
 bool QUaPermissionsWidgetEdit::areAccessVisible() const
@@ -199,6 +216,11 @@ void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(roleAccess.canRead);
 		pChBox->setObjectName("Read");
+		if (m_accessReadOnly)
+		{
+			pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+			pChBox->setFocusPolicy(Qt::NoFocus);
+		}
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);
@@ -219,6 +241,11 @@ void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(roleAccess.canWrite);
 		pChBox->setObjectName("Write");
+		if (m_accessReadOnly)
+		{
+			pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+			pChBox->setFocusPolicy(Qt::NoFocus);
+		}
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);
@@ -323,6 +350,11 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canUserRead);
 		pChBox->setObjectName("UserRead");
+		if (m_accessReadOnly)
+		{
+			pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+			pChBox->setFocusPolicy(Qt::NoFocus);
+		}
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);
@@ -343,6 +375,11 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canUserWrite);
 		pChBox->setObjectName("UserWrite");
+		if (m_accessReadOnly)
+		{
+			pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+			pChBox->setFocusPolicy(Qt::NoFocus);
+		}
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);
@@ -363,7 +400,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canRoleRead);
 		pChBox->setObjectName("RoleRead");
-		//pChBox->setEnabled(false);
+		// NOTE : always read only (has its own edit table)
 		pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
 		pChBox->setFocusPolicy(Qt::NoFocus);
 		pLayout->addSpacerItem(pSpace1);
@@ -386,7 +423,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canRoleWrite);
 		pChBox->setObjectName("RoleWrite");
-		//pChBox->setEnabled(false);
+		// NOTE : always read only (has its own edit table)
 		pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
 		pChBox->setFocusPolicy(Qt::NoFocus);
 		pLayout->addSpacerItem(pSpace1);

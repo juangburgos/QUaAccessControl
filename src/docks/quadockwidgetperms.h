@@ -2,10 +2,15 @@
 #define QUADOCKWIDGETPERMS_H
 
 #include <QWidget>
+#include <QStandardItemModel>
+#include <QSortFilterProxyModel>
+#include <QCompleter>
 
 namespace Ui {
 class QUaDockWidgetPerms;
 }
+
+class QUaPermissions;
 
 class QUaDockWidgetPerms : public QWidget
 {
@@ -15,8 +20,23 @@ public:
     explicit QUaDockWidgetPerms(QWidget *parent = nullptr);
     ~QUaDockWidgetPerms();
 
+	void setComboModel(QStandardItemModel * model, QSortFilterProxyModel * proxy);
+	QStandardItemModel * comboModel() const;
+
+	QUaPermissions * permissions() const;
+	void setPermissions(const QUaPermissions * permissions);
+
+	static int PointerRole;
+
+private slots:
+	void on_currentIndexChanged(int index);
+
 private:
     Ui::QUaDockWidgetPerms *ui;
+	bool m_deleting;
+	QList<QMetaObject::Connection> m_connections;
+	void clearWidgetPermissionsEdit();
+	void bindWidgetPermissionsEdit(const QUaPermissions * perms);
 };
 
 #endif // QUADOCKWIDGETPERMS_H

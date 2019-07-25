@@ -2,6 +2,8 @@
 #define QUAACDOCKING_H
 
 #include <QMainWindow>
+#include <QStandardItemModel>
+#include <QSortFilterProxyModel>
 
 #include <DockManager.h>
 #include <DockWidget.h>
@@ -123,10 +125,15 @@ private:
 	QUaAccessControl * m_ac;
 	QUaUser          * m_loggedUser;
 
+	QStandardItemModel    m_modelPerms;
+	QSortFilterProxyModel m_proxyPerms;
+
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
 	
 	void updatePermissions();
 	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
+
+	void setupPermsModel();
 
 	static QString m_strEmpty;
 };

@@ -191,7 +191,7 @@ void QUaUserWidgetEdit::setUserName(const QString & strUserName)
 
 QUaRole * QUaUserWidgetEdit::role() const
 {
-	return ui->comboBoxRole->currentData(QUaUserWidgetEdit::PointerRole).value<QUaRole*>();;
+	return ui->comboBoxRole->currentData(QUaUserWidgetEdit::PointerRole).value<QUaRole*>();
 }
 
 void QUaUserWidgetEdit::setRole(const QUaRole * role)
