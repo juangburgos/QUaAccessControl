@@ -19,6 +19,8 @@ typedef QAd::CDockWidget     QAdDockWidget;
 typedef QAd::DockWidgetArea  QAdDockArea;
 typedef QAd::CDockAreaWidget QAdDockWidgetArea;
 
+typedef std::function<void(void)> QAdWidgetEditFunc;
+
 class QUaAccessControl;
 class QUaUser;
 class QUaPermissions;
@@ -48,7 +50,9 @@ public:
 		const QString     &strWidgetName,
 		const QAdDockArea &dockArea,
 		QWidget           *widget,
-		QAdDockWidgetArea *widgetArea = nullptr
+		QWidget           *widgetEdit   = nullptr,
+		QAdWidgetEditFunc  editCallback = nullptr,
+		QAdDockWidgetArea *widgetArea   = nullptr
 	);
 
 	void removeDockWidget(const QString &strWidgetName);
@@ -120,6 +124,8 @@ private:
 	QUaUser          * m_loggedUser;
 
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
+	
+	void updatePermissions();
 	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
 
 	static QString m_strEmpty;

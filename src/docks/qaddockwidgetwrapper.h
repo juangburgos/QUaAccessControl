@@ -21,6 +21,9 @@ public:
 	QWidget * widget() const;
 	void      setWidget(QWidget * w);
 
+signals:
+	void configClicked();
+
 private:
     Ui::QAdDockWidgetWrapper *ui;
 };

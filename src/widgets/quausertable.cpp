@@ -199,7 +199,7 @@ void QUaUserTable::on_pushButtonAdd_clicked()
 	widgetNewUser->setRoleList(m_ac->roles());
 	widgetNewUser->setRepeatVisible(true);
 	// NOTE : dialog takes ownershit
-	QUaAcCommonDialog dialog;
+	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("New User"));
 	dialog.setWidget(widgetNewUser);
 	// NOTE : call in own method to we can recall it if fails

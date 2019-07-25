@@ -78,6 +78,18 @@ void QUaPermissionsWidgetEdit::setIdReadOnly(const bool & readOnly)
 	ui->lineEditId->setReadOnly(readOnly);
 }
 
+bool QUaPermissionsWidgetEdit::isIdVisible() const
+{
+	return ui->lineEditId->isEnabled();
+}
+
+void QUaPermissionsWidgetEdit::setIdVisible(const bool & isVisible)
+{
+	ui->lineEditId->setEnabled(isVisible);
+	ui->lineEditId->setVisible(isVisible);
+	ui->labelId->setVisible(isVisible);
+}
+
 bool QUaPermissionsWidgetEdit::areAccessVisible() const
 {
 	return ui->tableViewRoles->isEnabled();
@@ -153,7 +165,8 @@ void QUaPermissionsWidgetEdit::setRoleAccessMap(const QUaRoleAccessMap & roleMap
 	}
 }
 
-void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName, const QUaRoleAccess & roleAccess)
+void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName, 
+	                                            const QUaRoleAccess & roleAccess)
 {
 	// check if exists, if not then create
 	auto listMatches = m_modelRoles.findItems(strRoleName);
@@ -276,7 +289,8 @@ void QUaPermissionsWidgetEdit::setUserAccessMap(const QUaUserAccessMap & userMap
 	}
 }
 
-void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName, const QUaUserAccess & userAccess)
+void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName, 
+	                                            const QUaUserAccess & userAccess)
 {
 	// check if exists, if not then create
 	auto listMatches = m_modelUsers.findItems(strUserName);
@@ -349,7 +363,9 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName, con
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canRoleRead);
 		pChBox->setObjectName("RoleRead");
-		pChBox->setEnabled(false);
+		//pChBox->setEnabled(false);
+		pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+		pChBox->setFocusPolicy(Qt::NoFocus);
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);
@@ -370,7 +386,9 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName, con
 		pChBox->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 		pChBox->setChecked(userAccess.canRoleWrite);
 		pChBox->setObjectName("RoleWrite");
-		pChBox->setEnabled(false);
+		//pChBox->setEnabled(false);
+		pChBox->setAttribute(Qt::WA_TransparentForMouseEvents);
+		pChBox->setFocusPolicy(Qt::NoFocus);
 		pLayout->addSpacerItem(pSpace1);
 		pLayout->addWidget(pChBox);
 		pLayout->addSpacerItem(pSpace2);

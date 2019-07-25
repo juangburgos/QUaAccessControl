@@ -6,6 +6,8 @@ QAdDockWidgetWrapper::QAdDockWidgetWrapper(QWidget *parent) :
     ui(new Ui::QAdDockWidgetWrapper)
 {
     ui->setupUi(this);
+	// forward signals
+	QObject::connect(ui->pushButtonConfig, &QPushButton::clicked, this, &QAdDockWidgetWrapper::configClicked);
 }
 
 QAdDockWidgetWrapper::~QAdDockWidgetWrapper()

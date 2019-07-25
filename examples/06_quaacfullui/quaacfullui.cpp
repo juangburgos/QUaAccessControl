@@ -100,6 +100,8 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 		this->clearWidgetUserEdit();
 		this->clearWidgetRoleEdit();
 		this->clearWidgetPermissionsEdit();
+		// set empty layout
+		m_dockManager->setEmptyLayout();
 		return;
 	}
 	// update menubar : logged in user
@@ -390,34 +392,53 @@ void QUaAcFullUi::setupInfoModel()
 
 void QUaAcFullUi::createAcWidgetsDocks()
 {
-	// NOTE : it seems layout gets formed as widgets get added, building upon the last state,
-	//        the area type (left, right, top, etc.) of the first widget added is irrelevant,
-	//        the area of the second widget added defines its location wrt to the first widget,
-	//        now the first and second widget form a new area altogether, so the area of the third
-	//        widget defines its location wrt to this new area (first + second) and so on.
-	//        so as we add widgets we 'pivot' wrt the agroupation of all previous widgets.
-	//        to change the 'pivot' we must use the returned area and pass it as the last argument,
-	//        then all widgets added with this 'pivot' will be positioned wrt that widget
-
 	m_userTable = new QUaUserTable(this);
-	m_dockManager->addDockWidget("Users Table", QAd::CenterDockWidgetArea, m_userTable);
+	m_dockManager->addDockWidget(
+		"Users Table", 
+		QAd::CenterDockWidgetArea, 
+		m_userTable
+	);
 	
 	m_roleTable = new QUaRoleTable(this);
-	m_dockManager->addDockWidget("Roles Table", QAd::RightDockWidgetArea, m_roleTable);
+	m_dockManager->addDockWidget(
+		"Roles Table", 
+		QAd::RightDockWidgetArea, 
+		m_roleTable
+	);
 
 	m_permsTable = new QUaPermissionsTable(this);
-	m_dockManager->addDockWidget("Permissions Table", QAd::BottomDockWidgetArea, m_permsTable);
+	m_dockManager->addDockWidget(
+		"Permissions Table", 
+		QAd::BottomDockWidgetArea, 
+		m_permsTable
+	);
 
 	m_userWidget = new QUaUserWidgetEdit(this);
-	auto userArea =
-		m_dockManager->addDockWidget("User Edit", QAd::RightDockWidgetArea, m_userWidget);
+	auto userArea = m_dockManager->addDockWidget(
+		"User Edit", 
+		QAd::RightDockWidgetArea, 
+		m_userWidget
+	);
 
 	m_roleWidget = new QUaRoleWidgetEdit(this);
-	auto roleArea =
-		m_dockManager->addDockWidget("Role Edit", QAd::BottomDockWidgetArea, m_roleWidget, userArea);
+	auto roleArea = m_dockManager->addDockWidget(
+		"Role Edit", 
+		QAd::BottomDockWidgetArea, 
+		m_roleWidget, 
+		nullptr,
+		nullptr,
+		userArea
+	);
 
 	m_permsWidget = new QUaPermissionsWidgetEdit(this);
-	m_dockManager->addDockWidget("Permissions Edit", QAd::BottomDockWidgetArea, m_permsWidget, roleArea);
+	m_dockManager->addDockWidget(
+		"Permissions Edit", 
+		QAd::BottomDockWidgetArea, 
+		m_permsWidget,
+		nullptr,
+		nullptr,
+		roleArea
+	);
 }
 
 void QUaAcFullUi::setupUserWidgets()
@@ -643,7 +664,7 @@ void QUaAcFullUi::login()
 		widgetNewUser->setHashVisible(false);
 		widgetNewUser->setRepeatVisible(true);
 		// setup dialog
-		QUaAcCommonDialog dialog;
+		QUaAcCommonDialog dialog(this);
 		dialog.setWindowTitle(tr("Create Root User"));
 		dialog.setWidget(widgetNewUser);
 		// show dialog
@@ -656,7 +677,7 @@ void QUaAcFullUi::login()
 	widgetNewUser->setRoleVisible(false);
 	widgetNewUser->setHashVisible(false);
 	// setup dialog
-	QUaAcCommonDialog dialog;
+	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("Login Credentials"));
 	dialog.setWidget(widgetNewUser);
 	// show dialog

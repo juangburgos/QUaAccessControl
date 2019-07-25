@@ -348,7 +348,7 @@ void QUaRoleTableTestDialog::login()
 		widgetNewUser->setHashVisible(false);
 		widgetNewUser->setRepeatVisible(true);
 		// setup dialog
-		QUaAcCommonDialog dialog;
+		QUaAcCommonDialog dialog(this);
 		dialog.setWindowTitle(tr("Create Root User"));
 		dialog.setWidget(widgetNewUser);
 		// show dialog
@@ -361,7 +361,7 @@ void QUaRoleTableTestDialog::login()
 	widgetNewUser->setRoleVisible(false);
 	widgetNewUser->setHashVisible(false);
 	// setup dialog
-	QUaAcCommonDialog dialog;
+	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("Login Credentials"));
 	dialog.setWidget(widgetNewUser);
 	// show dialog

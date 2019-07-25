@@ -9,7 +9,10 @@
 #include <QUaRole>
 #include <QUaPermissions>
 
+#include <QUaAcCommonDialog>
 #include <QAdDockWidgetWrapper>
+#include <QAdDockWidgetConfig>
+#include <QUaDockWidgetPerms>
 
 QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
 
@@ -34,7 +37,9 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	const QString     &strWidgetName,
 	const QAdDockArea &dockArea,
 	QWidget           *widget,
-	QAdDockWidgetArea *widgetArea/* = nullptr*/
+	QWidget           *widgetEdit  /*= nullptr*/,
+	QAdWidgetEditFunc  editCallback/*= nullptr*/,
+	QAdDockWidgetArea *widgetArea  /*= nullptr*/
 )
 {
 	Q_ASSERT(!this->hasDockWidget(strWidgetName));
@@ -57,6 +62,45 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	// add dock
 	auto wAreaNew = m_dockManager->addDockWidget(dockArea, pDock, widgetArea); 
 	emit this->widgetAdded(strWidgetName);
+	// handle config button clicked
+	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
+	[this, strWidgetName, widgetEdit, editCallback]() {
+		// create config widget
+		auto configTabWidget = new QAdDockWidgetConfig;
+		if (widgetEdit)
+		{
+			// set and takes ownership
+			configTabWidget->setConfigWidget(widgetEdit);
+			// remove ownership from tab widget (else will be delated when dialog closed)
+			widgetEdit->setParent(m_dockManager);
+		}
+		// create permissions widget
+		auto permsTabWidget = new QUaDockWidgetPerms;
+
+		// TODO : configure
+
+		// set and takes ownership
+		configTabWidget->setPermissionsWidget(permsTabWidget);
+		// dialog
+		QUaAcCommonDialog dialog(m_dockManager);
+		dialog.setWindowTitle(tr("Config Widget"));
+		dialog.setWidget(configTabWidget);
+		// exec dialog
+		int res = dialog.exec();
+		if (res != QDialog::Accepted)
+		{
+			return;
+		}
+
+		// TODO : read permissions and set them for widget
+
+		this->setWidgetPermissions(strWidgetName, nullptr);
+		// call apply callback
+		if (editCallback)
+		{
+			editCallback();
+		}
+	});
 	return wAreaNew;
 }
 
@@ -151,6 +195,17 @@ void QUaAcDocking::saveCurrentLayoutInternal(const QString & strLayoutName)
 	}
 }
 
+void QUaAcDocking::updatePermissions()
+{
+	// update widgets permissions
+	for (auto widgetName : this->widgetNames())
+	{
+		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
+	}
+
+	// TODO : layouts
+}
+
 void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
 {
 	// update widget permissions iff current user valid
@@ -191,12 +246,8 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	// set new layout
 	m_currLayout = strLayoutName;
 	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
-	// TODO : is there a way to loop only widgets that belog to state?
-	// update widgets permissions
-	for (auto widgetName : this->widgetNames())
-	{
-		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
-	}
+	// update permissions
+	this->updatePermissions();
 	// check new layout action
 	QAction * layActNew = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActNew);
@@ -336,15 +387,7 @@ void QUaAcDocking::removeCurrentLayout()
 void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 {
 	m_loggedUser = user;
-	// update widgets permissions
-	for (auto widgetName : this->widgetNames())
-	{
-		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
-	}
-
-	// TODO : layouts
-
-	// refresh
+	// refresh (also updates permissions)
 	this->setLayout(this->currentLayout());
 }
 

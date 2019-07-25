@@ -198,7 +198,7 @@ void QUaPermissionsTable::on_pushButtonAdd_clicked()
 	widgetNewPerms->setActionsVisible(false);
 	widgetNewPerms->setAccessVisible(false);
 	// NOTE : dialog takes ownershit
-	QUaAcCommonDialog dialog;
+	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("New Permissions Object"));
 	dialog.setWidget(widgetNewPerms);
 	// NOTE : call in own method to we can recall it if fails

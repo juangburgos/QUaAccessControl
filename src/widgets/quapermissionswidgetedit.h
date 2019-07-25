@@ -39,6 +39,9 @@ public:
 	bool isIdReadOnly() const;
 	void setIdReadOnly(const bool &readOnly);
 
+	bool isIdVisible() const;
+	void setIdVisible(const bool &isVisible);
+
 	bool areAccessVisible() const;
 	void setAccessVisible(const bool &isVisible);
 

@@ -198,7 +198,7 @@ void QUaRoleTable::on_pushButtonAdd_clicked()
 	widgetNewRole->setActionsVisible(false);
 	widgetNewRole->setUserListVisible(false);
 	// NOTE : dialog takes ownershit
-	QUaAcCommonDialog dialog;
+	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("New Role"));
 	dialog.setWidget(widgetNewRole);
 	// NOTE : call in own method to we can recall it if fails
