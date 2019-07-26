@@ -305,7 +305,7 @@ void QUaPermissionsTableTestDialog::on_pushButtonLogout_clicked()
 void QUaPermissionsTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->updateWidgetPermissionsEditPermissions(user);
+	this->updateWidgetPermissionsEditPermissions();
 	// update ui
 	if (!user)
 	{
@@ -682,14 +682,14 @@ void QUaPermissionsTableTestDialog::bindWidgetPermissionsEdit(QUaPermissions * p
 	});
 
 	// set permissions
-	this->updateWidgetPermissionsEditPermissions(m_loggedUser);
+	this->updateWidgetPermissionsEditPermissions();
 }
 
-void QUaPermissionsTableTestDialog::updateWidgetPermissionsEditPermissions(QUaUser * user)
+void QUaPermissionsTableTestDialog::updateWidgetPermissionsEditPermissions()
 {
 	ui->widgetPermissionsEdit->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetPermissionsEdit();
 		return;
@@ -714,8 +714,8 @@ void QUaPermissionsTableTestDialog::updateWidgetPermissionsEditPermissions(QUaUs
 	}
 	else
 	{
-		ui->widgetPermissionsEdit->setActionsVisible(listPerms->canUserWrite(user));
-		ui->widgetPermissionsEdit->setAccessVisible(listPerms->canUserRead(user));
+		ui->widgetPermissionsEdit->setActionsVisible(listPerms->canUserWrite(this->loggedUser()));
+		ui->widgetPermissionsEdit->setAccessVisible(listPerms->canUserRead  (this->loggedUser()));
 	}
 	auto dispPermsPerms = dispPerms->permissionsObject();
 	// no perms set, means all permissions (only read apply to perms, nothing else left to modify)
@@ -723,7 +723,7 @@ void QUaPermissionsTableTestDialog::updateWidgetPermissionsEditPermissions(QUaUs
 	{
 		return;
 	}
-	if (!dispPermsPerms->canUserRead(user))
+	if (!dispPermsPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetPermissionsEdit();
 	}

@@ -292,7 +292,7 @@ void QUaRoleTableTestDialog::on_pushButtonLogout_clicked()
 void QUaRoleTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->updateWidgetRoleEditPermissions(user);
+	this->updateWidgetRoleEditPermissions();
 	// update ui
 	if (!user)
 	{
@@ -590,14 +590,14 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 	});
 
 	// set permissions
-	this->updateWidgetRoleEditPermissions(m_loggedUser);
+	this->updateWidgetRoleEditPermissions();
 }
 
-void QUaRoleTableTestDialog::updateWidgetRoleEditPermissions(QUaUser * user)
+void QUaRoleTableTestDialog::updateWidgetRoleEditPermissions()
 {
 	ui->widgetRoleEdit->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetRoleEdit();
 		return;
@@ -622,8 +622,8 @@ void QUaRoleTableTestDialog::updateWidgetRoleEditPermissions(QUaUser * user)
 	}
 	else
 	{
-		ui->widgetRoleEdit->setActionsVisible(listPerms->canUserWrite(user));
-		ui->widgetRoleEdit->setUserListVisible(listPerms->canUserRead(user));
+		ui->widgetRoleEdit->setActionsVisible(listPerms->canUserWrite(this->loggedUser()));
+		ui->widgetRoleEdit->setUserListVisible(listPerms->canUserRead(this->loggedUser()));
 	}
 	auto dispPerms = dispRole->permissionsObject();
 	// no perms set, means all permissions (only read apply to role, nothing to modify)
@@ -631,7 +631,7 @@ void QUaRoleTableTestDialog::updateWidgetRoleEditPermissions(QUaUser * user)
 	{
 		return;
 	}
-	if (!dispPerms->canUserRead(user))
+	if (!dispPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetRoleEdit();
 	}

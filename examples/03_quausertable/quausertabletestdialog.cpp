@@ -260,7 +260,7 @@ void QUaUserTableTestDialog::on_pushButtonLogout_clicked()
 void QUaUserTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->updateWidgetUserEditPermissions(user);
+	this->updateWidgetUserEditPermissions(nullptr);
 	// update ui
 	if (!user)
 	{
@@ -575,34 +575,40 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 	});
 
 	// set permissions
-	this->updateWidgetUserEditPermissions(m_loggedUser);
+	this->updateWidgetUserEditPermissions(user);
 }
 
 void QUaUserTableTestDialog::updateWidgetUserEditPermissions(QUaUser * user)
 {
+	// get access control
+	QUaFolderObject * objsFolder = m_server.objectsFolder();
+	QUaAccessControl * ac = objsFolder->browseChild<QUaAccessControl>("AccessControl");
+	Q_CHECK_PTR(ac);
 	ui->widgetUserEdit->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetUserEdit();
 		return;
 	}
 	// permission to delete user or modify role come from user list permissions
-	auto listPerms = user->list()->permissionsObject();
+	auto listPerms = this->loggedUser()->list()->permissionsObject();
 	if (!listPerms)
 	{
+		bool canDelete = user == this->loggedUser() ? false : user == ac->rootUser() ? false : true;
 		// no perms set, means all permissions
-		ui->widgetUserEdit->setDeleteVisible(true);
+		ui->widgetUserEdit->setDeleteVisible(canDelete);
 		ui->widgetUserEdit->setRoleReadOnly(false);
 	}
 	else
 	{
-		ui->widgetUserEdit->setDeleteVisible(listPerms->canUserWrite(user));
-		ui->widgetUserEdit->setRoleReadOnly(!listPerms->canUserWrite(user));
+		bool canDelete = user == this->loggedUser() ? false : user == ac->rootUser() ? false : listPerms->canUserWrite(this->loggedUser());
+		ui->widgetUserEdit->setDeleteVisible(canDelete);
+		ui->widgetUserEdit->setRoleReadOnly(!listPerms->canUserWrite(this->loggedUser()));
 	}
 
 	// permission to change password comes from individual user permissions
-	auto dispUser = user->list()->user(ui->widgetUserEdit->userName());
+	auto dispUser = this->loggedUser()->list()->user(ui->widgetUserEdit->userName());
 	if (!dispUser)
 	{
 		this->clearWidgetUserEdit();
@@ -615,12 +621,12 @@ void QUaUserTableTestDialog::updateWidgetUserEditPermissions(QUaUser * user)
 		ui->widgetUserEdit->setPasswordVisible(true);
 		return;
 	}
-	if (!dispPerms->canUserRead(user))
+	if (!dispPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetUserEdit();
 		return;
 	}
-	if (dispPerms->canUserWrite(user))
+	if (dispPerms->canUserWrite(this->loggedUser()))
 	{
 		ui->widgetUserEdit->setPasswordVisible(true);
 	}

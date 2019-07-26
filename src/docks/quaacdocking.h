@@ -72,7 +72,7 @@ public:
 	void              setWidgetPermissions(const QString &strWidgetName,
 		                                   QUaPermissions * permissions);
 
-	// TODO : permissions to set permissions (widget list permissions)
+	// TODO : permissions to set permissions, or display menus (widget list permissions)
 
 	// layout management
 
@@ -93,7 +93,7 @@ public:
 	void              setLayoutPermissions(const QString &strLayoutName,
 		                                   QUaPermissions * permissions);
 
-	// TODO : permissions to set permissions (layout list permissions)
+	// TODO : permissions to set permissions, or display menus (layout list permissions)
 
 signals:
 	void widgetAdded             (const QString &strWidgetName);
