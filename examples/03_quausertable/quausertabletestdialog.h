@@ -55,7 +55,7 @@ private:
 
 	void clearWidgetUserEdit();
 	void bindWidgetUserEdit(QUaUser * user);
-	void setWidgetUserEditPermissions(QUaUser * user);
+	void updateWidgetUserEditPermissions(QUaUser * user);
 };
 
 #endif // QUAUSERTABLETESTDIALOG_H

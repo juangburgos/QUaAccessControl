@@ -56,7 +56,7 @@ private:
 
 	void clearWidgetRoleEdit();
 	void bindWidgetRoleEdit(QUaRole * role);
-	void setWidgetRoleEditPermissions(QUaUser * user);
+	void updateWidgetRoleEditPermissions(QUaUser * user);
 };
 
 #endif // QUAROLETABLETESTDIALOG_H

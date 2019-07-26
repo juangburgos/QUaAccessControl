@@ -260,7 +260,7 @@ void QUaUserTableTestDialog::on_pushButtonLogout_clicked()
 void QUaUserTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->setWidgetUserEditPermissions(user);
+	this->updateWidgetUserEditPermissions(user);
 	// update ui
 	if (!user)
 	{
@@ -575,10 +575,10 @@ void QUaUserTableTestDialog::bindWidgetUserEdit(QUaUser * user)
 	});
 
 	// set permissions
-	this->setWidgetUserEditPermissions(m_loggedUser);
+	this->updateWidgetUserEditPermissions(m_loggedUser);
 }
 
-void QUaUserTableTestDialog::setWidgetUserEditPermissions(QUaUser * user)
+void QUaUserTableTestDialog::updateWidgetUserEditPermissions(QUaUser * user)
 {
 	ui->widgetUserEdit->setEnabled(true);
 	// if no user then clear

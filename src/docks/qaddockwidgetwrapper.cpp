@@ -51,5 +51,29 @@ void QAdDockWidgetWrapper::setWidget(QWidget * w)
 	w->setObjectName("wrappedwidget");
 	// put the widget in the layout
 	ui->verticalLayout->insertWidget(1, w);
-	//ui->verticalLayout->setSizeConstraint(QLayout::SetFixedSize);
+	// adjust dialog's geometry
+	auto geo = this->geometry();
+	geo.setWidth (1.1 * w->width ());
+	geo.setHeight(1.1 * w->height());
+	this->setGeometry(geo);
+	// if parent defined, move to center of parent
+	auto parent = dynamic_cast<QWidget*>(this->parent());
+	if (!parent)
+	{
+		return;
+	}
+	// get root parent
+	while(parent)
+	{
+		auto newParent = dynamic_cast<QWidget*>(parent->parent());
+		if (!newParent)
+		{
+			break;
+		}
+		parent = newParent;
+	}
+	this->move(
+		(parent->width() / 2) - (geo.width() / 2),
+		(parent->height() / 2) - (geo.height() / 2)
+	);
 }

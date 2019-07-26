@@ -44,7 +44,9 @@ class QUaAcDocking : public QObject
 {
     Q_OBJECT
 public:
-    explicit QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac);
+    explicit QUaAcDocking(QMainWindow           * parent, 
+		                  QStandardItemModel    * permsModel, 
+		                  QSortFilterProxyModel * permsFilter);
 
 	// widget management
 
@@ -81,6 +83,7 @@ public:
 	void    removeLayout  (const QString &strLayoutName);
 	void    setLayout     (const QString &strLayoutName);
 
+	QUaAcLayouts   layouts() const;
 	QList<QString> layoutNames() const;
 
 	QMenu * layoutsMenu();
@@ -126,18 +129,17 @@ private:
 	QMenu          * m_widgetsMenu;
 	QMenu          * m_layoutsMenu;
 
-	QUaAccessControl * m_ac;
-	QUaUser          * m_loggedUser;
+	QUaUser        * m_loggedUser;
 
-	QStandardItemModel    m_modelPerms;
-	QSortFilterProxyModel m_proxyPerms;
+	QStandardItemModel    * m_modelPerms;
+	QSortFilterProxyModel * m_proxyPerms;
 
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
 	
-	void updatePermissions();
+	void updateLayoutPermissions();
+	void updateWidgetPermissions();
+	void updateLayoutPermissions(const QString &strLayoutName, QUaPermissions * permissions);
 	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
-
-	void setupPermsModel();
 
 	static QString m_strEmpty;
 };

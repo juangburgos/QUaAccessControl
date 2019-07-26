@@ -83,17 +83,22 @@ private:
 	QList<QMetaObject::Connection> m_connsUserWidget;
 	void clearWidgetUserEdit();
 	void bindWidgetUserEdit(QUaUser * user);
-	void setWidgetUserEditPermissions(QUaUser * user);
+	void updateWidgetUserEditPermissions(QUaUser * user);
 
 	QList<QMetaObject::Connection> m_connsRoleWidget;
 	void clearWidgetRoleEdit();
 	void bindWidgetRoleEdit(QUaRole * role);
-	void setWidgetRoleEditPermissions(QUaUser * user);
+	void updateWidgetRoleEditPermissions();
 
 	QList<QMetaObject::Connection> m_connsPermsWidget;
 	void clearWidgetPermissionsEdit();
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
-	void setWidgetPermissionsEditPermissions(QUaUser * user);
+	void updateWidgetPermissionsEditPermissions();
+
+	// permissions model for combobox
+	QStandardItemModel    m_modelPerms;
+	QSortFilterProxyModel m_proxyPerms;
+	void setupPermsModel();
 
 	static QString m_strAppName;
 	static QString m_strUntitiled;

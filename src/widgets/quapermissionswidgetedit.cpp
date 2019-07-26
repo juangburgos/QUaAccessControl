@@ -81,14 +81,13 @@ void QUaPermissionsWidgetEdit::setIdReadOnly(const bool & readOnly)
 
 bool QUaPermissionsWidgetEdit::isIdVisible() const
 {
-	return ui->lineEditId->isEnabled();
+	return ui->framePermsId->isEnabled();
 }
 
 void QUaPermissionsWidgetEdit::setIdVisible(const bool & isVisible)
 {
-	ui->lineEditId->setEnabled(isVisible);
-	ui->lineEditId->setVisible(isVisible);
-	ui->labelId->setVisible(isVisible);
+	ui->framePermsId->setEnabled(isVisible);
+	ui->framePermsId->setVisible(isVisible);
 }
 
 bool QUaPermissionsWidgetEdit::isAccessReadOnly() const

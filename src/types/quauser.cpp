@@ -27,6 +27,11 @@ QUaProperty * QUaUser::hash() const
 
 void QUaUser::remove()
 {
+	Q_ASSERT_X(!this->isRootUser(), "QUaUser::remove", "Cannot delete root user");
+	if (this->isRootUser())
+	{
+		return;
+	}
 	this->deleteLater();
 	// NOTE : destroyed signal is too late
 	emit this->list()->userRemoved(this);

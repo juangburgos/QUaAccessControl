@@ -292,7 +292,7 @@ void QUaRoleTableTestDialog::on_pushButtonLogout_clicked()
 void QUaRoleTableTestDialog::on_loggedUserChanged(QUaUser * user)
 {
 	// set user edit widget permissions
-	this->setWidgetRoleEditPermissions(user);
+	this->updateWidgetRoleEditPermissions(user);
 	// update ui
 	if (!user)
 	{
@@ -590,10 +590,10 @@ void QUaRoleTableTestDialog::bindWidgetRoleEdit(QUaRole * role)
 	});
 
 	// set permissions
-	this->setWidgetRoleEditPermissions(m_loggedUser);
+	this->updateWidgetRoleEditPermissions(m_loggedUser);
 }
 
-void QUaRoleTableTestDialog::setWidgetRoleEditPermissions(QUaUser * user)
+void QUaRoleTableTestDialog::updateWidgetRoleEditPermissions(QUaUser * user)
 {
 	ui->widgetRoleEdit->setEnabled(true);
 	// if no user then clear

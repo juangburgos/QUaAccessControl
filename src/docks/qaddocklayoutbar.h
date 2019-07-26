@@ -3,7 +3,9 @@
 
 #include <QWidget>
 #include <QStandardItemModel>
-#include <QSortFilterProxyModel>
+#include <QUaAcCommonWidgets>
+
+#include <QUaAcDocking>
 
 class QUaAccessControl;
 class QUaPermissions;
@@ -17,10 +19,12 @@ class QAdDockLayoutBar : public QWidget
     Q_OBJECT
 
 public:
-    explicit QAdDockLayoutBar(QWidget *parent, QUaAccessControl *ac);
+    explicit QAdDockLayoutBar(QWidget               * parent,
+		                      QStandardItemModel    * permsModel,
+		                      QSortFilterProxyModel * permsFilter);
     ~QAdDockLayoutBar();
 
-	void setLayoutNames(const QList<QString> &listLayoutNames);
+	void setLayouts(const QUaAcLayouts &mapLayouts);
 
 signals:
 	void setLayout           (const QString &strLayoutName);
@@ -38,6 +42,8 @@ public slots:
 	// https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System/issues/43
 	//void on_layoutUpdated    (const QString &strLayoutName);
 
+	void on_loggedUserChanged(QUaUser * user);
+
 private slots:
     void on_pushButtonSave_clicked();
 
@@ -52,8 +58,13 @@ private slots:
 private:
     Ui::QAdDockLayoutBar *ui;
 
-	QStandardItemModel    m_modelLayouts;
-	QSortFilterProxyModel m_proxyLayouts;
+	QStandardItemModel    * m_modelPerms;
+	QSortFilterProxyModel * m_proxyPerms;
+
+	QStandardItemModel     m_modelLayouts;
+	QUaAcLambdaFilterProxy m_proxyLayouts;
+
+	QUaUser        * m_loggedUser;
 };
 
 #endif // QADDOCKLAYOUTBAR_H

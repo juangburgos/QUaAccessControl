@@ -16,11 +16,14 @@
 
 QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
 
-QUaAcDocking::QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac)
-	: QObject(parent), m_ac(ac)
+QUaAcDocking::QUaAcDocking(QMainWindow           * parent, 
+		                   QStandardItemModel    * permsModel, 
+		                   QSortFilterProxyModel * permsFilter)
+	: QObject(parent), m_modelPerms(permsModel), m_proxyPerms(permsFilter)
 {
 	Q_CHECK_PTR(parent);
-	Q_CHECK_PTR(ac);
+	Q_CHECK_PTR(permsModel);
+	Q_CHECK_PTR(permsFilter);
 	m_loggedUser  = nullptr;
 	m_dockManager = new QAdDockManager(parent);
 	m_widgetsMenu = new QMenu(tr("Widgets"), m_dockManager);
@@ -31,8 +34,7 @@ QUaAcDocking::QUaAcDocking(QMainWindow *parent, QUaAccessControl *ac)
 	QObject::connect(this, &QUaAcDocking::layoutAdded  , this, &QUaAcDocking::on_layoutAdded  );
 	QObject::connect(this, &QUaAcDocking::layoutRemoved, this, &QUaAcDocking::on_layoutRemoved);
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
-	// set permissions model for permissions combo
-	this->setupPermsModel();
+	
 }
 
 QAdDockWidgetArea * QUaAcDocking::addDockWidget(
@@ -57,6 +59,11 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	wrapper->setEditBarVisible(false);
 	// set widget in wrapper
 	wrapper->setWidget(widget);
+	// fix size (in advance)
+	auto geo = pDock->geometry();
+	geo.setWidth (1.1 * wrapper->width());
+	geo.setHeight(1.1 * wrapper->height());
+	pDock->setGeometry(geo);
 	// set wrapper in dock
 	pDock->setWidget(wrapper);
 	// fix margins
@@ -79,7 +86,7 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 		// create permissions widget
 		auto permsTabWidget = new QUaDockWidgetPerms;
 		// configure perms widget combo
-		permsTabWidget->setComboModel(&m_modelPerms, &m_proxyPerms);
+		permsTabWidget->setComboModel(m_modelPerms, m_proxyPerms);
 		permsTabWidget->setPermissions(this->widgetPermissions(strWidgetName));
 		// set and takes ownership
 		configTabWidget->setPermissionsWidget(permsTabWidget);
@@ -195,15 +202,29 @@ void QUaAcDocking::saveCurrentLayoutInternal(const QString & strLayoutName)
 	}
 }
 
-void QUaAcDocking::updatePermissions()
+void QUaAcDocking::updateLayoutPermissions()
+{
+	QUaAcLayoutsIter i(m_mapLayouts);
+	while (i.hasNext()) {
+		i.next();
+		this->updateLayoutPermissions(i.key(), i.value().permsObject);
+	}
+}
+
+void QUaAcDocking::updateWidgetPermissions()
 {
 	// update widgets permissions
 	for (auto widgetName : this->widgetNames())
 	{
 		this->updateWidgetPermissions(widgetName, m_mapWidgetPerms.value(widgetName, nullptr));
 	}
+}
 
-	// TODO : layouts
+void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
+{
+	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(strLayoutName);
+	Q_CHECK_PTR(layActOld);
+	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
 }
 
 void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
@@ -247,13 +268,18 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	m_currLayout = strLayoutName;
 	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
 	// update permissions
-	this->updatePermissions();
+	this->updateWidgetPermissions();
 	// check new layout action
 	QAction * layActNew = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActNew);
 	layActNew->setChecked(true);
 	// emit
 	emit this->currentLayoutChanged(m_currLayout);
+}
+
+QUaAcLayouts QUaAcDocking::layouts() const
+{
+	return m_mapLayouts;
 }
 
 QList<QString> QUaAcDocking::layoutNames() const
@@ -293,6 +319,7 @@ void QUaAcDocking::setLayoutPermissions(const QString & strLayoutName, QUaPermis
 	}
 	m_mapLayouts[strLayoutName].permsObject = permissions;
 	emit this->layoutPermissionsChanged(strLayoutName, permissions);
+	this->updateLayoutPermissions(strLayoutName, permissions);
 }
 
 void QUaAcDocking::saveCurrentLayout()
@@ -387,7 +414,9 @@ void QUaAcDocking::removeCurrentLayout()
 void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 {
 	m_loggedUser = user;
-	// refresh (also updates permissions)
+	// update layout permissions
+	this->updateLayoutPermissions();
+	// refresh layout (also updates widget permissions)
 	this->setLayout(this->currentLayout());
 }
 
@@ -420,50 +449,4 @@ void QUaAcDocking::on_layoutRemoved(const QString & strLayoutName)
 	QAction * layoutAction = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layoutAction);
 	m_layoutsMenu->removeAction(layoutAction);
-}
-
-void QUaAcDocking::setupPermsModel()
-{
-	// setup combo model
-	m_proxyPerms.setSourceModel(&m_modelPerms);
-	auto listPerms = m_ac->permissions();
-	// add empty/undefined
-	auto parent = m_modelPerms.invisibleRootItem();
-	auto row = parent->rowCount();
-	auto col = 0;
-	auto iInvalidParam = new QStandardItem("");
-	parent->setChild(row, col, iInvalidParam);
-	iInvalidParam->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
-	// add all existing perms
-	auto perms = listPerms->permissionsList();
-	for (auto perm : perms)
-	{
-		row = parent->rowCount();
-		auto iPerm = new QStandardItem(perm->getId());
-		parent->setChild(row, col, iPerm);
-		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
-		// subscribe to destroyed
-		QObject::connect(perm, &QObject::destroyed, this,
-		[this, iPerm]() {
-			Q_CHECK_PTR(iPerm);
-			// remove from model
-			m_modelPerms.removeRows(iPerm->index().row(), 1);
-		});
-	}
-	// subscribe to perm created
-	QObject::connect(listPerms, &QUaPermissionsList::permissionsAdded, this,
-	[this, col](QUaPermissions * perm) {
-		auto parent = m_modelPerms.invisibleRootItem();
-		auto row    = parent->rowCount();
-		auto iPerm  = new QStandardItem(perm->getId());
-		parent->setChild(row, col, iPerm);
-		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
-		// subscribe to destroyed
-		QObject::connect(perm, &QObject::destroyed, this,
-		[this, iPerm]() {
-			Q_CHECK_PTR(iPerm);
-			// remove from model
-			m_modelPerms.removeRows(iPerm->index().row(), 1);
-		});
-	});
 }

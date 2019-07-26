@@ -28,6 +28,7 @@
 #include <QUaRoleWidgetEdit>
 #include <QUaPermissionsWidgetEdit>
 
+#include <QUaDockWidgetPerms>
 #include <QAdDockLayoutBar>
 
 QString QUaAcFullUi::m_strAppName   = QObject::tr("QUaUserAccess GUI");
@@ -51,12 +52,12 @@ QUaAcFullUi::QUaAcFullUi(QWidget *parent) :
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
 	// setup opc ua information model and server
 	this->setupInfoModel();
+	// set permissions model for permissions combo
+	this->setupPermsModel();
 	// create default dock widgets
-	QUaAccessControl * ac = this->accessControl();
-	m_dockManager = new QUaAcDocking(this, ac);
+	m_dockManager = new QUaAcDocking(this, &m_modelPerms, &m_proxyPerms);
 	this->createAcWidgetsDocks();
-	m_dockManager->saveLayout(QUaAcFullUi::m_strDefault);
-	// TODO : initially empty set by this->logout();
+	// NOTE : initially empty set by this->logout();
 	// setup native docks
 	this->setupNativeDocks();
 	// setup widgets
@@ -88,9 +89,9 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 	Q_ASSERT(menuHelp->actions().count() == 1);
 	QAction * actLogInOut = menuHelp->actions().at(0);
 	// set edit widgets permissions
-	this->setWidgetUserEditPermissions(user);
-	this->setWidgetRoleEditPermissions(user);
-	this->setWidgetPermissionsEditPermissions(user);
+	this->updateWidgetUserEditPermissions(nullptr);
+	this->updateWidgetRoleEditPermissions();
+	this->updateWidgetPermissionsEditPermissions();
 	// update ui
 	if (!user)
 	{
@@ -108,6 +109,9 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 	// update menubar : logged in user
 	menuHelp->setTitle(user->getName());
 	actLogInOut->setText(tr("Logout"));
+
+	// TODO : set user's last state or layout
+	m_dockManager->setEmptyLayout();
 }
 
 void QUaAcFullUi::on_newConfig()
@@ -430,6 +434,9 @@ void QUaAcFullUi::createAcWidgetsDocks()
 		nullptr,
 		roleArea
 	);
+
+	// TODO : create default layouts or not?
+	//m_dockManager->saveLayout(QUaAcFullUi::m_strDefault);
 }
 
 void QUaAcFullUi::setupUserWidgets()
@@ -555,8 +562,6 @@ void QUaAcFullUi::setupMenuBar()
 	menuLayouts->addSeparator();
 	menuLayouts->addAction(tr("Remove"    ), m_dockManager, &QUaAcDocking::removeCurrentLayout);
 
-	// TODO : add permissions to layouts?
-
 	// setup top right loggin menu
 	auto logginBar  = new QMenuBar(this->menuBar());
 	QMenu *menuHelp = new QMenu(tr("Login"), logginBar);
@@ -590,9 +595,11 @@ void QUaAcFullUi::setupNativeDocks()
 	dockTop->setTitleBarWidget(new QWidget());
 	this->addDockWidget(Qt::TopDockWidgetArea, dockTop);
 	// widget
-	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, this->accessControl());
-	pWidget->setLayoutNames(m_dockManager->layoutNames());
+	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, &m_modelPerms, &m_proxyPerms);
+	pWidget->setLayouts(m_dockManager->layouts());
 	dockTop->setWidget(pWidget);
+	// subscribe to user change
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, pWidget, &QAdDockLayoutBar::on_loggedUserChanged);
 	// subscribe to layouts changes
 	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded             , pWidget, &QAdDockLayoutBar::on_layoutAdded             );
 	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved           , pWidget, &QAdDockLayoutBar::on_layoutRemoved           );
@@ -892,34 +899,37 @@ void QUaAcFullUi::bindWidgetUserEdit(QUaUser * user)
 	});
 
 	// set permissions
-	this->setWidgetUserEditPermissions(m_loggedUser);
+	this->updateWidgetUserEditPermissions(user);
 }
 
-void QUaAcFullUi::setWidgetUserEditPermissions(QUaUser * user)
+void QUaAcFullUi::updateWidgetUserEditPermissions(QUaUser * user)
 {
+	auto ac = this->accessControl();
 	m_userWidget->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetUserEdit();
 		return;
 	}
 	// permission to delete user or modify role come from user list permissions
-	auto listPerms = user->list()->permissionsObject();
+	auto listPerms = this->loggedUser()->list()->permissionsObject();
 	if (!listPerms)
 	{
+		bool canDelete = user == this->loggedUser() ? false : user == ac->rootUser() ? false : true;
 		// no perms set, means all permissions
-		m_userWidget->setDeleteVisible(true);
-		m_userWidget->setRoleReadOnly(false);
+		m_userWidget->setDeleteVisible(canDelete);
+		m_userWidget->setRoleReadOnly (false);
 	}
 	else
 	{
-		m_userWidget->setDeleteVisible(listPerms->canUserWrite(user));
-		m_userWidget->setRoleReadOnly(!listPerms->canUserWrite(user));
+		bool canDelete = user == this->loggedUser() ? false : user == ac->rootUser() ? false : listPerms->canUserWrite(this->loggedUser());
+		m_userWidget->setDeleteVisible(canDelete);
+		m_userWidget->setRoleReadOnly (!listPerms->canUserWrite(this->loggedUser()));
 	}
 
 	// permission to change password comes from individual user permissions
-	auto dispUser = user->list()->user(m_userWidget->userName());
+	auto dispUser = this->loggedUser()->list()->user(m_userWidget->userName());
 	if (!dispUser)
 	{
 		this->clearWidgetUserEdit();
@@ -932,12 +942,12 @@ void QUaAcFullUi::setWidgetUserEditPermissions(QUaUser * user)
 		m_userWidget->setPasswordVisible(true);
 		return;
 	}
-	if (!dispPerms->canUserRead(user))
+	if (!dispPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetUserEdit();
 		return;
 	}
-	if (dispPerms->canUserWrite(user))
+	if (dispPerms->canUserWrite(this->loggedUser()))
 	{
 		m_userWidget->setPasswordVisible(true);
 	}
@@ -1044,14 +1054,14 @@ void QUaAcFullUi::bindWidgetRoleEdit(QUaRole * role)
 	});
 
 	// set permissions
-	this->setWidgetRoleEditPermissions(m_loggedUser);
+	this->updateWidgetRoleEditPermissions();
 }
 
-void QUaAcFullUi::setWidgetRoleEditPermissions(QUaUser * user)
+void QUaAcFullUi::updateWidgetRoleEditPermissions()
 {
 	m_roleWidget->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetRoleEdit();
 		return;
@@ -1074,8 +1084,8 @@ void QUaAcFullUi::setWidgetRoleEditPermissions(QUaUser * user)
 	}
 	else
 	{
-		m_roleWidget->setActionsVisible(listPerms->canUserWrite(user));
-		m_roleWidget->setUserListVisible(listPerms->canUserRead(user));
+		m_roleWidget->setActionsVisible (listPerms->canUserWrite(this->loggedUser()));
+		m_roleWidget->setUserListVisible(listPerms->canUserRead(this->loggedUser()));
 	}
 	auto dispPerms = dispRole->permissionsObject();
 	// no perms set, means all permissions (only read apply to role, nothing to modify)
@@ -1083,7 +1093,7 @@ void QUaAcFullUi::setWidgetRoleEditPermissions(QUaUser * user)
 	{
 		return;
 	}
-	if (!dispPerms->canUserRead(user))
+	if (!dispPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetRoleEdit();
 	}
@@ -1258,14 +1268,14 @@ void QUaAcFullUi::bindWidgetPermissionsEdit(QUaPermissions * perms)
 	});
 
 	// set permissions
-	this->setWidgetPermissionsEditPermissions(m_loggedUser);
+	this->updateWidgetPermissionsEditPermissions();
 }
 
-void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
+void QUaAcFullUi::updateWidgetPermissionsEditPermissions()
 {
 	m_permsWidget->setEnabled(true);
 	// if no user then clear
-	if (!user)
+	if (!this->loggedUser())
 	{
 		this->clearWidgetPermissionsEdit();
 		return;
@@ -1288,8 +1298,8 @@ void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
 	}
 	else
 	{
-		m_permsWidget->setActionsVisible(listPerms->canUserWrite(user));
-		m_permsWidget->setAccessVisible(listPerms->canUserRead(user));
+		m_permsWidget->setActionsVisible(listPerms->canUserWrite(this->loggedUser()));
+		m_permsWidget->setAccessVisible (listPerms->canUserRead(this->loggedUser()));
 	}
 	auto dispPermsPerms = dispPerms->permissionsObject();
 	// no perms set, means all permissions (only read apply to perms, nothing else left to modify)
@@ -1297,10 +1307,60 @@ void QUaAcFullUi::setWidgetPermissionsEditPermissions(QUaUser * user)
 	{
 		return;
 	}
-	if (!dispPermsPerms->canUserRead(user))
+	if (!dispPermsPerms->canUserRead(this->loggedUser()))
 	{
 		this->clearWidgetPermissionsEdit();
 	}
+}
+
+void QUaAcFullUi::setupPermsModel()
+{
+	// setup combo model
+	m_proxyPerms.setSourceModel(&m_modelPerms);
+	auto listPerms = this->accessControl()->permissions();
+	// add empty/undefined
+	auto parent = m_modelPerms.invisibleRootItem();
+	auto row = parent->rowCount();
+	auto col = 0;
+	auto iInvalidParam = new QStandardItem("");
+	parent->setChild(row, col, iInvalidParam);
+	iInvalidParam->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
+	// add all existing perms
+	auto perms = listPerms->permissionsList();
+	for (auto perm : perms)
+	{
+		row = parent->rowCount();
+		auto iPerm = new QStandardItem(perm->getId());
+		parent->setChild(row, col, iPerm);
+		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
+		// subscribe to destroyed
+		QObject::connect(perm, &QObject::destroyed, this,
+		[this, iPerm]() {
+			Q_CHECK_PTR(iPerm);
+			// remove from model
+			m_modelPerms.removeRows(iPerm->index().row(), 1);
+		});
+	}
+	// subscribe to perm created
+	QObject::connect(listPerms, &QUaPermissionsList::permissionsAdded, this,
+	[this, col](QUaPermissions * perm) {
+		auto parent = m_modelPerms.invisibleRootItem();
+		auto row    = parent->rowCount();
+		auto iPerm  = new QStandardItem(perm->getId());
+		parent->setChild(row, col, iPerm);
+		iPerm->setData(QVariant::fromValue(perm), QUaDockWidgetPerms::PointerRole);
+		// subscribe to destroyed
+		QObject::connect(perm, &QObject::destroyed, this,
+		[this, iPerm]() {
+			Q_CHECK_PTR(iPerm);
+			if (m_deleting)
+			{
+				return;
+			}
+			// remove from model
+			m_modelPerms.removeRows(iPerm->index().row(), 1);
+		});
+	});
 }
 
 

@@ -57,7 +57,7 @@ private:
 
 	void clearWidgetPermissionsEdit();
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
-	void setWidgetPermissionsEditPermissions(QUaUser * user);
+	void updateWidgetPermissionsEditPermissions(QUaUser * user);
 };
 
 #endif // QUAPERMISSIONSTABLETESTDIALOG_H
