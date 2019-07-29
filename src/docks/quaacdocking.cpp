@@ -17,12 +17,10 @@
 QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
 
 QUaAcDocking::QUaAcDocking(QMainWindow           * parent, 
-		                   QStandardItemModel    * permsModel, 
 		                   QSortFilterProxyModel * permsFilter)
-	: QObject(parent), m_modelPerms(permsModel), m_proxyPerms(permsFilter)
+	: QObject(parent), m_proxyPerms(permsFilter)
 {
 	Q_CHECK_PTR(parent);
-	Q_CHECK_PTR(permsModel);
 	Q_CHECK_PTR(permsFilter);
 	m_loggedUser    = nullptr;
 	m_widgetListPerms = nullptr;
@@ -35,7 +33,7 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		// create permissions widget
 		auto permsWidget = new QUaDockWidgetPerms;
 		// configure perms widget combo
-		permsWidget->setComboModel(m_modelPerms, m_proxyPerms);
+		permsWidget->setComboModel(m_proxyPerms);
 		permsWidget->setPermissions(this->widgetListPermissions());
 		// dialog
 		QUaAcCommonDialog dialog(m_dockManager);
@@ -49,7 +47,7 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		}
 		// read permissions and set them for widget list
 		this->setWidgetListPermissions(permsWidget->permissions());
-	});
+	})->setObjectName("Permissions");
 	m_widgetsMenu->addSeparator();
 	m_layoutsMenu  = new QMenu(tr("Layouts"), m_dockManager);
 	m_layoutsMenu->addAction(tr("Permissions..."), 
@@ -57,7 +55,7 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		// create permissions widget
 		auto permsWidget = new QUaDockWidgetPerms;
 		// configure perms widget combo
-		permsWidget->setComboModel(m_modelPerms, m_proxyPerms);
+		permsWidget->setComboModel(m_proxyPerms);
 		permsWidget->setPermissions(this->layoutListPermissions());
 		// dialog
 		QUaAcCommonDialog dialog(m_dockManager);
@@ -71,15 +69,15 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		}
 		// read permissions and set them for layout list
 		this->setLayoutListPermissions(permsWidget->permissions());
-	});
+	})->setObjectName("Permissions");
 	m_layoutsMenu->addSeparator();
 	QMenu *menuLayouts = m_layoutsMenu->addMenu(tr("Show"));
 	menuLayouts->setObjectName("Show");
 	m_layoutsMenu->addSeparator();
-	m_layoutsMenu->addAction(tr("Save"), this, &QUaAcDocking::saveCurrentLayout);
-	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout);
-	m_layoutsMenu->addSeparator();
-	m_layoutsMenu->addAction(tr("Remove"), this, &QUaAcDocking::removeCurrentLayout);
+	m_layoutsMenu->addAction(tr("Save")      , this, &QUaAcDocking::saveCurrentLayout  )->setObjectName("Save");
+	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout)->setObjectName("SaveAs");
+	m_layoutsMenu->addSeparator()->setObjectName("Separator");
+	m_layoutsMenu->addAction(tr("Remove")    , this, &QUaAcDocking::removeCurrentLayout)->setObjectName("Remove");
 	// signals and slots
 	QObject::connect(this, &QUaAcDocking::widgetAdded  , this, &QUaAcDocking::on_widgetAdded  );
 	QObject::connect(this, &QUaAcDocking::widgetRemoved, this, &QUaAcDocking::on_widgetRemoved);
@@ -137,7 +135,7 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 		// create permissions widget
 		auto permsTabWidget = new QUaDockWidgetPerms;
 		// configure perms widget combo
-		permsTabWidget->setComboModel(m_modelPerms, m_proxyPerms);
+		permsTabWidget->setComboModel(m_proxyPerms);
 		permsTabWidget->setPermissions(this->widgetPermissions(strWidgetName));
 		// set and takes ownership
 		configTabWidget->setPermissionsWidget(permsTabWidget);
@@ -290,6 +288,18 @@ void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPer
 	QAction * layActOld = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActOld);
 	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
+	// check if current
+	if (strLayoutName.compare(m_currLayout, Qt::CaseInsensitive) != 0)
+	{
+		return;
+	}
+	// show/hide layout menu actions
+	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
+	m_layoutsMenu->findChild<QAction*>("Save"     )->setVisible(canWrite);
+	// NOTE : still allow read_only user to create own. If this is not desired then remove write permissions to layout list permissions
+	//m_layoutsMenu->findChild<QAction*>("SaveAs"   )->setVisible(canWrite);
+	m_layoutsMenu->findChild<QAction*>("Separator")->setVisible(canWrite);
+	m_layoutsMenu->findChild<QAction*>("Remove"   )->setVisible(canWrite);
 }
 
 void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
@@ -309,15 +319,23 @@ void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPer
 
 void QUaAcDocking::updateLayoutListPermissions()
 {
-	bool isVisible = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
-	m_layoutsMenu->menuAction()->setVisible(isVisible);
+	// show/hide root menu
+	bool canRead = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	m_layoutsMenu->menuAction()->setVisible(canRead);
+	// show/hide layout list permissions action
+	bool canWrite = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserWrite(m_loggedUser);
+	m_layoutsMenu->findChild<QAction*>("Permissions")->setVisible(canWrite);
 	// NOTE : write permissions affect wherever new layouts are created (e.g. QAdDockLayoutBar)
 }
 
 void QUaAcDocking::updateWidgetListPermissions()
 {
-	bool isVisible = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserRead(m_loggedUser);
-	m_widgetsMenu->menuAction()->setVisible(isVisible);
+	// show/hide root menu
+	bool canRead = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserRead(m_loggedUser);
+	m_widgetsMenu->menuAction()->setVisible(canRead);
+	// show/hide widget list permissions action
+	bool canWrite = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserWrite(m_loggedUser);
+	m_widgetsMenu->findChild<QAction*>("Permissions")->setVisible(canWrite);
 	// NOTE : write permissions affect wherever new widgets are created
 }
 
@@ -354,6 +372,8 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	QAction * layActNew = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActNew);
 	layActNew->setChecked(true);
+	// update menu permissions
+	this->updateLayoutPermissions(strLayoutName, m_mapLayouts[strLayoutName].permsObject);
 	// emit
 	emit this->currentLayoutChanged(m_currLayout);
 }

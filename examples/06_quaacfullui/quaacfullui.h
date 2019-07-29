@@ -5,24 +5,11 @@
 #include <QMenuBar>
 
 #include <QUaServer>
-
-#include <QUaAcDocking>
+#include <QUaAcDockWidgets>
 
 namespace Ui {
 class QUaAcFullUi;
 }
-
-class QUaUser;
-class QUaRole;
-class QUaPermissions;
-class QUaAcCommonDialog;
-
-class QUaUserTable;
-class QUaRoleTable;
-class QUaPermissionsTable;
-class QUaUserWidgetEdit;
-class QUaRoleWidgetEdit;
-class QUaPermissionsWidgetEdit;
 
 class QUaAcFullUi : public QMainWindow
 {
@@ -31,6 +18,17 @@ class QUaAcFullUi : public QMainWindow
 public:
     explicit QUaAcFullUi(QWidget *parent = nullptr);
     ~QUaAcFullUi();
+
+	// NOTE : all public methods (including signals) are T required
+
+	QUaAcDocking * getDockManager() const;
+
+	QUaAccessControl * accessControl() const;
+
+	bool isDeleting() const;
+
+	QUaUser * loggedUser() const;
+	void      setLoggedUser(QUaUser * user);
 
 signals:
 	void loggedUserChanged(QUaUser * user);
@@ -53,47 +51,16 @@ private:
 	QString          m_strTitle   ;
 	QUaUser        * m_loggedUser ;
 	QUaAcDocking   * m_dockManager;
-
-	// ac widgets
-	QUaUserTable             * m_userTable  ;
-	QUaRoleTable             * m_roleTable  ;
-	QUaPermissionsTable      * m_permsTable ;
-	QUaUserWidgetEdit        * m_userWidget ;
-	QUaRoleWidgetEdit        * m_roleWidget ;
-	QUaPermissionsWidgetEdit * m_permsWidget;
+	QUaAcDockWidgets<QUaAcFullUi> * m_acWidgets;
 
 	void setupInfoModel      ();
-	void createAcWidgetsDocks();
-	void setupUserWidgets    ();
-	void setupRoleWidgets    ();
-	void setupPermsWidgets   ();
-	void setupMenuBar        ();
 	void setupNativeDocks    ();
-
-	QUaAccessControl * accessControl() const;
-
-	QUaUser * loggedUser() const;
-	void      setLoggedUser(QUaUser * user);
+	void setupMenuBar        ();
 
 	void login ();
 	void logout();
 	void showCreateRootUserDialog (QUaAcCommonDialog &dialog);
 	void showUserCredentialsDialog(QUaAcCommonDialog &dialog);
-
-	QList<QMetaObject::Connection> m_connsUserWidget;
-	void clearWidgetUserEdit();
-	void bindWidgetUserEdit(QUaUser * user);
-	void updateWidgetUserEditPermissions(QUaUser * user);
-
-	QList<QMetaObject::Connection> m_connsRoleWidget;
-	void clearWidgetRoleEdit();
-	void bindWidgetRoleEdit(QUaRole * role);
-	void updateWidgetRoleEditPermissions();
-
-	QList<QMetaObject::Connection> m_connsPermsWidget;
-	void clearWidgetPermissionsEdit();
-	void bindWidgetPermissionsEdit(QUaPermissions * perms);
-	void updateWidgetPermissionsEditPermissions();
 
 	// permissions model for combobox
 	QStandardItemModel    m_modelPerms;

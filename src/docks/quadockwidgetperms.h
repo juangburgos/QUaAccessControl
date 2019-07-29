@@ -2,7 +2,6 @@
 #define QUADOCKWIDGETPERMS_H
 
 #include <QWidget>
-#include <QStandardItemModel>
 #include <QSortFilterProxyModel>
 #include <QCompleter>
 
@@ -20,8 +19,8 @@ public:
     explicit QUaDockWidgetPerms(QWidget *parent = nullptr);
     ~QUaDockWidgetPerms();
 
-	void setComboModel(QStandardItemModel * model, QSortFilterProxyModel * proxy);
-	QStandardItemModel * comboModel() const;
+	void setComboModel(QSortFilterProxyModel * proxy);
+	QSortFilterProxyModel * comboModel() const;
 
 	QUaPermissions * permissions() const;
 	void setPermissions(const QUaPermissions * permissions);

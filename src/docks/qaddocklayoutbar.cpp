@@ -118,6 +118,12 @@ void QAdDockLayoutBar::on_layoutPermissionsChanged(const QString & strLayoutName
 	Q_ASSERT(listItems.count() == 1);
 	auto iLn = listItems.at(0);
 	iLn->setData(QVariant::fromValue(permissions), QUaDockWidgetPerms::PointerRole);
+	// check if current
+	if (ui->comboBoxLayout->currentText().compare(strLayoutName, Qt::CaseInsensitive) == 0)
+	{
+		// check if can show actions
+		ui->frameActions->setVisible(permissions ? permissions->canUserWrite(m_loggedUser) : true);
+	}
 	// update permissions
 	m_proxyLayouts.resetFilter();
 }
@@ -162,7 +168,7 @@ void QAdDockLayoutBar::on_pushButtonPermissions_clicked()
 	// create permissions widget
 	auto permsWidget = new QUaDockWidgetPerms;
 	// configure perms widget combo
-	permsWidget->setComboModel(m_modelPerms, m_proxyPerms);
+	permsWidget->setComboModel(m_proxyPerms);
 	permsWidget->setPermissions(perms);
 	// dialog
 	QUaAcCommonDialog dialog(this);

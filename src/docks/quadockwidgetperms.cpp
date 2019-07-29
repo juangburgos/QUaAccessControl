@@ -35,12 +35,11 @@ QUaDockWidgetPerms::~QUaDockWidgetPerms()
     delete ui;
 }
 
-void QUaDockWidgetPerms::setComboModel(QStandardItemModel * model, QSortFilterProxyModel * proxy)
+void QUaDockWidgetPerms::setComboModel(QSortFilterProxyModel * proxy)
 {
-	Q_CHECK_PTR(model);
 	Q_CHECK_PTR(proxy);
 	// setup combo
-	ui->comboBoxPermissions->setModel(model);
+	ui->comboBoxPermissions->setModel(proxy);
 	ui->comboBoxPermissions->setEditable(true);
 	// setup completer
 	QCompleter *completer = new QCompleter(ui->comboBoxPermissions);
@@ -50,9 +49,9 @@ void QUaDockWidgetPerms::setComboModel(QStandardItemModel * model, QSortFilterPr
 	ui->comboBoxPermissions->setInsertPolicy(QComboBox::NoInsert);
 }
 
-QStandardItemModel * QUaDockWidgetPerms::comboModel() const
+QSortFilterProxyModel * QUaDockWidgetPerms::comboModel() const
 {
-	return dynamic_cast<QStandardItemModel*>(ui->comboBoxPermissions->model());
+	return dynamic_cast<QSortFilterProxyModel*>(ui->comboBoxPermissions->model());
 }
 
 QUaPermissions * QUaDockWidgetPerms::permissions() const

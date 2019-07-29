@@ -45,7 +45,6 @@ class QUaAcDocking : public QObject
     Q_OBJECT
 public:
     explicit QUaAcDocking(QMainWindow           * parent, 
-		                  QStandardItemModel    * permsModel, 
 		                  QSortFilterProxyModel * permsFilter);
 
 	// widget management
@@ -140,7 +139,6 @@ private:
 	QUaPermissions * m_widgetListPerms;
 	QUaPermissions * m_layoutListPerms;
 
-	QStandardItemModel    * m_modelPerms;
 	QSortFilterProxyModel * m_proxyPerms;
 
 	void saveCurrentLayoutInternal(const QString &strLayoutName);

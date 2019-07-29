@@ -18,12 +18,15 @@ SOURCES += \
     $$PWD/qaddockwidgetwrapper.cpp \
     $$PWD/qaddockwidgetconfig.cpp \
     $$PWD/quadockwidgetperms.cpp \
-    $$PWD/qaddocklayoutbar.cpp
+    $$PWD/qaddocklayoutbar.cpp \
 
 FORMS += \
     $$PWD/qaddockwidgetwrapper.ui \
     $$PWD/qaddockwidgetconfig.ui \
     $$PWD/quadockwidgetperms.ui \
     $$PWD/qaddocklayoutbar.ui
+
+HEADERS += \
+    $$PWD/quaacdockwidgets.hpp
 
 include($$PWD/../../libs/add_qad_path_win.pri)
