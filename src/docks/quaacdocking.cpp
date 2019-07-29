@@ -24,17 +24,68 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	Q_CHECK_PTR(parent);
 	Q_CHECK_PTR(permsModel);
 	Q_CHECK_PTR(permsFilter);
-	m_loggedUser  = nullptr;
-	m_dockManager = new QAdDockManager(parent);
-	m_widgetsMenu = new QMenu(tr("Widgets"), m_dockManager);
-	m_layoutsMenu = new QMenu(tr("Layouts"), m_dockManager);
+	m_loggedUser    = nullptr;
+	m_widgetListPerms = nullptr;
+	m_layoutListPerms = nullptr;
+	m_dockManager   = new QAdDockManager(parent);
+	// widgets menu
+	m_widgetsMenu   = new QMenu(tr("Widgets"), m_dockManager);
+	m_widgetsMenu->addAction(tr("Permissions..."), 
+	[this]() {
+		// create permissions widget
+		auto permsWidget = new QUaDockWidgetPerms;
+		// configure perms widget combo
+		permsWidget->setComboModel(m_modelPerms, m_proxyPerms);
+		permsWidget->setPermissions(this->widgetListPermissions());
+		// dialog
+		QUaAcCommonDialog dialog(m_dockManager);
+		dialog.setWindowTitle(tr("Widget List Permissions"));
+		dialog.setWidget(permsWidget);
+		// exec dialog
+		int res = dialog.exec();
+		if (res != QDialog::Accepted)
+		{
+			return;
+		}
+		// read permissions and set them for widget list
+		this->setWidgetListPermissions(permsWidget->permissions());
+	});
+	m_widgetsMenu->addSeparator();
+	m_layoutsMenu  = new QMenu(tr("Layouts"), m_dockManager);
+	m_layoutsMenu->addAction(tr("Permissions..."), 
+	[this]() {
+		// create permissions widget
+		auto permsWidget = new QUaDockWidgetPerms;
+		// configure perms widget combo
+		permsWidget->setComboModel(m_modelPerms, m_proxyPerms);
+		permsWidget->setPermissions(this->layoutListPermissions());
+		// dialog
+		QUaAcCommonDialog dialog(m_dockManager);
+		dialog.setWindowTitle(tr("Layout List Permissions"));
+		dialog.setWidget(permsWidget);
+		// exec dialog
+		int res = dialog.exec();
+		if (res != QDialog::Accepted)
+		{
+			return;
+		}
+		// read permissions and set them for layout list
+		this->setLayoutListPermissions(permsWidget->permissions());
+	});
+	m_layoutsMenu->addSeparator();
+	QMenu *menuLayouts = m_layoutsMenu->addMenu(tr("Show"));
+	menuLayouts->setObjectName("Show");
+	m_layoutsMenu->addSeparator();
+	m_layoutsMenu->addAction(tr("Save"), this, &QUaAcDocking::saveCurrentLayout);
+	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout);
+	m_layoutsMenu->addSeparator();
+	m_layoutsMenu->addAction(tr("Remove"), this, &QUaAcDocking::removeCurrentLayout);
 	// signals and slots
 	QObject::connect(this, &QUaAcDocking::widgetAdded  , this, &QUaAcDocking::on_widgetAdded  );
 	QObject::connect(this, &QUaAcDocking::widgetRemoved, this, &QUaAcDocking::on_widgetRemoved);
 	QObject::connect(this, &QUaAcDocking::layoutAdded  , this, &QUaAcDocking::on_layoutAdded  );
 	QObject::connect(this, &QUaAcDocking::layoutRemoved, this, &QUaAcDocking::on_layoutRemoved);
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
-	
 }
 
 QAdDockWidgetArea * QUaAcDocking::addDockWidget(
@@ -162,6 +213,18 @@ void QUaAcDocking::setWidgetPermissions(const QString & strWidgetName, QUaPermis
 	emit this->widgetPermissionsChanged(strWidgetName, permissions);
 }
 
+void QUaAcDocking::setWidgetListPermissions(QUaPermissions * permissions)
+{
+	m_widgetListPerms = permissions;
+	this->updateWidgetListPermissions();
+	emit this->widgetListPermissionsChanged(permissions);
+}
+
+QUaPermissions * QUaAcDocking::widgetListPermissions() const
+{
+	return m_widgetListPerms;
+}
+
 QString QUaAcDocking::currentLayout() const
 {
 	return m_currLayout;
@@ -222,7 +285,9 @@ void QUaAcDocking::updateWidgetPermissions()
 
 void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
 {
-	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(strLayoutName);
+	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
+	Q_CHECK_PTR(menuLayouts);
+	QAction * layActOld = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActOld);
 	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
 }
@@ -240,6 +305,20 @@ void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPer
 	widget->toggleView(permissions ? permissions->canUserRead(m_loggedUser) && !widget->isClosed() : m_loggedUser ? !widget->isClosed() : false);
 	// write (set permissions)
 	wrapper->setEditBarVisible(permissions ? permissions->canUserWrite(m_loggedUser) : m_loggedUser ? true : false);
+}
+
+void QUaAcDocking::updateLayoutListPermissions()
+{
+	bool isVisible = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	m_layoutsMenu->menuAction()->setVisible(isVisible);
+	// NOTE : write permissions affect wherever new layouts are created (e.g. QAdDockLayoutBar)
+}
+
+void QUaAcDocking::updateWidgetListPermissions()
+{
+	bool isVisible = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserRead(m_loggedUser);
+	m_widgetsMenu->menuAction()->setVisible(isVisible);
+	// NOTE : write permissions affect wherever new widgets are created
 }
 
 void QUaAcDocking::removeLayout(const QString & strLayoutName)
@@ -260,8 +339,10 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	{
 		return;
 	}
+	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
+	Q_CHECK_PTR(menuLayouts);
 	// uncheck old layout action
-	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(this->currentLayout());
+	QAction * layActOld = menuLayouts->findChild<QAction*>(this->currentLayout());
 	Q_CHECK_PTR(layActOld);
 	layActOld->setChecked(false);
 	// set new layout
@@ -270,7 +351,7 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	// update permissions
 	this->updateWidgetPermissions();
 	// check new layout action
-	QAction * layActNew = m_layoutsMenu->findChild<QAction*>(strLayoutName);
+	QAction * layActNew = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActNew);
 	layActNew->setChecked(true);
 	// emit
@@ -320,6 +401,18 @@ void QUaAcDocking::setLayoutPermissions(const QString & strLayoutName, QUaPermis
 	m_mapLayouts[strLayoutName].permsObject = permissions;
 	emit this->layoutPermissionsChanged(strLayoutName, permissions);
 	this->updateLayoutPermissions(strLayoutName, permissions);
+}
+
+void QUaAcDocking::setLayoutListPermissions(QUaPermissions * permissions)
+{
+	m_layoutListPerms = permissions;
+	this->updateLayoutListPermissions();
+	emit this->layoutListPermissionsChanged(permissions);
+}
+
+QUaPermissions * QUaAcDocking::layoutListPermissions() const
+{
+	return m_layoutListPerms;
 }
 
 void QUaAcDocking::saveCurrentLayout()
@@ -418,6 +511,10 @@ void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 	this->updateLayoutPermissions();
 	// refresh layout (also updates widget permissions)
 	this->setLayout(this->currentLayout());
+	// update layout list perms
+	this->updateLayoutListPermissions();
+	// update widget list perms
+	this->updateWidgetListPermissions();
 }
 
 void QUaAcDocking::on_widgetAdded(const QString & strWidgetName)
@@ -436,7 +533,9 @@ void QUaAcDocking::on_widgetRemoved(const QString & strWidgetName)
 
 void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)
 {
-	auto act = m_layoutsMenu->addAction(strLayoutName, this,
+	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
+	Q_CHECK_PTR(menuLayouts);
+	auto act = menuLayouts->addAction(strLayoutName, this,
 	[this, strLayoutName]() {
 		this->setLayout(strLayoutName);
 	});
@@ -446,7 +545,9 @@ void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)
 
 void QUaAcDocking::on_layoutRemoved(const QString & strLayoutName)
 {
-	QAction * layoutAction = m_layoutsMenu->findChild<QAction*>(strLayoutName);
+	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
+	Q_CHECK_PTR(menuLayouts);
+	QAction * layoutAction = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layoutAction);
-	m_layoutsMenu->removeAction(layoutAction);
+	menuLayouts->removeAction(layoutAction);
 }

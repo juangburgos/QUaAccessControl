@@ -552,15 +552,7 @@ void QUaAcFullUi::setupMenuBar()
 	this->menuBar()->addMenu(m_dockManager->widgetsMenu());
 
 	// user layouts
-	QMenu *menuLayouts = this->menuBar()->addMenu(tr("Layouts"));
-	auto layoutListMenu = m_dockManager->layoutsMenu();
-	layoutListMenu->setTitle(tr("Show"));
-	menuLayouts->addMenu(layoutListMenu);
-	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Save"      ), m_dockManager, &QUaAcDocking::saveCurrentLayout  );
-	menuLayouts->addAction(tr("Save As..."), m_dockManager, &QUaAcDocking::saveAsCurrentLayout);
-	menuLayouts->addSeparator();
-	menuLayouts->addAction(tr("Remove"    ), m_dockManager, &QUaAcDocking::removeCurrentLayout);
+	this->menuBar()->addMenu(m_dockManager->layoutsMenu());
 
 	// setup top right loggin menu
 	auto logginBar  = new QMenuBar(this->menuBar());
@@ -601,10 +593,11 @@ void QUaAcFullUi::setupNativeDocks()
 	// subscribe to user change
 	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, pWidget, &QAdDockLayoutBar::on_loggedUserChanged);
 	// subscribe to layouts changes
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded             , pWidget, &QAdDockLayoutBar::on_layoutAdded             );
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved           , pWidget, &QAdDockLayoutBar::on_layoutRemoved           );
-	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged    , pWidget, &QAdDockLayoutBar::on_currentLayoutChanged    );
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutPermissionsChanged, pWidget, &QAdDockLayoutBar::on_layoutPermissionsChanged);
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded                 , pWidget, &QAdDockLayoutBar::on_layoutAdded                 );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved               , pWidget, &QAdDockLayoutBar::on_layoutRemoved               );
+	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged        , pWidget, &QAdDockLayoutBar::on_currentLayoutChanged        );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutPermissionsChanged    , pWidget, &QAdDockLayoutBar::on_layoutPermissionsChanged    );
+	QObject::connect(m_dockManager, &QUaAcDocking::layoutListPermissionsChanged, pWidget, &QAdDockLayoutBar::on_layoutListPermissionsChanged);
 	// subscribe to bar events
 	QObject::connect(pWidget, &QAdDockLayoutBar::setLayout           , m_dockManager, &QUaAcDocking::setLayout           );
 	QObject::connect(pWidget, &QAdDockLayoutBar::saveCurrentLayout   , m_dockManager, &QUaAcDocking::saveCurrentLayout   );

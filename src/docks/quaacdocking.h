@@ -72,7 +72,9 @@ public:
 	void              setWidgetPermissions(const QString &strWidgetName,
 		                                   QUaPermissions * permissions);
 
-	// TODO : permissions to set permissions, or display menus (widget list permissions)
+	// permissions to set permissions, or display menus (widget list permissions)
+	void setWidgetListPermissions(QUaPermissions * permissions);
+	QUaPermissions * widgetListPermissions() const;
 
 	// layout management
 
@@ -93,18 +95,22 @@ public:
 	void              setLayoutPermissions(const QString &strLayoutName,
 		                                   QUaPermissions * permissions);
 
-	// TODO : permissions to set permissions, or display menus (layout list permissions)
+	// permissions to set permissions, or display menus (layout list permissions)
+	void setLayoutListPermissions(QUaPermissions * permissions);
+	QUaPermissions * layoutListPermissions() const;
 
 signals:
 	void widgetAdded             (const QString &strWidgetName);
 	void widgetRemoved           (const QString &strWidgetName);
 	void widgetPermissionsChanged(const QString &strWidgetName, QUaPermissions * permissions);
+	void widgetListPermissionsChanged(QUaPermissions * permissions);
 
 	void layoutAdded             (const QString &strLayoutName);
 	void layoutUpdated           (const QString &strLayoutName);
 	void layoutRemoved           (const QString &strLayoutName);
 	void currentLayoutChanged    (const QString &strLayoutName);
 	void layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
+	void layoutListPermissionsChanged(QUaPermissions * permissions);
 
 public slots:
 	void saveCurrentLayout  ();
@@ -131,6 +137,9 @@ private:
 
 	QUaUser        * m_loggedUser;
 
+	QUaPermissions * m_widgetListPerms;
+	QUaPermissions * m_layoutListPerms;
+
 	QStandardItemModel    * m_modelPerms;
 	QSortFilterProxyModel * m_proxyPerms;
 
@@ -140,6 +149,9 @@ private:
 	void updateWidgetPermissions();
 	void updateLayoutPermissions(const QString &strLayoutName, QUaPermissions * permissions);
 	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
+
+	void updateLayoutListPermissions();
+	void updateWidgetListPermissions();
 
 	static QString m_strEmpty;
 };

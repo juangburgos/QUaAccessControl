@@ -38,6 +38,7 @@ public slots:
 	void on_layoutRemoved           (const QString &strLayoutName);
 	void on_currentLayoutChanged    (const QString &strLayoutName);
 	void on_layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
+	void on_layoutListPermissionsChanged(QUaPermissions * permissions);
 	// TODO : N/A until stateChanged signal implemented
 	// https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System/issues/43
 	//void on_layoutUpdated    (const QString &strLayoutName);
@@ -64,7 +65,11 @@ private:
 	QStandardItemModel     m_modelLayouts;
 	QUaAcLambdaFilterProxy m_proxyLayouts;
 
+	QUaPermissions * m_layoutListPerms;
+
 	QUaUser        * m_loggedUser;
+
+	void updateLayoutListPermissions();
 };
 
 #endif // QADDOCKLAYOUTBAR_H

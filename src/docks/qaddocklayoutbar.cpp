@@ -23,6 +23,7 @@ QAdDockLayoutBar::QAdDockLayoutBar(
 	Q_CHECK_PTR(permsFilter);
     ui->setupUi(this);
 	m_loggedUser = nullptr;
+	m_layoutListPerms = nullptr;
 	// set layouts model for combo
 	m_proxyLayouts.setSourceModel(&m_modelLayouts);
 	// setup combo
@@ -121,6 +122,12 @@ void QAdDockLayoutBar::on_layoutPermissionsChanged(const QString & strLayoutName
 	m_proxyLayouts.resetFilter();
 }
 
+void QAdDockLayoutBar::on_layoutListPermissionsChanged(QUaPermissions * permissions)
+{
+	m_layoutListPerms = permissions;
+	this->updateLayoutListPermissions();
+}
+
 void QAdDockLayoutBar::on_loggedUserChanged(QUaUser * user)
 {
 	m_loggedUser = user;
@@ -128,6 +135,8 @@ void QAdDockLayoutBar::on_loggedUserChanged(QUaUser * user)
 	ui->comboBoxLayout->setEnabled(m_loggedUser);
 	// update permissions
 	m_proxyLayouts.resetFilter();
+	// update list permissions
+	this->updateLayoutListPermissions();
 }
 
 void QAdDockLayoutBar::on_pushButtonSave_clicked()
@@ -182,4 +191,10 @@ void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
 	ui->frameActions->setVisible(perms ? perms->canUserWrite(m_loggedUser) : true);
 	// ask to change layout
 	emit this->setLayout(ui->comboBoxLayout->currentText());
+}
+
+void QAdDockLayoutBar::updateLayoutListPermissions()
+{
+	bool isVisible = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserWrite(m_loggedUser);
+	ui->frameActions->setVisible(isVisible);
 }
