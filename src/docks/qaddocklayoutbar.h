@@ -20,7 +20,6 @@ class QAdDockLayoutBar : public QWidget
 
 public:
     explicit QAdDockLayoutBar(QWidget               * parent,
-		                      QStandardItemModel    * permsModel,
 		                      QSortFilterProxyModel * permsFilter);
     ~QAdDockLayoutBar();
 
@@ -70,6 +69,7 @@ private:
 	QUaUser        * m_loggedUser;
 
 	void updateLayoutListPermissions();
+	void setLayoutActionsCanWrite(const bool &canWrite);
 };
 
 #endif // QADDOCKLAYOUTBAR_H

@@ -4,6 +4,7 @@
 #include <QInputDialog>
 #include <QLayout>
 
+#include <QUaServer>
 #include <QUaAccessControl>
 #include <QUaUser>
 #include <QUaRole>
@@ -14,7 +15,11 @@
 #include <QAdDockWidgetConfig>
 #include <QUaDockWidgetPerms>
 
-QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
+const QString QUaAcDocking::m_strEmpty = QObject::tr("Empty");
+
+const QString QUaAcDocking::m_strXmlName       = "QDockManager";
+const QString QUaAcDocking::m_strXmlWidgetName = "QDockWidget";
+const QString QUaAcDocking::m_strXmlLayoutName = "QDockLayout";
 
 QUaAcDocking::QUaAcDocking(QMainWindow           * parent, 
 		                   QSortFilterProxyModel * permsFilter)
@@ -22,10 +27,10 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 {
 	Q_CHECK_PTR(parent);
 	Q_CHECK_PTR(permsFilter);
-	m_loggedUser    = nullptr;
+	m_loggedUser      = nullptr;
 	m_widgetListPerms = nullptr;
 	m_layoutListPerms = nullptr;
-	m_dockManager   = new QAdDockManager(parent);
+	m_dockManager     = new QAdDockManager(parent);
 	// widgets menu
 	m_widgetsMenu   = new QMenu(tr("Widgets"), m_dockManager);
 	m_widgetsMenu->addAction(tr("Permissions..."), 
@@ -260,6 +265,11 @@ void QUaAcDocking::saveCurrentLayoutInternal(const QString & strLayoutName)
 	{
 		m_mapLayouts.insert(strLayoutName, { m_dockManager->saveState(), nullptr });
 		emit this->layoutAdded(strLayoutName);
+		// when created, set current user's permissions if any, by default
+		if (m_loggedUser && m_loggedUser->permissionsObject())
+		{
+			this->setLayoutPermissions(strLayoutName, m_loggedUser->permissionsObject());
+		}
 	}
 }
 
@@ -294,10 +304,9 @@ void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPer
 		return;
 	}
 	// show/hide layout menu actions
-	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
+	bool canWrite     = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
 	m_layoutsMenu->findChild<QAction*>("Save"     )->setVisible(canWrite);
-	// NOTE : still allow read_only user to create own. If this is not desired then remove write permissions to layout list permissions
-	//m_layoutsMenu->findChild<QAction*>("SaveAs"   )->setVisible(canWrite);
+	// NOTE : still allow read_only user to create own (save as). If this is not desired then remove write permissions to layout list permissions
 	m_layoutsMenu->findChild<QAction*>("Separator")->setVisible(canWrite);
 	m_layoutsMenu->findChild<QAction*>("Remove"   )->setVisible(canWrite);
 }
@@ -311,10 +320,14 @@ void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPer
 	auto wrapper = dynamic_cast<QAdDockWidgetWrapper*>(widget->widget());
 	Q_ASSERT(wrapper);
 	// read
-	widget->toggleViewAction()->setVisible(permissions ? permissions->canUserRead(m_loggedUser) : m_loggedUser ? true : false);
-	widget->toggleView(permissions ? permissions->canUserRead(m_loggedUser) && !widget->isClosed() : m_loggedUser ? !widget->isClosed() : false);
+	bool canRead = !m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser);
+	widget->toggleViewAction()->setVisible(canRead);
+	bool isOpen  = !widget->isClosed();
+	bool setOpen = !m_loggedUser ? false : !permissions ? isOpen : permissions->canUserRead(m_loggedUser) && isOpen;
+	widget->toggleView(setOpen);
 	// write (set permissions)
-	wrapper->setEditBarVisible(permissions ? permissions->canUserWrite(m_loggedUser) : m_loggedUser ? true : false);
+	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
+	wrapper->setEditBarVisible(canWrite);
 }
 
 void QUaAcDocking::updateLayoutListPermissions()
@@ -433,6 +446,133 @@ void QUaAcDocking::setLayoutListPermissions(QUaPermissions * permissions)
 QUaPermissions * QUaAcDocking::layoutListPermissions() const
 {
 	return m_layoutListPerms;
+}
+
+QDomElement QUaAcDocking::toDomElement(QDomDocument & domDoc) const
+{
+	// add element
+	QDomElement elemDock = domDoc.createElement(QUaAcDocking::m_strXmlName);
+	// lists permissions
+	if (m_widgetListPerms)
+	{
+		elemDock.setAttribute("WidgetListPermissions", m_widgetListPerms->nodeId());
+	}
+	if (m_layoutListPerms)
+	{
+		elemDock.setAttribute("LayoutListPermissions", m_layoutListPerms->nodeId());
+	}
+	// NOTE : only layouts, widgets are serialized by their factories (which might need to serilize extra info)
+	for (auto layoutName : this->layoutNames())
+	{
+		QDomElement elemLayout = domDoc.createElement(QUaAcDocking::m_strXmlLayoutName);
+		// set name
+		elemLayout.setAttribute("Name", layoutName);
+		// set state
+		elemLayout.setAttribute("State", QString(m_mapLayouts[layoutName].byteState.toHex()));
+		// set permissions if any
+		if (m_mapLayouts[layoutName].permsObject)
+		{
+			elemLayout.setAttribute("Permissions", m_mapLayouts[layoutName].permsObject->nodeId());
+		}
+		// append
+		elemDock.appendChild(elemLayout);
+	}
+	// return element
+	return elemDock;
+
+}
+
+void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, QString & strError)
+{
+	Q_CHECK_PTR(ac);
+	// lists permissions (optional)
+	if (domElem.hasAttribute("WidgetListPermissions"))
+	{
+		auto permissions = this->findPermissions(ac, domElem.attribute("WidgetListPermissions"), strError);
+		if (permissions)
+		{
+			this->setWidgetListPermissions(permissions);
+		}
+	}
+	if (domElem.hasAttribute("LayoutListPermissions"))
+	{
+		auto permissions = this->findPermissions(ac, domElem.attribute("LayoutListPermissions"), strError);
+		if (permissions)
+		{
+			this->setLayoutListPermissions(permissions);
+		}
+	}
+	// NOTE : only layouts, widgets are serialized by their factories
+	QDomNodeList listNodesL = domElem.elementsByTagName(QUaAcDocking::m_strXmlLayoutName);
+	for (int i = 0; i < listNodesL.count(); i++)
+	{
+		QDomElement elem = listNodesL.at(i).toElement();
+		Q_ASSERT(!elem.isNull());
+		// name is mandatory
+		if (!elem.hasAttribute("Name"))
+		{
+			strError += tr("%1 : %2 element must have Name attribute.")
+				.arg("Error")
+				.arg(QUaAcDocking::m_strXmlLayoutName);
+			continue;
+		}
+		// state is mandatory
+		if (!elem.hasAttribute("State"))
+		{
+			strError += tr("%1 : %2 element must have State attribute.")
+				.arg("Error")
+				.arg(QUaAcDocking::m_strXmlLayoutName);
+			continue;
+		}
+		QString strLayoutName = elem.attribute("Name");
+		QByteArray byteLayoutState = QByteArray::fromHex(elem.attribute("State").toUtf8());
+		// add layout 
+		// NOTE : manually
+		if (this->hasLayout(strLayoutName))
+		{
+			m_mapLayouts[strLayoutName].byteState = byteLayoutState;
+			emit this->layoutUpdated(strLayoutName);
+		}
+		else
+		{
+			m_mapLayouts.insert(strLayoutName, { byteLayoutState, nullptr });
+			emit this->layoutAdded(strLayoutName);
+		}
+		// not having permissions is acceptable
+		if (!elem.hasAttribute("Permissions"))
+		{
+			continue;
+		}
+		// attempt to add permissions
+		QString strNodeId = elem.attribute("Permissions");
+		auto permissions  = this->findPermissions(ac, strNodeId, strError);
+		if (!permissions)
+		{
+			continue;
+		}
+		this->setLayoutPermissions(strLayoutName, permissions);
+	}
+}
+
+QUaPermissions * QUaAcDocking::findPermissions(QUaAccessControl * ac, const QString & strNodeId, QString & strError)
+{
+	QUaNode * node = ac->server()->nodeById(strNodeId);
+	if (!node)
+	{
+		strError += tr("%1 : Unexisting node with NodeId %2.")
+			.arg("Error")
+			.arg(strNodeId);
+		return nullptr;
+	}
+	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+	if (!permissions)
+	{
+		strError += tr("%1 : Node with NodeId %2 is not a permissions instance.")
+			.arg("Error")
+			.arg(strNodeId);
+		return nullptr;
+	}
+	return permissions;
 }
 
 void QUaAcDocking::saveCurrentLayout()

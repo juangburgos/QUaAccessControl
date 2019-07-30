@@ -14,6 +14,8 @@
 #include <QByteArray>
 #include <QString>
 #include <QMenu>
+#include <QDomDocument>
+#include <QDomElement>
 
 namespace QAd = ads;
 typedef QAd::CDockManager    QAdDockManager;
@@ -71,7 +73,9 @@ public:
 	void              setWidgetPermissions(const QString &strWidgetName,
 		                                   QUaPermissions * permissions);
 
-	// permissions to set permissions, or display menus (widget list permissions)
+	// over all list permissions
+	// can read controls if user can list, create, save, remove or set permissions to individual widgets (hides top-elvel menu)
+	// can write controls if user can set widget list permissions (this permissions)
 	void setWidgetListPermissions(QUaPermissions * permissions);
 	QUaPermissions * widgetListPermissions() const;
 
@@ -94,9 +98,21 @@ public:
 	void              setLayoutPermissions(const QString &strLayoutName,
 		                                   QUaPermissions * permissions);
 
-	// permissions to set permissions, or display menus (layout list permissions)
+	// over all list permissions
+	// can read controls if user can list, create, save, remove or set permissions to individual layouts (hides top-elvel menu)
+	// can write controls if user can set layout list permissions (this permissions)
 	void setLayoutListPermissions(QUaPermissions * permissions);
 	QUaPermissions * layoutListPermissions() const;
+
+	// XML import / export
+	// NOTE : only layouts, widgets are serialized wherever they are handled (factory)
+
+	QDomElement toDomElement(QDomDocument & domDoc) const;
+	void        fromDomElement(QUaAccessControl * ac, QDomElement  & domElem, QString &strError);
+
+	const static QString m_strXmlName;
+	const static QString m_strXmlWidgetName;
+	const static QString m_strXmlLayoutName;
 
 signals:
 	void widgetAdded             (const QString &strWidgetName);
@@ -151,7 +167,9 @@ private:
 	void updateLayoutListPermissions();
 	void updateWidgetListPermissions();
 
-	static QString m_strEmpty;
+	QUaPermissions * findPermissions(QUaAccessControl * ac, const QString &strNodeId, QString &strError);
+
+	const static QString m_strEmpty;
 };
 
 #endif // QUAACDOCKING_H

@@ -19,7 +19,7 @@ public:
     explicit QUaAcFullUi(QWidget *parent = nullptr);
     ~QUaAcFullUi();
 
-	// NOTE : all public methods (including signals) are T required
+	// NOTE : all public methods (including signals) are T requirements
 
 	QUaAcDocking * getDockManager() const;
 
@@ -51,6 +51,8 @@ private:
 	QString          m_strTitle   ;
 	QUaUser        * m_loggedUser ;
 	QUaAcDocking   * m_dockManager;
+
+	// NOTE : template arg must fullfill T requirements
 	QUaAcDockWidgets<QUaAcFullUi> * m_acWidgets;
 
 	void setupInfoModel      ();
@@ -66,6 +68,13 @@ private:
 	QStandardItemModel    m_modelPerms;
 	QSortFilterProxyModel m_proxyPerms;
 	void setupPermsModel();
+
+	// XML import / export
+	QByteArray xmlConfig();
+	QString    setXmlConfig(const QByteArray &xmlConfig);
+
+	QDomElement toDomElement(QDomDocument & domDoc) const;
+	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 	static QString m_strAppName;
 	static QString m_strUntitiled;

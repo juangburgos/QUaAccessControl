@@ -10,16 +10,13 @@
 
 QAdDockLayoutBar::QAdDockLayoutBar(
 	QWidget               * parent, 
-	QStandardItemModel    * permsModel, 
 	QSortFilterProxyModel * permsFilter
 ) :
     QWidget(parent),
     ui(new Ui::QAdDockLayoutBar),
-	m_modelPerms(permsModel), 
 	m_proxyPerms(permsFilter)
 {
 	Q_CHECK_PTR(parent);
-	Q_CHECK_PTR(permsModel);
 	Q_CHECK_PTR(permsFilter);
     ui->setupUi(this);
 	m_loggedUser = nullptr;
@@ -45,11 +42,11 @@ QAdDockLayoutBar::QAdDockLayoutBar(
 		{
 			return false;
 		}
-		auto perms  = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
 		if (!m_loggedUser)
 		{
 			return false;
 		}
+		auto perms  = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
 		if (!perms)
 		{
 			return true;
@@ -122,7 +119,8 @@ void QAdDockLayoutBar::on_layoutPermissionsChanged(const QString & strLayoutName
 	if (ui->comboBoxLayout->currentText().compare(strLayoutName, Qt::CaseInsensitive) == 0)
 	{
 		// check if can show actions
-		ui->frameActions->setVisible(permissions ? permissions->canUserWrite(m_loggedUser) : true);
+		bool canWrite = permissions ? permissions->canUserWrite(m_loggedUser) : true;
+		this->setLayoutActionsCanWrite(canWrite);
 	}
 	// update permissions
 	m_proxyLayouts.resetFilter();
@@ -194,13 +192,27 @@ void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
 	}
 	// check if can show actions
 	auto perms = ui->comboBoxLayout->currentData(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
-	ui->frameActions->setVisible(perms ? perms->canUserWrite(m_loggedUser) : true);
+	bool canWrite = perms ? perms->canUserWrite(m_loggedUser) : true;
+	this->setLayoutActionsCanWrite(canWrite);
 	// ask to change layout
 	emit this->setLayout(ui->comboBoxLayout->currentText());
 }
 
 void QAdDockLayoutBar::updateLayoutListPermissions()
 {
-	bool isVisible = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserWrite(m_loggedUser);
-	ui->frameActions->setVisible(isVisible);
+	// can read controls if user can create, save, remove or set permissions to individual layouts
+	bool canRead = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	ui->frameActions->setVisible(canRead);
+	// can write controls if user can set lists permissions, so nothing to do here
+}
+
+void QAdDockLayoutBar::setLayoutActionsCanWrite(const bool &canWrite)
+{
+	ui->pushButtonSave->setVisible(canWrite);
+	ui->pushButtonPermissions->setVisible(canWrite);
+	ui->pushButtonRemove->setVisible(canWrite);
+	ui->line1->setVisible(canWrite);
+	ui->line2->setVisible(canWrite);
+	// can always save as
+	ui->pushButtonSaveAs->setVisible(true);
 }

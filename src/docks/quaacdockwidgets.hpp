@@ -22,13 +22,17 @@ class QUaAcDockWidgets : public QObject
 public:
     explicit QUaAcDockWidgets(T *parent = nullptr);
 
-	// NOTE : all public methods are T required
+	// NOTE : all public methods are T requirements
 
 	void updateWidgetsPermissions();
-
 	void clearWidgets();
-
 	void closeConfig();
+
+	// XML import / export
+	QDomElement toDomElement(QDomDocument & domDoc) const;
+	void        fromDomElement(QDomElement  & domElem, QString &strError);
+
+	const static QString m_strXmlName;
 
 private:
 	T * m_thiz;
@@ -60,13 +64,57 @@ private:
 	void clearWidgetPermissionsEdit();
 	void bindWidgetPermissionsEdit(QUaPermissions * perms);
 	void updateWidgetPermissionsEditPermissions();
+
+	// helpers
+	QUaAcDocking * getDockManager() const;
+
+	const static QString m_strUsersTable;
+	const static QString m_strRolesTable;
+	const static QString m_strPermissionsTable;
+	const static QString m_strUserEdit;
+	const static QString m_strRoleEdit;
+	const static QString m_strPermissionsEdit;
+	static QList<QString> m_listWidgetNames;
 };
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strXmlName = "QUaAcDockWidgets";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strUsersTable = "Users Table";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strRolesTable = "Roles Table";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strPermissionsTable = "Permissions Table";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strUserEdit = "User Edit";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strRoleEdit = "Role Edit";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strPermissionsEdit = "Permissions Edit";
+
+// create list to iterate
+template <class T>
+QList<QString> QUaAcDockWidgets<T>::m_listWidgetNames;
 
 template <class T>
 inline QUaAcDockWidgets<T>::QUaAcDockWidgets(T *parent) : QObject(parent)
 {
 	Q_CHECK_PTR(parent);
 	m_thiz = parent;
+	//
+	QUaAcDockWidgets<T>::m_listWidgetNames = QList<QString>()
+		<< QUaAcDockWidgets<T>::m_strUsersTable
+		<< QUaAcDockWidgets<T>::m_strRolesTable
+		<< QUaAcDockWidgets<T>::m_strPermissionsTable
+		<< QUaAcDockWidgets<T>::m_strUserEdit
+		<< QUaAcDockWidgets<T>::m_strRoleEdit
+		<< QUaAcDockWidgets<T>::m_strPermissionsEdit;
 	// create access control widgets
 	this->createAcWidgetsDocks();
 	// setup widgets
@@ -114,39 +162,100 @@ inline void QUaAcDockWidgets<T>::closeConfig()
 }
 
 template<class T>
+inline QDomElement QUaAcDockWidgets<T>::toDomElement(QDomDocument & domDoc) const
+{
+	// add element
+	QDomElement elemAcDockW = domDoc.createElement(QUaAcDockWidgets<T>::m_strXmlName);
+	// serialize each widget
+	for (auto wName : QUaAcDockWidgets<T>::m_listWidgetNames)
+	{
+		QDomElement elemW = domDoc.createElement(QUaAcDocking::m_strXmlWidgetName);
+		// set name
+		elemW.setAttribute("Name", wName);
+		// set permissions if any
+		QUaPermissions * perms = this->getDockManager()->widgetPermissions(wName);
+		if (perms)
+		{
+			elemW.setAttribute("Permissions", perms->nodeId());
+		}
+		// append
+		elemAcDockW.appendChild(elemW);
+	}
+	// return element
+	return elemAcDockW;
+}
+
+template<class T>
+inline void QUaAcDockWidgets<T>::fromDomElement(QDomElement & domElem, QString & strError)
+{
+	QDomNodeList listNodesW = domElem.elementsByTagName(QUaAcDocking::m_strXmlWidgetName);
+	for (int i = 0; i < listNodesW.count(); i++)
+	{
+		QDomElement elem = listNodesW.at(i).toElement();
+		Q_ASSERT(!elem.isNull());
+		Q_ASSERT(QUaAcDockWidgets<T>::m_listWidgetNames.contains(elem.attribute("Name")));
+		// not having permissions is acceptable
+		if (!elem.hasAttribute("Permissions"))
+		{
+			continue;
+		}
+		// attempt to add permissions
+		QString strPermissionsNodeId = elem.attribute("Permissions");
+		QUaNode * node = m_thiz->accessControl()->server()->nodeById(strPermissionsNodeId);
+		if (!node)
+		{
+			strError += tr("%1 : Unexisting node with NodeId %2.")
+				.arg("Error")
+				.arg(strPermissionsNodeId);
+			continue;
+		}
+		QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+		if (!permissions)
+		{
+			strError += tr("%1 : Node with NodeId %2 is not a permissions instance.")
+				.arg("Error")
+				.arg(strPermissionsNodeId);
+			continue;
+		}
+		QString strWidgetName = elem.attribute("Name");
+		this->getDockManager()->setWidgetPermissions(strWidgetName, permissions);
+	}
+}
+
+template<class T>
 inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 {
 	m_userTable = new QUaUserTable(m_thiz);
-	m_thiz->getDockManager()->addDockWidget(
-		"Users Table",
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strUsersTable,
 		QAd::CenterDockWidgetArea,
 		m_userTable
 	);
 
 	m_roleTable = new QUaRoleTable(m_thiz);
-	m_thiz->getDockManager()->addDockWidget(
-		"Roles Table",
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strRolesTable,
 		QAd::RightDockWidgetArea,
 		m_roleTable
 	);
 
 	m_permsTable = new QUaPermissionsTable(m_thiz);
-	m_thiz->getDockManager()->addDockWidget(
-		"Permissions Table",
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strPermissionsTable,
 		QAd::BottomDockWidgetArea,
 		m_permsTable
 	);
 
 	m_userWidget = new QUaUserWidgetEdit(m_thiz);
-	auto userArea = m_thiz->getDockManager()->addDockWidget(
-		"User Edit",
+	auto userArea = this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strUserEdit,
 		QAd::RightDockWidgetArea,
 		m_userWidget
 	);
 
 	m_roleWidget = new QUaRoleWidgetEdit(m_thiz);
-	auto roleArea = m_thiz->getDockManager()->addDockWidget(
-		"Role Edit",
+	auto roleArea = this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strRoleEdit,
 		QAd::BottomDockWidgetArea,
 		m_roleWidget,
 		nullptr,
@@ -155,8 +264,8 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 	);
 
 	m_permsWidget = new QUaPermissionsWidgetEdit(m_thiz);
-	m_thiz->getDockManager()->addDockWidget(
-		"Permissions Edit",
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strPermissionsEdit,
 		QAd::BottomDockWidgetArea,
 		m_permsWidget,
 		nullptr,
@@ -165,7 +274,7 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 	);
 
 	// TODO : create default layouts or not?
-	//m_thiz->getDockManager()->saveLayout(QUaAcDockWidgets<T>::m_strDefault);
+	//this->getDockManager()->saveLayout(QUaAcDockWidgets<T>::m_strDefault);
 }
 
 template<class T>
@@ -399,6 +508,7 @@ inline void QUaAcDockWidgets<T>::updateWidgetUserEditPermissions(QUaUser * user)
 	auto listPerms = m_thiz->loggedUser()->list()->permissionsObject();
 	if (!listPerms)
 	{
+		// NOTE : cannot delete logged or root user
 		bool canDelete = user == m_thiz->loggedUser() ? false : user == ac->rootUser() ? false : true;
 		// no perms set, means all permissions
 		m_userWidget->setDeleteVisible(canDelete);
@@ -406,6 +516,7 @@ inline void QUaAcDockWidgets<T>::updateWidgetUserEditPermissions(QUaUser * user)
 	}
 	else
 	{
+		// NOTE : cannot delete logged or root user
 		bool canDelete = user == m_thiz->loggedUser() ? false : user == ac->rootUser() ? false : listPerms->canUserWrite(m_thiz->loggedUser());
 		m_userWidget->setDeleteVisible(canDelete);
 		m_userWidget->setRoleReadOnly(!listPerms->canUserWrite(m_thiz->loggedUser()));
@@ -800,6 +911,12 @@ inline void QUaAcDockWidgets<T>::updateWidgetPermissionsEditPermissions()
 	{
 		this->clearWidgetPermissionsEdit();
 	}
+}
+
+template<class T>
+inline QUaAcDocking * QUaAcDockWidgets<T>::getDockManager() const
+{
+	return m_thiz->getDockManager();
 }
 
 #endif // QUAACDOCKWIDGETS_H

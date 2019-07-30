@@ -98,17 +98,46 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 
 void QUaAcFullUi::on_newConfig()
 {
+	// get access control
+	QUaAccessControl * ac = this->accessControl();
+	auto listUsers = ac->users()->users();
+	// if existing config opened, ask if wanna close
+	if (listUsers.count() > 0)
+	{
+		// ask user if create new config
+		auto res = QMessageBox::question(
+			this,
+			tr("Confirm New Config"),
+			tr("There is currently a configuration loaded.\nWould you like to discard the current configuration and create a new one?"),
+			QMessageBox::StandardButton::Ok,
+			QMessageBox::StandardButton::Cancel
+		);
+		if (res != QMessageBox::StandardButton::Ok)
+		{
+			return;
+		}
+	}
+	// clear old config
 	this->on_closeConfig();
-	this->login();
+	// setup new user widget
+	auto widgetNewUser = new QUaUserWidgetEdit;
+	widgetNewUser->setActionsVisible(false);
+	widgetNewUser->setRoleVisible(false);
+	widgetNewUser->setHashVisible(false);
+	widgetNewUser->setRepeatVisible(true);
+	// setup dialog
+	QUaAcCommonDialog dialog(this);
+	dialog.setWindowTitle(tr("Create Root User"));
+	dialog.setWidget(widgetNewUser);
+	// show dialog
+	this->showCreateRootUserDialog(dialog);
 }
 
 void QUaAcFullUi::on_openConfig()
 {
-	// get access control
-	QUaAccessControl * ac = this->accessControl();
 	// setup error dialog just in case
 	QMessageBox msgBox;
-	msgBox.setWindowTitle("Error");
+	msgBox.setWindowTitle(tr("Error"));
 	msgBox.setIcon(QMessageBox::Critical);
 	// read from file
 	QString strConfigFileName = QFileDialog::getOpenFileName(this, tr("Open File"),
@@ -154,7 +183,7 @@ void QUaAcFullUi::on_openConfig()
 			// close old file
 			this->on_closeConfig();
 			// try load config
-			auto strError = ac->setXmlConfig(byteContents);
+			auto strError = this->setXmlConfig(byteContents);
 			if (strError.contains("Error"))
 			{
 				msgBox.setText(strError);
@@ -181,8 +210,6 @@ void QUaAcFullUi::on_openConfig()
 
 void QUaAcFullUi::on_saveConfig()
 {
-	// get access control
-	QUaAccessControl * ac = this->accessControl();
 	// select file
 	QString strConfigFileName = QFileDialog::getSaveFileName(this, tr("Save File"),
 		QStandardPaths::writableLocation(QStandardPaths::DesktopLocation),
@@ -201,17 +228,8 @@ void QUaAcFullUi::on_saveConfig()
 	{
 		QTextStream streamConfig(&fileConfig);
 		QTextStream streamKey(&fileKey);
-		// create dom doc
-		QDomDocument doc;
-		// set xml header
-		QDomProcessingInstruction header = doc.createProcessingInstruction("xml", "version='1.0' encoding='UTF-8'");
-		doc.appendChild(header);
-		// convert config to xml
-		auto elemAc = ac->toDomElement(doc);
-		doc.appendChild(elemAc);
-		// get contents bytearray
-		auto byteContents = doc.toByteArray();
 		// save config in file
+		auto byteContents = this->xmlConfig();
 		streamConfig << byteContents;
 		// create key
 		QByteArray key = QMessageAuthenticationCode::hash(
@@ -239,15 +257,33 @@ void QUaAcFullUi::on_saveConfig()
 
 void QUaAcFullUi::on_closeConfig()
 {
-	// close access control widgets
-	m_acWidgets->closeConfig();
+
 	// get access control
 	QUaAccessControl * ac = this->accessControl();
+	auto listUsers = ac->users()->users();
+	// are you sure wanna close?
+	if (listUsers.count() > 0)
+	{
+		// ask user if create new config
+		auto res = QMessageBox::question(
+			this,
+			tr("Confirm Close Config"),
+			tr("Closing current configuration will discard any unsaved changes.\nWould you like to close the current configuration?"),
+			QMessageBox::StandardButton::Ok,
+			QMessageBox::StandardButton::Cancel
+		);
+		if (res != QMessageBox::StandardButton::Ok)
+		{
+			return;
+		}
+	}
+	// close access control widgets
+	m_acWidgets->closeConfig();
+	// logout
+	this->logout();
 	// clear config
 	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
 	ac->clearInmediatly();
-	// logout
-	this->logout();
 	// update title
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
 }
@@ -356,16 +392,30 @@ void QUaAcFullUi::setupMenuBar()
 {
 	// file open, save, close
 	QMenu *menuFile = this->menuBar()->addMenu(tr("File"));
-	menuFile->addAction(tr("New"), this, &QUaAcFullUi::on_newConfig);
-	menuFile->addAction(tr("Open"), this, &QUaAcFullUi::on_openConfig);
+	menuFile->addAction(tr("New"  ), this, &QUaAcFullUi::on_newConfig);
+	menuFile->addAction(tr("Open" ), this, &QUaAcFullUi::on_openConfig);
 	menuFile->addSeparator();
-	menuFile->addAction(tr("Save"), this, &QUaAcFullUi::on_saveConfig);
+	menuFile->addAction(tr("Save" ), this, &QUaAcFullUi::on_saveConfig);
 	menuFile->addSeparator();
 	menuFile->addAction(tr("Close"), this, &QUaAcFullUi::on_closeConfig);
 
-	// TODO : native docks show/hide
-	//        e.g. top dock (current layout), left/right dock (widget tree)
-	QMenu *menuView = this->menuBar()->addMenu(tr("View"));
+	// native docks show/hide
+	QMenu   *menuView = this->menuBar()->addMenu(tr("View"));
+	QAction *actLayoutBar = menuView->addAction(tr("Layout Bar"), this, 
+	[this, actLayoutBar](bool checked) {
+		QDockWidget *dockTop = this->findChild<QDockWidget*>(QUaAcFullUi::m_strTopDock);
+		Q_CHECK_PTR(dockTop);
+		if (checked)
+		{
+			dockTop->show();
+		}
+		else
+		{
+			dockTop->hide();
+		}
+	});
+	actLayoutBar->setCheckable(true);
+	actLayoutBar->setChecked(true);
 
 	// user widgets
 	this->menuBar()->addMenu(m_dockManager->widgetsMenu());
@@ -406,7 +456,7 @@ void QUaAcFullUi::setupNativeDocks()
 	dockTop->setTitleBarWidget(new QWidget());
 	this->addDockWidget(Qt::TopDockWidgetArea, dockTop);
 	// widget
-	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, &m_modelPerms, &m_proxyPerms);
+	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, &m_proxyPerms);
 	pWidget->setLayouts(m_dockManager->layouts());
 	dockTop->setWidget(pWidget);
 	// subscribe to user change
@@ -454,9 +504,9 @@ void QUaAcFullUi::login()
 {
 	// get access control
 	QUaAccessControl * ac = this->accessControl();
-	auto listUsers = ac->users();
+	auto listUsers = ac->users()->users();
 	// if no users yet, create root user
-	if (listUsers->users().count() <= 0)
+	if (listUsers.count() <= 0)
 	{
 		// ask user if create new config
 		auto res = QMessageBox::question(
@@ -543,7 +593,7 @@ void QUaAcFullUi::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
 	auto rootPermissions = root->permissionsObject();
 	if (rootPermissions)
 	{
-		// only root can add/remove users, roles and permissions
+		// NOTE : only root can add/remove users, roles and permissions
 		ac->setPermissionsObject(rootPermissions);
 		ac->users()->setPermissionsObject(rootPermissions);
 		ac->roles()->setPermissionsObject(rootPermissions);
@@ -650,6 +700,92 @@ void QUaAcFullUi::setupPermsModel()
 			m_modelPerms.removeRows(iPerm->index().row(), 1);
 		});
 	});
+}
+
+QByteArray QUaAcFullUi::xmlConfig()
+{
+	// create dom doc
+	QDomDocument doc;
+	// set xml header
+	QDomProcessingInstruction header = doc.createProcessingInstruction("xml", "version='1.0' encoding='UTF-8'");
+	doc.appendChild(header);
+	// convert config to xml
+	auto elemAc = this->toDomElement(doc);
+	doc.appendChild(elemAc);
+	// get contents bytearray
+	return doc.toByteArray();
+}
+
+QString QUaAcFullUi::setXmlConfig(const QByteArray & xmlConfig)
+{
+	QString strError;
+	// set to dom doc
+	QDomDocument doc;
+	int line, col;
+	doc.setContent(xmlConfig, &strError, &line, &col);
+	if (!strError.isEmpty())
+	{
+		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
+		return strError;
+	}
+	// get list of params
+	QDomElement elemApp = doc.firstChildElement(QUaAcFullUi::staticMetaObject.className());
+	if (elemApp.isNull())
+	{
+		strError = tr("%1 : No Application %2 element found in XML config.\n").arg("Error").arg(QUaAcFullUi::staticMetaObject.className());
+		return strError;
+	}
+	// load config from xml
+	this->fromDomElement(elemApp, strError);
+	if (strError.isEmpty())
+	{
+		strError = "Success.\n";
+	}
+	return strError;
+}
+
+QDomElement QUaAcFullUi::toDomElement(QDomDocument & domDoc) const
+{
+	// add element
+	QDomElement elemApp = domDoc.createElement(QUaAcFullUi::staticMetaObject.className());
+	// access control
+	QUaAccessControl * ac = this->accessControl();
+	elemApp.appendChild(ac->toDomElement(domDoc));
+	// widgets
+	elemApp.appendChild(m_acWidgets->toDomElement(domDoc));
+	// layouts
+	elemApp.appendChild(m_dockManager->toDomElement(domDoc));
+	// return ac element
+	return elemApp;
+}
+
+void QUaAcFullUi::fromDomElement(QDomElement & domElem, QString & strError)
+{
+	// access control
+	QDomElement elemAc = domElem.firstChildElement(QUaAccessControl::staticMetaObject.className());
+	if (elemAc.isNull())
+	{
+		strError = tr("%1 : No Access Control %2 element found in XML config.\n").arg("Error").arg(QUaAccessControl::staticMetaObject.className());
+		return;
+	}
+	QUaAccessControl * ac = this->accessControl();
+	ac->fromDomElement(elemAc, strError);
+	// widgets
+	QDomElement elemAcW = domElem.firstChildElement(QUaAcDockWidgets<QUaAcFullUi>::m_strXmlName);
+	if (elemAcW.isNull())
+	{
+		strError = tr("%1 : No Access Control Widgets %2 element found in XML config.\n").arg("Error").arg(QUaAcDockWidgets<QUaAcFullUi>::m_strXmlName);
+		return;
+	}
+	m_acWidgets->fromDomElement(elemAcW, strError);
+	// layouts
+	QDomElement elemLayouts = domElem.firstChildElement(QUaAcDocking::m_strXmlName);
+	if (elemLayouts.isNull())
+	{
+		strError = tr("%1 : No Docking Layouts %2 element found in XML config.\n").arg("Error").arg(QUaAcDocking::m_strXmlName);
+		return;
+	}
+	m_dockManager->fromDomElement(ac, elemLayouts, strError);
 }
 
 
