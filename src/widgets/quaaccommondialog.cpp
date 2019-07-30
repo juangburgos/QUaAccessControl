@@ -46,7 +46,7 @@ void QUaAcCommonDialog::setWidget(QWidget * w)
 	w->setObjectName("diagwidget");
 	// put the widget in the layout
 	ui->verticalLayout->insertWidget(0, w);
-	// adjust dialog's geaometry
+	// adjust dialog's geometry
 	auto geo = this->geometry();
 	geo.setWidth (1.1 * w->width ());
 	geo.setHeight(1.1 * w->height());
@@ -68,7 +68,7 @@ void QUaAcCommonDialog::setWidget(QWidget * w)
 		parent = newParent;
 	}
 	this->move(
-		(parent->width() / 2) - (geo.width() / 2),
-		(parent->height() / 2) - (geo.height() / 2)
+		parent->x() + (parent->width () / 2) - (geo.width () / 2),
+		parent->y() + (parent->height() / 2) - (geo.height() / 2)
 	);
 }

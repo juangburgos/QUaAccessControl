@@ -39,7 +39,7 @@ private slots:
 	void on_newConfig();
 	void on_openConfig();
 	void on_saveConfig();
-	void on_closeConfig();
+	bool on_closeConfig();
 
 private:
     Ui::QUaAcFullUi *ui;

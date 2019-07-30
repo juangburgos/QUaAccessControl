@@ -206,10 +206,12 @@ void QUaAcDocking::setWidgetPermissions(const QString & strWidgetName, QUaPermis
 	if (!permissions)
 	{
 		m_mapWidgetPerms.remove(strWidgetName);
-		return;
 	}
-	// set permissions
-	m_mapWidgetPerms[strWidgetName] = permissions;
+	else
+	{
+		// set permissions
+		m_mapWidgetPerms[strWidgetName] = permissions;
+	}
 	// update permissions
 	this->updateWidgetPermissions(strWidgetName, permissions);
 	// emit
@@ -356,6 +358,11 @@ void QUaAcDocking::removeLayout(const QString & strLayoutName)
 {
 	Q_ASSERT(this->hasLayout(strLayoutName));
 	if (!this->hasLayout(strLayoutName))
+	{
+		return;
+	}
+	// check is empty
+	if (strLayoutName.compare(QUaAcDocking::m_strEmpty, Qt::CaseInsensitive) == 0)
 	{
 		return;
 	}

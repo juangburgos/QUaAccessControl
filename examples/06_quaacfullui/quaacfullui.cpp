@@ -98,27 +98,11 @@ void QUaAcFullUi::on_loggedUserChanged(QUaUser * user)
 
 void QUaAcFullUi::on_newConfig()
 {
-	// get access control
-	QUaAccessControl * ac = this->accessControl();
-	auto listUsers = ac->users()->users();
-	// if existing config opened, ask if wanna close
-	if (listUsers.count() > 0)
+	// clear old config (asks for confirmation is there is a config open)
+	if (!this->on_closeConfig())
 	{
-		// ask user if create new config
-		auto res = QMessageBox::question(
-			this,
-			tr("Confirm New Config"),
-			tr("There is currently a configuration loaded.\nWould you like to discard the current configuration and create a new one?"),
-			QMessageBox::StandardButton::Ok,
-			QMessageBox::StandardButton::Cancel
-		);
-		if (res != QMessageBox::StandardButton::Ok)
-		{
-			return;
-		}
+		return;
 	}
-	// clear old config
-	this->on_closeConfig();
 	// setup new user widget
 	auto widgetNewUser = new QUaUserWidgetEdit;
 	widgetNewUser->setActionsVisible(false);
@@ -181,7 +165,10 @@ void QUaAcFullUi::on_openConfig()
 		if (byteKey == keyComputed)
 		{
 			// close old file
-			this->on_closeConfig();
+			if (!this->on_closeConfig())
+			{
+				return;
+			}
 			// try load config
 			auto strError = this->setXmlConfig(byteContents);
 			if (strError.contains("Error"))
@@ -255,7 +242,7 @@ void QUaAcFullUi::on_saveConfig()
 	fileKey.close();
 }
 
-void QUaAcFullUi::on_closeConfig()
+bool QUaAcFullUi::on_closeConfig()
 {
 
 	// get access control
@@ -274,7 +261,7 @@ void QUaAcFullUi::on_closeConfig()
 		);
 		if (res != QMessageBox::StandardButton::Ok)
 		{
-			return;
+			return false;
 		}
 	}
 	// close access control widgets
@@ -284,8 +271,23 @@ void QUaAcFullUi::on_closeConfig()
 	// clear config
 	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
 	ac->clearInmediatly();
+	// clear dock manager (not widgets because some are fixed)
+	m_dockManager->setWidgetListPermissions(nullptr);
+	m_dockManager->setLayoutListPermissions(nullptr);
+	for (auto widgetName : m_dockManager->widgetNames())
+	{
+		m_dockManager->setWidgetPermissions(widgetName, nullptr);
+		// TODO : cannot remove widget because they are fixed. Should they be fixed or recreate every time?
+	}
+	for (auto layoutName : m_dockManager->layoutNames())
+	{
+		m_dockManager->setLayoutPermissions(layoutName, nullptr);
+		m_dockManager->removeLayout(layoutName);
+	}
 	// update title
 	this->setWindowTitle(m_strTitle.arg(QUaAcFullUi::m_strUntitiled).arg(QUaAcFullUi::m_strAppName));
+	// success
+	return true;
 }
 
 void QUaAcFullUi::setupInfoModel()
