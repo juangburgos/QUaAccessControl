@@ -25,3 +25,5 @@ SOURCES += \
     $$PWD/quaaccesscontrol.cpp \
     $$PWD/quafolderobjectprotected.cpp \
     $$PWD/quabaseobjectprotected.cpp
+
+DEFINES += QUA_ACCESS_CONTROL
