@@ -7,11 +7,27 @@ CONFIG(debug, debug|release) {
         LIBS += -lqtadvanceddockingd
     }
     mac {
-        LIBS += -L$${OUT_PWD}/../../libs/QAdvancedDocking.git/lib
+        SO_FIND = 1
+        DOCKLIB_PATH = $$system(dirname $(readlink -f $(find $${OUT_PWD}/../../ -type f -name "*docking.so*")), ,SO_FIND)
+        equals(SO_FIND, 0) {
+            message("Found docking library in $${DOCKLIB_PATH}.")
+        }
+        else {
+            error("Failed to find docking library (qadvanceddocking.pri).")
+        }
+        LIBS += -L$${DOCKLIB_PATH}
         LIBS += -lqtadvanceddocking_debug
     }
     linux-g++ {
-        LIBS += -L$${OUT_PWD}/../../libs/QAdvancedDocking.git/lib
+        SO_FIND = 1
+        DOCKLIB_PATH = $$system(dirname $(readlink -f $(find $${OUT_PWD}/../../ -type f -name "*docking.so*")), ,SO_FIND)
+        equals(SO_FIND, 0) {
+            message("Found docking library in $${DOCKLIB_PATH}.")
+        }
+        else {
+            error("Failed to find docking library (qadvanceddocking.pri).")
+        }
+        LIBS += -L$${DOCKLIB_PATH}
         LIBS += -lqtadvanceddocking
     }
 } else {
