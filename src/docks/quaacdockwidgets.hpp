@@ -16,6 +16,8 @@
 #include <QUaRoleWidgetEdit>
 #include <QUaPermissionsWidgetEdit>
 
+#include <QMessageBox>
+
 template <class T>
 class QUaAcDockWidgets : public QObject
 {

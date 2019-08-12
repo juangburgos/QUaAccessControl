@@ -1,16 +1,17 @@
 #CONFIG += c++14
 
-LIBS += -L$$PWD/QAdvancedDocking.git/lib
-
 # shared
 CONFIG(debug, debug|release) {
     win32 {
+        LIBS += -L$$PWD/QAdvancedDocking.git/lib
         LIBS += -lqtadvanceddockingd
     }
     mac {
+        LIBS += -L$${OUT_PWD}/../../libs/QAdvancedDocking.git/lib
         LIBS += -lqtadvanceddocking_debug
     }
     linux-g++ {
+        LIBS += -L$${OUT_PWD}/../../libs/QAdvancedDocking.git/lib
         LIBS += -lqtadvanceddocking
     }
 } else {
