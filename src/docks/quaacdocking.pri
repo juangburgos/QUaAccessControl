@@ -2,8 +2,6 @@ QT += core gui
 
 CONFIG += c++11
 
-include($$PWD/../../libs/qadvanceddocking.pri)
-
 INCLUDEPATH += $$PWD/
 
 HEADERS += \
@@ -29,4 +27,3 @@ FORMS += \
 HEADERS += \
     $$PWD/quaacdockwidgets.hpp
 
-include($$PWD/../../libs/add_qad_path_win.pri)

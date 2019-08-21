@@ -13,6 +13,7 @@ TEMPLATE = app
 
 include($$PWD/../../libs/QUaServer.git/src/wrapper/quaserver.pri)
 include($$PWD/../../libs/Utils/utils.pri)
+include($$PWD/../../libs/qadvanceddocking.pri)
 
 SOURCES += main.cpp \
     quaacfullui.cpp
@@ -27,3 +28,4 @@ include($$PWD/../../src/types/quaaccesscontrol.pri)
 include($$PWD/../../src/widgets/quaaccesscontrolwidgets.pri)
 include($$PWD/../../src/docks/quaacdocking.pri)
 
+include($$PWD/../../libs/add_qad_path_win.pri)
