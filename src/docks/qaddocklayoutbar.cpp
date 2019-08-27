@@ -46,7 +46,7 @@ QAdDockLayoutBar::QAdDockLayoutBar(
 		{
 			return false;
 		}
-		auto perms  = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
+		auto perms = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
 		if (!perms)
 		{
 			return true;
@@ -83,6 +83,8 @@ void QAdDockLayoutBar::on_layoutAdded(const QString & strLayoutName)
 	auto row    = parent->rowCount();
 	auto col    = 0;
 	auto iLn    = new QStandardItem(strLayoutName);
+	// TODO : line below fixes random crash about m_proxyLayouts.setFilterAcceptsRow in constructor?
+	iLn->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
 	parent->setChild(row, col, iLn);
 }
 
