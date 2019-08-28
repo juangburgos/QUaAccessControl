@@ -84,15 +84,13 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	m_layoutsMenu->addSeparator()->setObjectName("Separator");
 	m_layoutsMenu->addAction(tr("Remove")    , this, &QUaAcDocking::removeCurrentLayout)->setObjectName("Remove");
 	// signals and slots
-	QObject::connect(this, &QUaAcDocking::widgetAdded  , this, &QUaAcDocking::on_widgetAdded  );
-	QObject::connect(this, &QUaAcDocking::widgetRemoved, this, &QUaAcDocking::on_widgetRemoved);
 	QObject::connect(this, &QUaAcDocking::layoutAdded  , this, &QUaAcDocking::on_layoutAdded  );
 	QObject::connect(this, &QUaAcDocking::layoutRemoved, this, &QUaAcDocking::on_layoutRemoved);
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
 }
 
 QAdDockWidgetArea * QUaAcDocking::addDockWidget(
-	const QString     &strWidgetName,
+	const QString     &strWidgetPathName,
 	const QAdDockArea &dockArea,
 	QWidget           *widget,
 	QWidget           *widgetEdit  /*= nullptr*/,
@@ -100,7 +98,11 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	QAdDockWidgetArea *widgetArea  /*= nullptr*/
 )
 {
-	Q_ASSERT(!this->hasDockWidget(strWidgetName));
+	// get only name from path, name must be unique
+	QStringList listPathParts = strWidgetPathName.split("/");
+	QString     strWidgetName = listPathParts.last();
+	// check does not exists
+	Q_ASSERT_X(!this->hasDockWidget(strWidgetName), "addDockWidget", "Repeated Widget Name not supported.");
 	if (this->hasDockWidget(strWidgetName))
 	{
 		// TODO : remove old, put new?
@@ -124,7 +126,8 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	wrapper->layout()->setContentsMargins(3, 3, 3, 3);
 	// add dock
 	auto wAreaNew = m_dockManager->addDockWidget(dockArea, pDock, widgetArea); 
-	emit this->widgetAdded(strWidgetName);
+	// add to menu and tree model
+	this->handleWidgetAdded(listPathParts, m_widgetsMenu);
 	// handle config button clicked
 	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
 	[this, strWidgetName, widgetEdit, editCallback]() {
@@ -172,7 +175,7 @@ void QUaAcDocking::removeDockWidget(const QString & strWidgetName)
 	{
 		return;
 	}
-	emit this->widgetRemoved(strWidgetName); // NOTE : before, so still can find it in callback
+	this->handleWidgetRemoved(strWidgetName);
 	m_dockManager->removeDockWidget(widget);
 }
 
@@ -214,15 +217,12 @@ void QUaAcDocking::setWidgetPermissions(const QString & strWidgetName, QUaPermis
 	}
 	// update permissions
 	this->updateWidgetPermissions(strWidgetName, permissions);
-	// emit
-	emit this->widgetPermissionsChanged(strWidgetName, permissions);
 }
 
 void QUaAcDocking::setWidgetListPermissions(QUaPermissions * permissions)
 {
 	m_widgetListPerms = permissions;
 	this->updateWidgetListPermissions();
-	emit this->widgetListPermissionsChanged(permissions);
 }
 
 QUaPermissions * QUaAcDocking::widgetListPermissions() const
@@ -684,18 +684,49 @@ void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 	this->updateWidgetListPermissions();
 }
 
-void QUaAcDocking::on_widgetAdded(const QString & strWidgetName)
+void QUaAcDocking::handleWidgetAdded(const QStringList & strWidgetPathName, QMenu * menuParent, const int &index/* = 0*/)
 {
+	// create menu path if necessary
+	if (strWidgetPathName.count()-1 > index)
+	{
+		// get path part
+		QString strPathName = strWidgetPathName.at(index);
+		// add if does not exist
+		QMenu * menuChild = menuParent->findChild<QMenu*>(strPathName);
+		if (!menuChild)
+		{
+			menuChild = menuParent->addMenu(strPathName);
+			menuChild->setObjectName(strPathName);
+		}
+		Q_CHECK_PTR(menuChild);
+
+		// TODO : model
+
+		this->handleWidgetAdded(strWidgetPathName, menuChild, index + 1);
+		// exit
+		return;
+	}
+	// get name
+	QString strWidgetName = strWidgetPathName.at(index);
+	// add action to menu
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
 	Q_ASSERT(widget);
-	m_widgetsMenu->addAction(widget->toggleViewAction());
+	menuParent->addAction(widget->toggleViewAction());
 }
 
-void QUaAcDocking::on_widgetRemoved(const QString & strWidgetName)
+void QUaAcDocking::handleWidgetRemoved(const QString & strWidgetName)
 {
+	/*
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
 	Q_ASSERT(widget);
 	m_widgetsMenu->removeAction(widget->toggleViewAction());
+	*/
+	// NOTE : find recursivelly by default, uses QObject::objectName
+	QAction * action = m_widgetsMenu->findChild<QAction*>(strWidgetName);
+	Q_CHECK_PTR(action);
+	QMenu * parentMenu = dynamic_cast<QMenu*>(action->parentWidget());
+	Q_CHECK_PTR(parentMenu);
+	parentMenu->removeAction(action);
 }
 
 void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)

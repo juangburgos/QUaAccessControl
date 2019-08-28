@@ -52,7 +52,7 @@ public:
 	// widget management
 
 	QAdDockWidgetArea * addDockWidget(
-		const QString     &strWidgetName,
+		const QString     &strWidgetPathName,
 		const QAdDockArea &dockArea,
 		QWidget           *widget,
 		QWidget           *widgetEdit   = nullptr,
@@ -115,10 +115,6 @@ public:
 	const static QString m_strXmlLayoutName;
 
 signals:
-	void widgetAdded             (const QString &strWidgetName);
-	void widgetRemoved           (const QString &strWidgetName);
-	void widgetPermissionsChanged(const QString &strWidgetName, QUaPermissions * permissions);
-	void widgetListPermissionsChanged(QUaPermissions * permissions);
 
 	void layoutAdded             (const QString &strLayoutName);
 	void layoutUpdated           (const QString &strLayoutName);
@@ -135,9 +131,6 @@ public slots:
 	void on_loggedUserChanged(QUaUser * user);
 
 private slots:
-	void on_widgetAdded  (const QString &strWidgetName);
-	void on_widgetRemoved(const QString &strWidgetName);
-
 	void on_layoutAdded  (const QString &strLayoutName);
 	void on_layoutRemoved(const QString &strLayoutName);
 
@@ -158,6 +151,9 @@ private:
 	QSortFilterProxyModel * m_proxyPerms;
 
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
+
+	void handleWidgetAdded  (const QStringList &strWidgetPathName, QMenu * menuParent, const int &index = 0);
+	void handleWidgetRemoved(const QString &strWidgetName);
 	
 	void updateLayoutPermissions();
 	void updateWidgetPermissions();

@@ -70,6 +70,7 @@ private:
 	// helpers
 	QUaAcDocking * getDockManager() const;
 
+	const static QString m_strMenuPath;
 	const static QString m_strUsersTable;
 	const static QString m_strRolesTable;
 	const static QString m_strPermissionsTable;
@@ -81,6 +82,9 @@ private:
 
 template <class T>
 const QString QUaAcDockWidgets<T>::m_strXmlName = "QUaAcDockWidgets";
+
+template <class T>
+const QString QUaAcDockWidgets<T>::m_strMenuPath = "Permissions";
 
 template <class T>
 const QString QUaAcDockWidgets<T>::m_strUsersTable = "Users Table";
@@ -229,54 +233,45 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 {
 	m_userTable = new QUaUserTable(m_thiz);
 	this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strUsersTable,
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strUsersTable,
 		QAd::CenterDockWidgetArea,
 		m_userTable
 	);
 
 	m_roleTable = new QUaRoleTable(m_thiz);
 	this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strRolesTable,
-		QAd::RightDockWidgetArea,
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strRolesTable,
+		QAd::CenterDockWidgetArea,
 		m_roleTable
 	);
 
 	m_permsTable = new QUaPermissionsTable(m_thiz);
 	this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strPermissionsTable,
-		QAd::BottomDockWidgetArea,
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strPermissionsTable,
+		QAd::CenterDockWidgetArea,
 		m_permsTable
 	);
 
 	m_userWidget = new QUaUserWidgetEdit(m_thiz);
-	auto userArea = this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strUserEdit,
-		QAd::RightDockWidgetArea,
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strUserEdit,
+		QAd::CenterDockWidgetArea,
 		m_userWidget
 	);
 
 	m_roleWidget = new QUaRoleWidgetEdit(m_thiz);
-	auto roleArea = this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strRoleEdit,
-		QAd::BottomDockWidgetArea,
-		m_roleWidget,
-		nullptr,
-		nullptr,
-		userArea
+	this->getDockManager()->addDockWidget(
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strRoleEdit,
+		QAd::CenterDockWidgetArea,
+		m_roleWidget
 	);
 
 	m_permsWidget = new QUaPermissionsWidgetEdit(m_thiz);
 	this->getDockManager()->addDockWidget(
-		QUaAcDockWidgets<T>::m_strPermissionsEdit,
-		QAd::BottomDockWidgetArea,
-		m_permsWidget,
-		nullptr,
-		nullptr,
-		roleArea
+		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strPermissionsEdit,
+		QAd::CenterDockWidgetArea,
+		m_permsWidget
 	);
-
-	// TODO : create default layouts or not?
-	//this->getDockManager()->saveLayout(QUaAcDockWidgets<T>::m_strDefault);
 }
 
 template<class T>
@@ -379,6 +374,11 @@ inline void QUaAcDockWidgets<T>::setupPermsWidgets()
 template<class T>
 inline void QUaAcDockWidgets<T>::clearWidgetUserEdit()
 {
+	// disable old connections
+	while (m_connsUserWidget.count() > 0)
+	{
+		QObject::disconnect(m_connsUserWidget.takeFirst());
+	}
 	m_userWidget->setUserName("");
 	m_userWidget->setRole    (nullptr);
 	m_userWidget->setPassword("");
@@ -556,6 +556,11 @@ inline void QUaAcDockWidgets<T>::updateWidgetUserEditPermissions(QUaUser * user)
 template<class T>
 inline void QUaAcDockWidgets<T>::clearWidgetRoleEdit()
 {
+	// disable old connections
+	while (m_connsRoleWidget.count() > 0)
+	{
+		QObject::disconnect(m_connsRoleWidget.takeFirst());
+	}
 	m_roleWidget->setRoleName("");
 	m_roleWidget->setUsers(QStringList());
 	m_roleWidget->setEnabled(false);
@@ -701,6 +706,11 @@ inline void QUaAcDockWidgets<T>::updateWidgetRoleEditPermissions()
 template<class T>
 inline void QUaAcDockWidgets<T>::clearWidgetPermissionsEdit()
 {
+	// disable old connections
+	while (m_connsPermsWidget.count() > 0)
+	{
+		QObject::disconnect(m_connsPermsWidget.takeFirst());
+	}
 	m_permsWidget->setId("");
 	m_permsWidget->setRoleAccessMap(QUaRoleAccessMap());
 	m_permsWidget->setUserAccessMap(QUaUserAccessMap());
