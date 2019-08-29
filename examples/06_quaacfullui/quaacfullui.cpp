@@ -458,14 +458,12 @@ void QUaAcFullUi::setupNativeDocks()
 	dockTop->setTitleBarWidget(new QWidget());
 	this->addDockWidget(Qt::TopDockWidgetArea, dockTop);
 	// widget
-	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, &m_proxyPerms);
-	pWidget->setLayouts(m_dockManager->layouts());
+	QAdDockLayoutBar *pWidget = new QAdDockLayoutBar(this, &m_proxyPerms, this->m_dockManager->layoutsModel());
 	dockTop->setWidget(pWidget);
 	// subscribe to user change
-	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, pWidget, &QAdDockLayoutBar::on_loggedUserChanged);
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, pWidget      , &QAdDockLayoutBar::on_loggedUserChanged);
+	QObject::connect(this, &QUaAcFullUi::loggedUserChanged, m_dockManager, &QUaAcDocking    ::on_loggedUserChanged);
 	// subscribe to layouts changes
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutAdded                 , pWidget, &QAdDockLayoutBar::on_layoutAdded                 );
-	QObject::connect(m_dockManager, &QUaAcDocking::layoutRemoved               , pWidget, &QAdDockLayoutBar::on_layoutRemoved               );
 	QObject::connect(m_dockManager, &QUaAcDocking::currentLayoutChanged        , pWidget, &QAdDockLayoutBar::on_currentLayoutChanged        );
 	QObject::connect(m_dockManager, &QUaAcDocking::layoutPermissionsChanged    , pWidget, &QAdDockLayoutBar::on_layoutPermissionsChanged    );
 	QObject::connect(m_dockManager, &QUaAcDocking::layoutListPermissionsChanged, pWidget, &QAdDockLayoutBar::on_layoutListPermissionsChanged);
@@ -498,6 +496,10 @@ QUaUser * QUaAcFullUi::loggedUser() const
 
 void QUaAcFullUi::setLoggedUser(QUaUser * user)
 {
+	if (m_loggedUser == user)
+	{
+		return;
+	}
 	m_loggedUser = user;
 	emit this->loggedUserChanged(m_loggedUser);
 }
@@ -553,6 +555,8 @@ void QUaAcFullUi::logout()
 {
 	// logout
 	this->setLoggedUser(nullptr);
+	// set empty
+	m_dockManager->setEmptyLayout();
 }
 
 void QUaAcFullUi::showCreateRootUserDialog(QUaAcCommonDialog & dialog)
