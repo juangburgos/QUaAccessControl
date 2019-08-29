@@ -70,6 +70,7 @@ void QAdDockLayoutBar::on_currentLayoutChanged(const QString & strLayoutName)
 
 void QAdDockLayoutBar::on_layoutPermissionsChanged(const QString & strLayoutName, QUaPermissions * permissions)
 {
+	Q_UNUSED(permissions);
 	// check if current
 	if (ui->comboBoxLayout->currentText().compare(strLayoutName, Qt::CaseInsensitive) != 0)
 	{
@@ -120,8 +121,13 @@ void QAdDockLayoutBar::on_pushButtonPermissions_clicked()
 	{
 		return;
 	}
+	auto newPerms = permsWidget->permissions();
+	if (perms == newPerms)
+	{
+		return;
+	}
 	// read permissions and set them for widget
-	emit this->setLayoutPermissions(strLayoutName, permsWidget->permissions());
+	emit this->setLayoutPermissions(strLayoutName, newPerms);
 }
 
 void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)

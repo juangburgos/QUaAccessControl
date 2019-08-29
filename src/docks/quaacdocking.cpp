@@ -324,11 +324,15 @@ void QUaAcDocking::updateWidgetPermissions()
 
 void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
 {
-	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
-	Q_CHECK_PTR(menuLayouts);
-	QAction * layActOld = menuLayouts->findChild<QAction*>(strLayoutName);
+	// update in menu
+	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActOld);
 	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
+	// update in model
+	auto listItems = m_modelLayouts.findItems(strLayoutName);
+	Q_ASSERT(listItems.count() == 1);
+	auto iLn = listItems.at(0);
+	iLn->setData(QVariant::fromValue(permissions), QUaDockWidgetPerms::PointerRole);
 	// check if current
 	if (strLayoutName.compare(m_currLayout, Qt::CaseInsensitive) != 0)
 	{
@@ -340,8 +344,6 @@ void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPer
 	// NOTE : still allow read_only user to create own (save as). If this is not desired then remove write permissions to layout list permissions
 	m_layoutsMenu->findChild<QAction*>("Separator")->setVisible(canWrite);
 	m_layoutsMenu->findChild<QAction*>("Remove"   )->setVisible(canWrite);
-
-	// TODO : model ?
 }
 
 void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
@@ -408,8 +410,6 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	{
 		return;
 	}
-	// update internal
-	m_currLayout = strLayoutName;
 	// update filter before anything because layout to be set might be filtered out
 	m_proxyLayouts.resetFilter();
 	// get parent menu
@@ -419,6 +419,8 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	QAction * layActOld = menuLayouts->findChild<QAction*>(this->currentLayout());
 	Q_CHECK_PTR(layActOld);
 	layActOld->setChecked(false);
+	// update internal (after uncheck old)
+	m_currLayout = strLayoutName;
 	// set new layout
 	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
 	// update permissions
@@ -812,4 +814,5 @@ void QUaAcDocking::handleLayoutRemoved(const QString & strLayoutName)
 void QUaAcDocking::handleLayoutUpdated(const QString & strLayoutName)
 {
 	// TODO ?
+	Q_UNUSED(strLayoutName);
 }
