@@ -8,7 +8,7 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 include($$PWD/../../libs/QUaServer.git/src/wrapper/quaserver.pri)
-include($$PWD/../../libs/Utils/utils.pri)
+include($$PWD/../../libs/QFunctionUtils.git/src/qfunctionutils.pri)
 
 INCLUDEPATH += $$PWD/
 
