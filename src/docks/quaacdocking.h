@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QStandardItemModel>
-#include <QSortFilterProxyModel>
+#include <QUaAcCommonWidgets>
 
 #include <DockManager.h>
 #include <DockWidget.h>
@@ -92,6 +92,7 @@ public:
 	QList<QString> layoutNames() const;
 
 	QMenu * layoutsMenu();
+	QUaAcLambdaFilterProxy * layoutsModel();
 
 	bool              hasLayoutPermissions(const QString &strLayoutName) const;
 	QUaPermissions  * layoutPermissions   (const QString &strLayoutName) const;
@@ -115,10 +116,6 @@ public:
 	const static QString m_strXmlLayoutName;
 
 signals:
-
-	void layoutAdded             (const QString &strLayoutName);
-	void layoutUpdated           (const QString &strLayoutName);
-	void layoutRemoved           (const QString &strLayoutName);
 	void currentLayoutChanged    (const QString &strLayoutName);
 	void layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
 	void layoutListPermissionsChanged(QUaPermissions * permissions);
@@ -129,10 +126,6 @@ public slots:
 	void removeCurrentLayout();
 
 	void on_loggedUserChanged(QUaUser * user);
-
-private slots:
-	void on_layoutAdded  (const QString &strLayoutName);
-	void on_layoutRemoved(const QString &strLayoutName);
 
 private:
 	QAdDockManager * m_dockManager;
@@ -150,10 +143,19 @@ private:
 
 	QSortFilterProxyModel * m_proxyPerms;
 
+	// layouts model for combobox
+	QStandardItemModel     m_modelLayouts;
+	QUaAcLambdaFilterProxy m_proxyLayouts;
+	void setupLayoutsModel();
+
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
 
 	void handleWidgetAdded  (const QStringList &strWidgetPathName, QMenu * menuParent, const int &index = 0);
 	void handleWidgetRemoved(const QString &strWidgetName);
+
+	void handleLayoutAdded  (const QString &strLayoutName);
+	void handleLayoutRemoved(const QString &strLayoutName);
+	void handleLayoutUpdated(const QString &strLayoutName);
 	
 	void updateLayoutPermissions();
 	void updateWidgetPermissions();

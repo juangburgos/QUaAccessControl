@@ -9,50 +9,30 @@
 #include <QUaDockWidgetPerms>
 
 QAdDockLayoutBar::QAdDockLayoutBar(
-	QWidget               * parent, 
-	QSortFilterProxyModel * permsFilter
+	QWidget                * parent, 
+	QSortFilterProxyModel  * permsProxy,
+	QUaAcLambdaFilterProxy * layoutsProxy
 ) :
     QWidget(parent),
     ui(new Ui::QAdDockLayoutBar),
-	m_proxyPerms(permsFilter)
+	m_proxyPerms(permsProxy),
+	m_proxyLayouts(layoutsProxy)
 {
 	Q_CHECK_PTR(parent);
-	Q_CHECK_PTR(permsFilter);
+	Q_CHECK_PTR(permsProxy);
+	Q_CHECK_PTR(m_proxyLayouts);
     ui->setupUi(this);
-	m_loggedUser = nullptr;
+	m_loggedUser      = nullptr;
 	m_layoutListPerms = nullptr;
-	// set layouts model for combo
-	m_proxyLayouts.setSourceModel(&m_modelLayouts);
 	// setup combo
-	ui->comboBoxLayout->setModel(&m_proxyLayouts);
+	ui->comboBoxLayout->setModel(m_proxyLayouts);
 	ui->comboBoxLayout->setEditable(true);
 	// setup completer
 	QCompleter *completer = new QCompleter(ui->comboBoxLayout);
-	completer->setModel(&m_proxyLayouts);
+	completer->setModel(m_proxyLayouts);
 	completer->setFilterMode(Qt::MatchContains);
 	ui->comboBoxLayout->setCompleter(completer);
 	ui->comboBoxLayout->setInsertPolicy(QComboBox::NoInsert);
-	// setup filer
-	m_proxyLayouts.setFilterAcceptsRow(
-	[this](int sourceRow, const QModelIndex &sourceParent) {
-		Q_UNUSED(sourceParent;)
-		auto parent = m_modelLayouts.invisibleRootItem();
-		auto iLn    = parent->child(sourceRow);
-		if (!iLn)
-		{
-			return false;
-		}
-		if (!m_loggedUser)
-		{
-			return false;
-		}
-		auto perms = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
-		if (!perms)
-		{
-			return true;
-		}
-		return perms->canUserRead(m_loggedUser);
-	});
 }
 
 QAdDockLayoutBar::~QAdDockLayoutBar()
@@ -60,45 +40,23 @@ QAdDockLayoutBar::~QAdDockLayoutBar()
     delete ui;
 }
 
-void QAdDockLayoutBar::setLayouts(const QUaAcLayouts &mapLayouts)
+void QAdDockLayoutBar::on_loggedUserChanged(QUaUser * user)
 {
-	auto parent = m_modelLayouts.invisibleRootItem();
-	auto row    = parent->rowCount();
-	auto col    = 0;
-	QUaAcLayoutsIter i(mapLayouts);
-	while (i.hasNext()) {
-		i.next();
-		row = parent->rowCount();
-		auto iLn = new QStandardItem(i.key());
-		parent->setChild(row, col, iLn);
-		iLn->setData(QVariant::fromValue(i.value().permsObject), QUaDockWidgetPerms::PointerRole);
-	}
+	m_loggedUser = user;
 	// update permissions
-	m_proxyLayouts.resetFilter();
-}
-
-void QAdDockLayoutBar::on_layoutAdded(const QString & strLayoutName)
-{
-	auto parent = m_modelLayouts.invisibleRootItem();
-	auto row    = parent->rowCount();
-	auto col    = 0;
-	auto iLn    = new QStandardItem(strLayoutName);
-	// TODO : line below fixes random crash about m_proxyLayouts.setFilterAcceptsRow in constructor?
-	iLn->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
-	parent->setChild(row, col, iLn);
-}
-
-void QAdDockLayoutBar::on_layoutRemoved(const QString & strLayoutName)
-{
-	auto listItems = m_modelLayouts.findItems(strLayoutName);
-	Q_ASSERT(listItems.count() == 1);
-	auto iLn = listItems.at(0);
-	// remove from model
-	m_modelLayouts.removeRows(iLn->index().row(), 1);
+	ui->comboBoxLayout->setEnabled(m_loggedUser);
+	this->updateLayoutListPermissions();
+	this->on_comboBoxLayout_currentIndexChanged(ui->comboBoxLayout->currentIndex());
 }
 
 void QAdDockLayoutBar::on_currentLayoutChanged(const QString & strLayoutName)
 {
+	// check if layout is same
+	if (strLayoutName.compare(ui->comboBoxLayout->currentText(), Qt::CaseInsensitive) == 0)
+	{
+		return;
+	}
+	// get index of new layout
 	auto index = ui->comboBoxLayout->findText(strLayoutName);
 	// can happen that current set layout is not visible in proxy model
 	if (index < 0)
@@ -112,36 +70,18 @@ void QAdDockLayoutBar::on_currentLayoutChanged(const QString & strLayoutName)
 
 void QAdDockLayoutBar::on_layoutPermissionsChanged(const QString & strLayoutName, QUaPermissions * permissions)
 {
-	// set item data
-	auto listItems = m_modelLayouts.findItems(strLayoutName);
-	Q_ASSERT(listItems.count() == 1);
-	auto iLn = listItems.at(0);
-	iLn->setData(QVariant::fromValue(permissions), QUaDockWidgetPerms::PointerRole);
+	Q_UNUSED(permissions);
 	// check if current
-	if (ui->comboBoxLayout->currentText().compare(strLayoutName, Qt::CaseInsensitive) == 0)
+	if (ui->comboBoxLayout->currentText().compare(strLayoutName, Qt::CaseInsensitive) != 0)
 	{
-		// check if can show actions
-		bool canWrite = permissions ? permissions->canUserWrite(m_loggedUser) : true;
-		this->setLayoutActionsCanWrite(canWrite);
+		return;
 	}
-	// update permissions
-	m_proxyLayouts.resetFilter();
+	this->on_comboBoxLayout_currentIndexChanged(ui->comboBoxLayout->currentIndex());
 }
 
 void QAdDockLayoutBar::on_layoutListPermissionsChanged(QUaPermissions * permissions)
 {
 	m_layoutListPerms = permissions;
-	this->updateLayoutListPermissions();
-}
-
-void QAdDockLayoutBar::on_loggedUserChanged(QUaUser * user)
-{
-	m_loggedUser = user;
-	// update combo
-	ui->comboBoxLayout->setEnabled(m_loggedUser);
-	// update permissions
-	m_proxyLayouts.resetFilter();
-	// update list permissions
 	this->updateLayoutListPermissions();
 }
 
@@ -181,8 +121,13 @@ void QAdDockLayoutBar::on_pushButtonPermissions_clicked()
 	{
 		return;
 	}
+	auto newPerms = permsWidget->permissions();
+	if (perms == newPerms)
+	{
+		return;
+	}
 	// read permissions and set them for widget
-	emit this->setLayoutPermissions(strLayoutName, permsWidget->permissions());
+	emit this->setLayoutPermissions(strLayoutName, newPerms);
 }
 
 void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
@@ -193,7 +138,7 @@ void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
 		return;
 	}
 	// check if can show actions
-	auto perms = ui->comboBoxLayout->currentData(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
+	auto perms    = ui->comboBoxLayout->currentData(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
 	bool canWrite = perms ? perms->canUserWrite(m_loggedUser) : true;
 	this->setLayoutActionsCanWrite(canWrite);
 	// ask to change layout

@@ -83,10 +83,11 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout)->setObjectName("SaveAs");
 	m_layoutsMenu->addSeparator()->setObjectName("Separator");
 	m_layoutsMenu->addAction(tr("Remove")    , this, &QUaAcDocking::removeCurrentLayout)->setObjectName("Remove");
-	// signals and slots
-	QObject::connect(this, &QUaAcDocking::layoutAdded  , this, &QUaAcDocking::on_layoutAdded  );
-	QObject::connect(this, &QUaAcDocking::layoutRemoved, this, &QUaAcDocking::on_layoutRemoved);
+	// set empty initially
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
+	this->setEmptyLayout();
+	//  set layouts model for combos
+	this->setupLayoutsModel();
 }
 
 QAdDockWidgetArea * QUaAcDocking::addDockWidget(
@@ -256,17 +257,45 @@ void QUaAcDocking::saveLayout(const QString & strLayoutName)
 	this->saveCurrentLayoutInternal(strLayoutName);
 }
 
+void QUaAcDocking::setupLayoutsModel()
+{
+	// setup combo model
+	m_proxyLayouts.setSourceModel(&m_modelLayouts);
+	// NOTE : add existing or subscribe not necessary?
+	// setup filter
+	m_proxyLayouts.setFilterAcceptsRow(
+	[this](int sourceRow, const QModelIndex &sourceParent) {
+		Q_UNUSED(sourceParent;)
+		auto parent = m_modelLayouts.invisibleRootItem();
+		auto iLn    = parent->child(sourceRow);
+		if (!iLn)
+		{
+			return false;
+		}
+		if (!m_loggedUser)
+		{
+			return false;
+		}
+		auto perms = iLn->data(QUaDockWidgetPerms::PointerRole).value<QUaPermissions*>();
+		if (!perms)
+		{
+			return true;
+		}
+		return perms->canUserRead(m_loggedUser);
+	});
+}
+
 void QUaAcDocking::saveCurrentLayoutInternal(const QString & strLayoutName)
 {
 	if (this->hasLayout(strLayoutName))
 	{
 		m_mapLayouts[strLayoutName].byteState = m_dockManager->saveState();
-		emit this->layoutUpdated(strLayoutName);
+		this->handleLayoutUpdated(strLayoutName);
 	}
 	else
 	{
 		m_mapLayouts.insert(strLayoutName, { m_dockManager->saveState(), nullptr });
-		emit this->layoutAdded(strLayoutName);
+		this->handleLayoutAdded(strLayoutName);
 		// when created, set current user's permissions if any, by default
 		if (m_loggedUser && m_loggedUser->permissionsObject())
 		{
@@ -295,18 +324,22 @@ void QUaAcDocking::updateWidgetPermissions()
 
 void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
 {
-	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
-	Q_CHECK_PTR(menuLayouts);
-	QAction * layActOld = menuLayouts->findChild<QAction*>(strLayoutName);
+	// update in menu
+	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActOld);
 	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
+	// update in model
+	auto listItems = m_modelLayouts.findItems(strLayoutName);
+	Q_ASSERT(listItems.count() == 1);
+	auto iLn = listItems.at(0);
+	iLn->setData(QVariant::fromValue(permissions), QUaDockWidgetPerms::PointerRole);
 	// check if current
 	if (strLayoutName.compare(m_currLayout, Qt::CaseInsensitive) != 0)
 	{
 		return;
 	}
 	// show/hide layout menu actions
-	bool canWrite     = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
+	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
 	m_layoutsMenu->findChild<QAction*>("Save"     )->setVisible(canWrite);
 	// NOTE : still allow read_only user to create own (save as). If this is not desired then remove write permissions to layout list permissions
 	m_layoutsMenu->findChild<QAction*>("Separator")->setVisible(canWrite);
@@ -367,7 +400,7 @@ void QUaAcDocking::removeLayout(const QString & strLayoutName)
 		return;
 	}
 	m_mapLayouts.remove(strLayoutName);
-	emit this->layoutRemoved(strLayoutName);
+	this->handleLayoutRemoved(strLayoutName);
 }
 
 void QUaAcDocking::setLayout(const QString & strLayoutName)
@@ -377,24 +410,28 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	{
 		return;
 	}
+	// update filter before anything because layout to be set might be filtered out
+	m_proxyLayouts.resetFilter();
+	// get parent menu
 	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
 	Q_CHECK_PTR(menuLayouts);
 	// uncheck old layout action
 	QAction * layActOld = menuLayouts->findChild<QAction*>(this->currentLayout());
 	Q_CHECK_PTR(layActOld);
 	layActOld->setChecked(false);
-	// set new layout
+	// update internal (after uncheck old)
 	m_currLayout = strLayoutName;
+	// set new layout
 	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
 	// update permissions
 	this->updateWidgetPermissions();
 	// check new layout action
-	QAction * layActNew = menuLayouts->findChild<QAction*>(strLayoutName);
+	QAction * layActNew = menuLayouts->findChild<QAction*>(m_currLayout);
 	Q_CHECK_PTR(layActNew);
 	layActNew->setChecked(true);
 	// update menu permissions
-	this->updateLayoutPermissions(strLayoutName, m_mapLayouts[strLayoutName].permsObject);
-	// emit
+	this->updateLayoutPermissions(m_currLayout, m_mapLayouts[m_currLayout].permsObject);
+	// emit id really changed
 	emit this->currentLayoutChanged(m_currLayout);
 }
 
@@ -411,6 +448,11 @@ QList<QString> QUaAcDocking::layoutNames() const
 QMenu * QUaAcDocking::layoutsMenu()
 {
 	return m_layoutsMenu;
+}
+
+QUaAcLambdaFilterProxy * QUaAcDocking::layoutsModel()
+{
+	return &m_proxyLayouts;
 }
 
 bool QUaAcDocking::hasLayoutPermissions(const QString & strLayoutName) const
@@ -538,12 +580,12 @@ void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, 
 		if (this->hasLayout(strLayoutName))
 		{
 			m_mapLayouts[strLayoutName].byteState = byteLayoutState;
-			emit this->layoutUpdated(strLayoutName);
+			this->handleLayoutUpdated(strLayoutName);
 		}
 		else
 		{
 			m_mapLayouts.insert(strLayoutName, { byteLayoutState, nullptr });
-			emit this->layoutAdded(strLayoutName);
+			this->handleLayoutAdded(strLayoutName);
 		}
 		// not having permissions is acceptable
 		if (!elem.hasAttribute("Permissions"))
@@ -673,6 +715,10 @@ void QUaAcDocking::removeCurrentLayout()
 
 void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 {
+	if (m_loggedUser == user)
+	{
+		return;
+	}
 	m_loggedUser = user;
 	// update layout permissions
 	this->updateLayoutPermissions();
@@ -682,16 +728,20 @@ void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
 	this->updateLayoutListPermissions();
 	// update widget list perms
 	this->updateWidgetListPermissions();
+	// update filter for layout combo model
+	m_proxyLayouts.resetFilter();
 }
 
-void QUaAcDocking::handleWidgetAdded(const QStringList & strWidgetPathName, QMenu * menuParent, const int &index/* = 0*/)
+void QUaAcDocking::handleWidgetAdded(const QStringList & strWidgetPathName, 
+	                                 QMenu * menuParent, 
+	                                 const int &index/* = 0*/)
 {
-	// create menu path if necessary
+	// create branch if necessary
 	if (strWidgetPathName.count()-1 > index)
 	{
 		// get path part
 		QString strPathName = strWidgetPathName.at(index);
-		// add if does not exist
+		// add branch to menu if does not exist
 		QMenu * menuChild = menuParent->findChild<QMenu*>(strPathName);
 		if (!menuChild)
 		{
@@ -700,27 +750,24 @@ void QUaAcDocking::handleWidgetAdded(const QStringList & strWidgetPathName, QMen
 		}
 		Q_CHECK_PTR(menuChild);
 
-		// TODO : model
+		// TODO : add to model
 
 		this->handleWidgetAdded(strWidgetPathName, menuChild, index + 1);
 		// exit
 		return;
 	}
-	// get name
+	// create leaf
 	QString strWidgetName = strWidgetPathName.at(index);
 	// add action to menu
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
 	Q_ASSERT(widget);
 	menuParent->addAction(widget->toggleViewAction());
+
+	// TODO : add to model
 }
 
 void QUaAcDocking::handleWidgetRemoved(const QString & strWidgetName)
 {
-	/*
-	auto widget = m_dockManager->findDockWidget(strWidgetName);
-	Q_ASSERT(widget);
-	m_widgetsMenu->removeAction(widget->toggleViewAction());
-	*/
 	// NOTE : find recursivelly by default, uses QObject::objectName
 	QAction * action = m_widgetsMenu->findChild<QAction*>(strWidgetName);
 	Q_CHECK_PTR(action);
@@ -729,8 +776,9 @@ void QUaAcDocking::handleWidgetRemoved(const QString & strWidgetName)
 	parentMenu->removeAction(action);
 }
 
-void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)
+void QUaAcDocking::handleLayoutAdded(const QString & strLayoutName)
 {
+	// update menu
 	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
 	Q_CHECK_PTR(menuLayouts);
 	auto act = menuLayouts->addAction(strLayoutName, this,
@@ -739,13 +787,32 @@ void QUaAcDocking::on_layoutAdded(const QString & strLayoutName)
 	});
 	act->setObjectName(strLayoutName);
 	act->setCheckable(true);
+	// update model
+	auto parent = m_modelLayouts.invisibleRootItem();
+	auto iLn    = new QStandardItem(strLayoutName);
+	// NOTE : line below fixes random crash about m_proxyLayouts.setFilterAcceptsRow
+	iLn->setData(QVariant::fromValue(nullptr), QUaDockWidgetPerms::PointerRole);
+	parent->appendRow(iLn);
 }
 
-void QUaAcDocking::on_layoutRemoved(const QString & strLayoutName)
+void QUaAcDocking::handleLayoutRemoved(const QString & strLayoutName)
 {
+	// update menu
 	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
 	Q_CHECK_PTR(menuLayouts);
 	QAction * layoutAction = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layoutAction);
 	menuLayouts->removeAction(layoutAction);
+	// update model
+	auto listItems = m_modelLayouts.findItems(strLayoutName);
+	Q_ASSERT(listItems.count() == 1);
+	auto iLn = listItems.at(0);
+	// remove from model
+	m_modelLayouts.removeRows(iLn->index().row(), 1);
+}
+
+void QUaAcDocking::handleLayoutUpdated(const QString & strLayoutName)
+{
+	// TODO ?
+	Q_UNUSED(strLayoutName);
 }
