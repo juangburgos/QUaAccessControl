@@ -781,6 +781,7 @@ void QUaAcDocking::handleLayoutAdded(const QString & strLayoutName)
 	// update menu
 	QMenu *menuLayouts = m_layoutsMenu->findChild<QMenu*>("Show");
 	Q_CHECK_PTR(menuLayouts);
+	Q_ASSERT(!menuLayouts->findChild<QAction*>(strLayoutName));
 	auto act = menuLayouts->addAction(strLayoutName, this,
 	[this, strLayoutName]() {
 		this->setLayout(strLayoutName);
@@ -803,6 +804,7 @@ void QUaAcDocking::handleLayoutRemoved(const QString & strLayoutName)
 	QAction * layoutAction = menuLayouts->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layoutAction);
 	menuLayouts->removeAction(layoutAction);
+	delete layoutAction;
 	// update model
 	auto listItems = m_modelLayouts.findItems(strLayoutName);
 	Q_ASSERT(listItems.count() == 1);
