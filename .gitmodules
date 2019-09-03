@@ -6,3 +6,7 @@
 	path = libs/QAdvancedDocking.git
 	url = https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git
 	branch = master
+[submodule "libs/QFunctionUtils.git"]
+	path = libs/QFunctionUtils.git
+	url = https://github.com/juangburgos/QFunctionUtils.git
+	branch = master

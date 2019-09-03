@@ -9,7 +9,7 @@
 #include <QUaRole>
 #include <QUaPermissions>
 
-#include <FunctionUtils>
+#include <QFunctionUtils>
 
 QString strSecret         = "my_secret";
 QString strConfigFileName = "AcConfig.xml";
@@ -115,7 +115,7 @@ void configSave(QUaAccessControl * ac)
 void autoConfigSave(QUaAccessControl * ac)
 {
 	// save inmediatly on any change, then wait 5 secs for any further changes and if any, save again after wait
-	auto throttledConfigSave = std::bind(FunctionUtils::Throttle(&configSave, 2000), ac);
+	auto throttledConfigSave = std::bind(QFunctionUtils::Throttle(&configSave, 2000), ac);
 	// changes in ac
 	QObject::connect(ac, &QUaAccessControl::permissionsObjectChanged, throttledConfigSave);
 	// changes in users list
