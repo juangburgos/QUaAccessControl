@@ -190,6 +190,47 @@ QList<QString> QUaAcDocking::widgetNames() const
 	return m_dockManager->dockWidgetsMap().keys();
 }
 
+bool QUaAcDocking::isDockWidgetVisible(const QString & strWidgetName)
+{
+	Q_ASSERT(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
+	if (!this->hasDockWidget(strWidgetName))
+	{
+		return false;
+	}
+	auto widget = m_dockManager->findDockWidget(strWidgetName);
+	Q_ASSERT(widget, "QUaAcDocking", "Invalid widget.");
+	if (!widget)
+	{
+		return false;
+	}
+	return !widget->isClosed();
+}
+
+bool QUaAcDocking::setIsDockWidgetVisible(const QString & strWidgetName, const bool & visible)
+{
+	Q_ASSERT(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
+	if (!this->hasDockWidget(strWidgetName))
+	{
+		return false;
+	}
+	auto widget = m_dockManager->findDockWidget(strWidgetName);
+	Q_ASSERT(widget, "QUaAcDocking", "Invalid widget.");
+	if (!widget)
+	{
+		return false;
+	}
+	// check if already
+	if (
+		(!widget->isClosed() &&  visible) ||
+		( widget->isClosed() && !visible)
+	)
+	{
+		return true;
+	}
+	widget->toggleView(visible);
+	return true;
+}
+
 QMenu * QUaAcDocking::widgetsMenu()
 {
 	return m_widgetsMenu;

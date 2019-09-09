@@ -66,6 +66,9 @@ public:
 
 	QList<QString> widgetNames() const;
 
+	bool isDockWidgetVisible(const QString &strWidgetName);
+	bool setIsDockWidgetVisible(const QString &strWidgetName, const bool &visible);
+
 	QMenu * widgetsMenu();
 
 	bool              hasWidgetPermissions(const QString &strWidgetName) const;
