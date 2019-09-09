@@ -6,8 +6,21 @@ QAdDockWidgetWrapper::QAdDockWidgetWrapper(QWidget *parent) :
     ui(new Ui::QAdDockWidgetWrapper)
 {
     ui->setupUi(this);
+
+	// NOTE : if you are looking for the QFrame background color, it is set
+	//        as a stylesheet on the qaddockwidgetwrapper.ui file
+
+	// tooltips
+	ui->pushButtonConfig->setToolTip(tr(
+		"Displays the wrapped widget configuration."
+	));
+	ui->pushButtonPermissions->setToolTip(tr(
+		"Read permissions control if 'Widgets' menu is shown.\n"
+		"Write permissions control if this 'List Permissions' menu is shown."
+	));
 	// forward signals
-	QObject::connect(ui->pushButtonConfig, &QPushButton::clicked, this, &QAdDockWidgetWrapper::configClicked);
+	QObject::connect(ui->pushButtonConfig     , &QPushButton::clicked, this, &QAdDockWidgetWrapper::configClicked);
+	QObject::connect(ui->pushButtonPermissions, &QPushButton::clicked, this, &QAdDockWidgetWrapper::permissionsClicked);
 }
 
 QAdDockWidgetWrapper::~QAdDockWidgetWrapper()
@@ -23,6 +36,26 @@ bool QAdDockWidgetWrapper::isEditBarVisible() const
 void QAdDockWidgetWrapper::setEditBarVisible(const bool & isVisible)
 {
 	ui->frameEdit->setVisible(isVisible);
+}
+
+bool QAdDockWidgetWrapper::isConfigButtonVisible() const
+{
+	return ui->pushButtonConfig->isVisible();
+}
+
+void QAdDockWidgetWrapper::seConfigButtonVisible(const bool & isVisible)
+{
+	ui->pushButtonConfig->setVisible(isVisible);
+}
+
+QString QAdDockWidgetWrapper::title() const
+{
+	return ui->labelTitle->text();
+}
+
+void QAdDockWidgetWrapper::setTitle(const QString & strTitle)
+{
+	ui->labelTitle->setText(strTitle);
 }
 
 QWidget * QAdDockWidgetWrapper::widget() const

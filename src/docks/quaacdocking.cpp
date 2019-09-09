@@ -32,8 +32,9 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	m_layoutListPerms = nullptr;
 	m_dockManager     = new QAdDockManager(parent);
 	// widgets menu
-	m_widgetsMenu   = new QMenu(tr("Widgets"), m_dockManager);
-	m_widgetsMenu->addAction(tr("Permissions..."), 
+	m_widgetsMenu = new QMenu(tr("Widgets"), m_dockManager);
+	m_widgetsMenu->setToolTipsVisible(true);
+	auto actWidgetListPerms = m_widgetsMenu->addAction(tr("List Permissions"), 
 	[this]() {
 		// create permissions widget
 		auto permsWidget = new QUaDockWidgetPerms;
@@ -52,10 +53,17 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		}
 		// read permissions and set them for widget list
 		this->setWidgetListPermissions(permsWidget->permissions());
-	})->setObjectName("Permissions");
+	});
+	actWidgetListPerms->setObjectName("Permissions");
+	actWidgetListPerms->setToolTip(tr(
+		"Read permissions control if 'Widgets' menu is shown.\n"
+		"Write permissions control if this 'List Permissions' menu is shown."
+	));
 	m_widgetsMenu->addSeparator();
-	m_layoutsMenu  = new QMenu(tr("Layouts"), m_dockManager);
-	m_layoutsMenu->addAction(tr("Permissions..."), 
+	// layouts  menu
+	m_layoutsMenu = new QMenu(tr("Layouts"), m_dockManager);
+	m_layoutsMenu->setToolTipsVisible(true);
+	auto actLayoutListPerms = m_layoutsMenu->addAction(tr("List Permissions"),
 	[this]() {
 		// create permissions widget
 		auto permsWidget = new QUaDockWidgetPerms;
@@ -74,7 +82,13 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 		}
 		// read permissions and set them for layout list
 		this->setLayoutListPermissions(permsWidget->permissions());
-	})->setObjectName("Permissions");
+	});
+	actLayoutListPerms->setObjectName("Permissions");
+	actLayoutListPerms->setToolTip(tr(
+		"Read permissions control if 'Layouts' menu is shown and "
+		"if 'Save As' and 'Remove' buttons are shown in the Layout Bar.\n"
+		"Write permissions control if this 'List Permissions' menu is shown."
+	));
 	m_layoutsMenu->addSeparator();
 	QMenu *menuLayouts = m_layoutsMenu->addMenu(tr("Show"));
 	menuLayouts->setObjectName("Show");
@@ -113,7 +127,9 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	auto pDock = new QAdDockWidget(strWidgetName, m_dockManager);
 	// create wrapper
 	QAdDockWidgetWrapper * wrapper = new QAdDockWidgetWrapper(pDock);
+	//wrapper->setTitle(tr("DockWidget %1").arg(strWidgetName));
 	wrapper->setEditBarVisible(false);
+	wrapper->seConfigButtonVisible(widgetEdit ? true : false);
 	// set widget in wrapper
 	wrapper->setWidget(widget);
 	// fix size (in advance)
@@ -132,26 +148,39 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 	// handle config button clicked
 	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
 	[this, strWidgetName, widgetEdit, editCallback]() {
-		// create config widget
-		auto configTabWidget = new QAdDockWidgetConfig;
-		if (widgetEdit)
-		{
-			// set and takes ownership
-			configTabWidget->setConfigWidget(widgetEdit);
-			// remove ownership from tab widget (else will be delated when dialog closed)
-			widgetEdit->setParent(m_dockManager);
-		}
-		// create permissions widget
-		auto permsTabWidget = new QUaDockWidgetPerms;
-		// configure perms widget combo
-		permsTabWidget->setComboModel(m_proxyPerms);
-		permsTabWidget->setPermissions(this->widgetPermissions(strWidgetName));
-		// set and takes ownership
-		configTabWidget->setPermissionsWidget(permsTabWidget);
+		Q_CHECK_PTR(widgetEdit);
 		// dialog
 		QUaAcCommonDialog dialog(m_dockManager);
-		dialog.setWindowTitle(tr("Config Widget"));
-		dialog.setWidget(configTabWidget);
+		dialog.setWindowTitle(tr("DockWidget Configuration - %1").arg(strWidgetName));
+		// set and takes ownership
+		dialog.setWidget(widgetEdit);
+		// remove ownership from tab widget (else will be delated when dialog closed)
+		widgetEdit->setParent(m_dockManager);
+		// exec dialog
+		int res = dialog.exec();
+		if (res != QDialog::Accepted)
+		{
+			return;
+		}
+		// call apply callback
+		if (editCallback)
+		{
+			editCallback();
+		}
+	});
+	// handle permissions button clicked
+	QObject::connect(wrapper, &QAdDockWidgetWrapper::permissionsClicked, pDock,
+	[this, strWidgetName]() {
+		// create permissions widget
+		auto permsWidget = new QUaDockWidgetPerms;
+		// configure perms widget combo
+		permsWidget->setComboModel(m_proxyPerms);
+		permsWidget->setPermissions(this->widgetPermissions(strWidgetName));
+		// dialog
+		QUaAcCommonDialog dialog(m_dockManager);
+		dialog.setWindowTitle(tr("DockWidget Permissions - %1").arg(strWidgetName));
+		// set and takes ownership
+		dialog.setWidget(permsWidget);
 		// exec dialog
 		int res = dialog.exec();
 		if (res != QDialog::Accepted)
@@ -159,12 +188,7 @@ QAdDockWidgetArea * QUaAcDocking::addDockWidget(
 			return;
 		}
 		// read permissions and set them for widget
-		this->setWidgetPermissions(strWidgetName, permsTabWidget->permissions());
-		// call apply callback
-		if (editCallback)
-		{
-			editCallback();
-		}
+		this->setWidgetPermissions(strWidgetName, permsWidget->permissions());
 	});
 	return wAreaNew;
 }
@@ -192,13 +216,13 @@ QList<QString> QUaAcDocking::widgetNames() const
 
 bool QUaAcDocking::isDockWidgetVisible(const QString & strWidgetName)
 {
-	Q_ASSERT(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
+	Q_ASSERT_X(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
 	if (!this->hasDockWidget(strWidgetName))
 	{
 		return false;
 	}
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
-	Q_ASSERT(widget, "QUaAcDocking", "Invalid widget.");
+	Q_ASSERT_X(widget, "QUaAcDocking", "Invalid widget.");
 	if (!widget)
 	{
 		return false;
@@ -208,13 +232,13 @@ bool QUaAcDocking::isDockWidgetVisible(const QString & strWidgetName)
 
 bool QUaAcDocking::setIsDockWidgetVisible(const QString & strWidgetName, const bool & visible)
 {
-	Q_ASSERT(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
+	Q_ASSERT_X(this->hasDockWidget(strWidgetName), "QUaAcDocking", "Widget does not exist.");
 	if (!this->hasDockWidget(strWidgetName))
 	{
 		return false;
 	}
 	auto widget = m_dockManager->findDockWidget(strWidgetName);
-	Q_ASSERT(widget, "QUaAcDocking", "Invalid widget.");
+	Q_ASSERT_X(widget, "QUaAcDocking", "Invalid widget.");
 	if (!widget)
 	{
 		return false;
@@ -365,11 +389,11 @@ void QUaAcDocking::updateWidgetPermissions()
 
 void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPermissions * permissions)
 {
-	// update in menu
+	// update if visible in menu
 	QAction * layActOld = m_layoutsMenu->findChild<QAction*>(strLayoutName);
 	Q_CHECK_PTR(layActOld);
 	layActOld->setVisible(!m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser));
-	// update in model
+	// update if visible in model
 	auto listItems = m_modelLayouts.findItems(strLayoutName);
 	Q_ASSERT(listItems.count() == 1);
 	auto iLn = listItems.at(0);
@@ -379,12 +403,14 @@ void QUaAcDocking::updateLayoutPermissions(const QString & strLayoutName, QUaPer
 	{
 		return;
 	}
-	// show/hide layout menu actions
+	// update if can edit or remove layout - show/hide layout menu actions
 	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
 	m_layoutsMenu->findChild<QAction*>("Save"     )->setVisible(canWrite);
-	// NOTE : still allow read_only user to create own (save as). If this is not desired then remove write permissions to layout list permissions
 	m_layoutsMenu->findChild<QAction*>("Separator")->setVisible(canWrite);
-	m_layoutsMenu->findChild<QAction*>("Remove"   )->setVisible(canWrite);
+	// NOTE : ability to add or remove layouts goes in conjunction with layout *list* permissions
+	bool canReadList = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	m_layoutsMenu->findChild<QAction*>("Remove"   )->setVisible(canWrite && canReadList);
+	m_layoutsMenu->findChild<QAction*>("SaveAs"   )->setVisible(canReadList);
 }
 
 void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPermissions * permissions)
@@ -408,24 +434,24 @@ void QUaAcDocking::updateWidgetPermissions(const QString & strWidgetName, QUaPer
 
 void QUaAcDocking::updateLayoutListPermissions()
 {
-	// show/hide root menu
-	bool canRead = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
-	m_layoutsMenu->menuAction()->setVisible(canRead);
+	// NOTE : read permissions affect ability ability to add or remove layouts
+	//        in QAdDockLayoutBar, buttons for saving new layouts are also disabled
+	// ability to add or remove layouts by show/hide full root menu
+	bool canReadList = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	m_layoutsMenu->menuAction()->setVisible(canReadList);
 	// show/hide layout list permissions action
-	bool canWrite = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserWrite(m_loggedUser);
-	m_layoutsMenu->findChild<QAction*>("Permissions")->setVisible(canWrite);
-	// NOTE : write permissions affect wherever new layouts are created (e.g. QAdDockLayoutBar)
+	bool canWriteList = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserWrite(m_loggedUser);
+	m_layoutsMenu->findChild<QAction*>("Permissions")->setVisible(canWriteList);
 }
 
 void QUaAcDocking::updateWidgetListPermissions()
 {
-	// show/hide root menu
+	// show/hide root menu (and that's it! not as complex as layout list)
 	bool canRead = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserRead(m_loggedUser);
 	m_widgetsMenu->menuAction()->setVisible(canRead);
 	// show/hide widget list permissions action
 	bool canWrite = !m_loggedUser ? false : !m_widgetListPerms ? true : m_widgetListPerms->canUserWrite(m_loggedUser);
 	m_widgetsMenu->findChild<QAction*>("Permissions")->setVisible(canWrite);
-	// NOTE : write permissions affect wherever new widgets are created
 }
 
 void QUaAcDocking::removeLayout(const QString & strLayoutName)

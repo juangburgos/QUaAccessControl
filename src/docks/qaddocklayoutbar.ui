@@ -130,7 +130,7 @@
       <item>
        <widget class="QPushButton" name="pushButtonPermissions">
         <property name="text">
-         <string>Config</string>
+         <string>Permissions</string>
         </property>
        </widget>
       </item>

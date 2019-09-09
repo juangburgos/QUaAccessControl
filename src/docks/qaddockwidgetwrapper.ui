@@ -37,6 +37,14 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame {
+	background : rgb(255, 255, 255);
+}</string>
+     </property>
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
@@ -63,6 +71,13 @@
        <number>6</number>
       </property>
       <item>
+       <widget class="QLabel" name="labelTitle">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -84,7 +99,14 @@
          </size>
         </property>
         <property name="text">
-         <string>Config</string>
+         <string>Configuration</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonPermissions">
+        <property name="text">
+         <string>Permissions</string>
         </property>
        </widget>
       </item>

@@ -18,11 +18,18 @@ public:
 	bool isEditBarVisible() const;
 	void setEditBarVisible(const bool &isVisible);
 
+	bool isConfigButtonVisible() const;
+	void seConfigButtonVisible(const bool &isVisible);
+
+	QString title() const;
+	void    setTitle(const QString &strTitle);
+
 	QWidget * widget() const;
 	void      setWidget(QWidget * w);
 
 signals:
 	void configClicked();
+	void permissionsClicked();
 
 private:
     Ui::QAdDockWidgetWrapper *ui;

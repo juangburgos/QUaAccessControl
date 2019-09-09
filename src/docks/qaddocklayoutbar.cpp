@@ -33,6 +33,15 @@ QAdDockLayoutBar::QAdDockLayoutBar(
 	completer->setFilterMode(Qt::MatchContains);
 	ui->comboBoxLayout->setCompleter(completer);
 	ui->comboBoxLayout->setInsertPolicy(QComboBox::NoInsert);
+	// tooltips
+	ui->pushButtonSave->setToolTip(tr("Save current layout state."));
+	ui->pushButtonSaveAs->setToolTip(tr("Save current layout state with a different name."));
+	ui->pushButtonRemove->setToolTip(tr("Delete current layout"));
+	ui->pushButtonPermissions->setToolTip(tr(
+		"Sets this layout's permissions.\n"
+		"Read permissions control if the layout is listed in the Layouts menu and in this bar.\n"
+		"Write permissions control if the layout can be edited ('Save') or deleted ('Remove')."
+	));
 }
 
 QAdDockLayoutBar::~QAdDockLayoutBar()
@@ -148,8 +157,8 @@ void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
 void QAdDockLayoutBar::updateLayoutListPermissions()
 {
 	// can read controls if user can create, save, remove or set permissions to individual layouts
-	bool canRead = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
-	ui->frameActions->setVisible(canRead);
+	bool canReadList = !m_loggedUser ? false : !m_layoutListPerms ? true : m_layoutListPerms->canUserRead(m_loggedUser);
+	ui->frameActions->setVisible(canReadList);
 	// can write controls if user can set lists permissions, so nothing to do here
 }
 
