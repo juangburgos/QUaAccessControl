@@ -175,11 +175,11 @@ inline QDomElement QUaAcDockWidgets<T>::toDomElement(QDomDocument & domDoc) cons
 	// serialize each widget
 	for (auto wName : QUaAcDockWidgets<T>::m_listWidgetNames)
 	{
-		QDomElement elemW = domDoc.createElement(QUaAcDocking::m_strXmlWidgetName);
+		QDomElement elemW = domDoc.createElement(QUaAcDocking::m_strXmlDockName);
 		// set name
 		elemW.setAttribute("Name", wName);
 		// set permissions if any
-		QUaPermissions * perms = this->getDockManager()->widgetPermissions(wName);
+		QUaPermissions * perms = this->getDockManager()->dockPermissions(wName);
 		if (perms)
 		{
 			elemW.setAttribute("Permissions", perms->nodeId());
@@ -194,7 +194,7 @@ inline QDomElement QUaAcDockWidgets<T>::toDomElement(QDomDocument & domDoc) cons
 template<class T>
 inline void QUaAcDockWidgets<T>::fromDomElement(QDomElement & domElem, QString & strError)
 {
-	QDomNodeList listNodesW = domElem.elementsByTagName(QUaAcDocking::m_strXmlWidgetName);
+	QDomNodeList listNodesW = domElem.elementsByTagName(QUaAcDocking::m_strXmlDockName);
 	for (int i = 0; i < listNodesW.count(); i++)
 	{
 		QDomElement elem = listNodesW.at(i).toElement();
@@ -224,7 +224,7 @@ inline void QUaAcDockWidgets<T>::fromDomElement(QDomElement & domElem, QString &
 			continue;
 		}
 		QString strWidgetName = elem.attribute("Name");
-		this->getDockManager()->setWidgetPermissions(strWidgetName, permissions);
+		this->getDockManager()->setDockPermissions(strWidgetName, permissions);
 	}
 }
 
@@ -232,42 +232,42 @@ template<class T>
 inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 {
 	m_userTable = new QUaUserTable(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strUsersTable,
 		QAd::CenterDockWidgetArea,
 		m_userTable
 	);
 
 	m_roleTable = new QUaRoleTable(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strRolesTable,
 		QAd::CenterDockWidgetArea,
 		m_roleTable
 	);
 
 	m_permsTable = new QUaPermissionsTable(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strPermissionsTable,
 		QAd::CenterDockWidgetArea,
 		m_permsTable
 	);
 
 	m_userWidget = new QUaUserWidgetEdit(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strUserEdit,
 		QAd::CenterDockWidgetArea,
 		m_userWidget
 	);
 
 	m_roleWidget = new QUaRoleWidgetEdit(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strRoleEdit,
 		QAd::CenterDockWidgetArea,
 		m_roleWidget
 	);
 
 	m_permsWidget = new QUaPermissionsWidgetEdit(m_thiz);
-	this->getDockManager()->addDockWidget(
+	this->getDockManager()->addDock(
 		QUaAcDockWidgets<T>::m_strMenuPath + "/" + QUaAcDockWidgets<T>::m_strPermissionsEdit,
 		QAd::CenterDockWidgetArea,
 		m_permsWidget

@@ -15,8 +15,8 @@ QAdDockWidgetWrapper::QAdDockWidgetWrapper(QWidget *parent) :
 		"Displays the wrapped widget configuration."
 	));
 	ui->pushButtonPermissions->setToolTip(tr(
-		"Read permissions control if 'Widgets' menu is shown.\n"
-		"Write permissions control if this 'List Permissions' menu is shown."
+		"Read permissions control if the Dock can be shown.\n"
+		"Write permissions control if this 'Permissions' button is shown."
 	));
 	// forward signals
 	QObject::connect(ui->pushButtonConfig     , &QPushButton::clicked, this, &QAdDockWidgetWrapper::configClicked);

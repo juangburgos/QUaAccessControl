@@ -51,8 +51,8 @@ public:
 
 	// widget management
 
-	QAdDockWidgetArea * addDockWidget(
-		const QString     &strWidgetPathName,
+	QAdDockWidgetArea * addDock(
+		const QString     &strDockPathName,
 		const QAdDockArea &dockArea,
 		QWidget           *widget,
 		QWidget           *widgetEdit   = nullptr,
@@ -60,27 +60,27 @@ public:
 		QAdDockWidgetArea *widgetArea   = nullptr
 	);
 
-	void removeDockWidget(const QString &strWidgetName);
+	void removeDock(const QString &strDockName);
 
-	bool hasDockWidget(const QString &strWidgetName);
+	bool hasDock(const QString &strDockName);
 
-	QList<QString> widgetNames() const;
+	QList<QString> dockNames() const;
 
-	bool isDockWidgetVisible(const QString &strWidgetName);
-	bool setIsDockWidgetVisible(const QString &strWidgetName, const bool &visible);
+	bool isDockVisible(const QString &strDockName);
+	bool setIsDockVisible(const QString &strDockName, const bool &visible);
 
-	QMenu * widgetsMenu();
+	QMenu * docksMenu();
 
-	bool              hasWidgetPermissions(const QString &strWidgetName) const;
-	QUaPermissions  * widgetPermissions   (const QString &strWidgetName) const;
-	void              setWidgetPermissions(const QString &strWidgetName,
+	bool              hasPermissions    (const QString &strDockName) const;
+	QUaPermissions  * dockPermissions   (const QString &strDockName) const;
+	void              setDockPermissions(const QString &strDockName,
 		                                   QUaPermissions * permissions);
 
 	// over all list permissions
 	// can read controls if user can list, create, save, remove or set permissions to individual widgets (hides top-elvel menu)
 	// can write controls if user can set widget list permissions (this permissions)
-	void setWidgetListPermissions(QUaPermissions * permissions);
-	QUaPermissions * widgetListPermissions() const;
+	void setDockListPermissions(QUaPermissions * permissions);
+	QUaPermissions * dockListPermissions() const;
 
 	// layout management
 
@@ -115,7 +115,7 @@ public:
 	void        fromDomElement(QUaAccessControl * ac, QDomElement  & domElem, QString &strError);
 
 	const static QString m_strXmlName;
-	const static QString m_strXmlWidgetName;
+	const static QString m_strXmlDockName;
 	const static QString m_strXmlLayoutName;
 
 signals:
@@ -132,16 +132,16 @@ public slots:
 
 private:
 	QAdDockManager * m_dockManager;
-	QUaAcWidgetPerms m_mapWidgetPerms;
+	QUaAcWidgetPerms m_mapDockPerms;
 	QUaAcLayouts     m_mapLayouts;
 	QString          m_currLayout;
 
-	QMenu          * m_widgetsMenu;
+	QMenu          * m_docksMenu;
 	QMenu          * m_layoutsMenu;
 
 	QUaUser        * m_loggedUser;
 
-	QUaPermissions * m_widgetListPerms;
+	QUaPermissions * m_dockListPerms;
 	QUaPermissions * m_layoutListPerms;
 
 	QSortFilterProxyModel * m_proxyPerms;
@@ -153,20 +153,20 @@ private:
 
 	void saveCurrentLayoutInternal(const QString &strLayoutName);
 
-	void handleWidgetAdded  (const QStringList &strWidgetPathName, QMenu * menuParent, const int &index = 0);
-	void handleWidgetRemoved(const QString &strWidgetName);
+	void handleDockAdded  (const QStringList &strDockPathName, QMenu * menuParent, const int &index = 0);
+	void handleDockRemoved(const QString &strDockName);
 
 	void handleLayoutAdded  (const QString &strLayoutName);
 	void handleLayoutRemoved(const QString &strLayoutName);
 	void handleLayoutUpdated(const QString &strLayoutName);
 	
 	void updateLayoutPermissions();
-	void updateWidgetPermissions();
+	void updateDockPermissions();
 	void updateLayoutPermissions(const QString &strLayoutName, QUaPermissions * permissions);
-	void updateWidgetPermissions(const QString &strWidgetName, QUaPermissions * permissions);
+	void updateDockPermissions  (const QString &strDockName, QUaPermissions * permissions);
 
 	void updateLayoutListPermissions();
-	void updateWidgetListPermissions();
+	void updateDockListPermissions();
 
 	QUaPermissions * findPermissions(QUaAccessControl * ac, const QString &strNodeId, QString &strError);
 
