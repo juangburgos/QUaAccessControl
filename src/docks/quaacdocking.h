@@ -29,6 +29,8 @@ class QUaAccessControl;
 class QUaUser;
 class QUaPermissions;
 
+class QUaAcCommonDialog;
+
 struct QUaAcLayoutsValue
 {
 	QByteArray      byteState;
@@ -63,6 +65,8 @@ public:
 	void removeDock(const QString &strDockName);
 
 	bool hasDock(const QString &strDockName);
+
+	QAdDockWidget * dock(const QString &strDockName) const;
 
 	QList<QString> dockNames() const;
 
@@ -119,6 +123,7 @@ public:
 	const static QString m_strXmlLayoutName;
 
 signals:
+	void aboutToChangeLayout();
 	void currentLayoutChanged    (const QString &strLayoutName);
 	void layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
 	void layoutListPermissionsChanged(QUaPermissions * permissions);
@@ -140,6 +145,8 @@ private:
 	QMenu          * m_layoutsMenu;
 
 	QUaUser        * m_loggedUser;
+
+	QHash<QString, QUaAcCommonDialog*> m_mapDialogs;
 
 	QUaPermissions * m_dockListPerms;
 	QUaPermissions * m_layoutListPerms;

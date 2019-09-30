@@ -2,10 +2,16 @@
 #define QUAACCOMMONDIALOG_H
 
 #include <QDialog>
+#include <QDialogButtonBox>
+#include <QSharedPointer>
 
 namespace Ui {
 class QUaAcCommonDialog;
 }
+
+class QUaAcCommonDialog;
+
+typedef QSharedPointer<QUaAcCommonDialog> QUaAcCommonDialogPtr;
 
 class QUaAcCommonDialog : public QDialog
 {
@@ -17,6 +23,14 @@ public:
 
 	QWidget * widget() const;
 	void      setWidget(QWidget * w);
+
+	void clearButtons();
+	void addButton(const QString &text, QDialogButtonBox::ButtonRole role);
+
+	static QUaAcCommonDialogPtr CreateModal(QWidget *parent = nullptr);
+
+signals:
+	void dialogDestroyed();
 
 private:
     Ui::QUaAcCommonDialog *ui;

@@ -3,6 +3,23 @@
 
 #include <QPushButton>
 
+QUaAcCommonDialogPtr QUaAcCommonDialog::CreateModal(QWidget * parent)
+{
+	auto ptr = new QUaAcCommonDialog(parent);
+	auto ptrShared = QUaAcCommonDialogPtr(ptr,
+	[](QUaAcCommonDialog *dialog) {
+		dialog->deleteLater();
+	});
+	// NOTE : copy the shared ptr in the finished lambda capture
+	QObject::connect(ptr, &QDialog::finished,
+	[ptr, ptrShared]() {
+		// disconnect this signal to lambda capture gets cleared up
+		QObject::disconnect(ptr, &QDialog::finished, 0, 0);
+	});
+	// return shared
+	return ptrShared;
+}
+
 QUaAcCommonDialog::QUaAcCommonDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::QUaAcCommonDialog)
@@ -15,6 +32,7 @@ QUaAcCommonDialog::QUaAcCommonDialog(QWidget *parent) :
 
 QUaAcCommonDialog::~QUaAcCommonDialog()
 {
+	emit this->dialogDestroyed();
     delete ui;
 }
 
@@ -71,4 +89,15 @@ void QUaAcCommonDialog::setWidget(QWidget * w)
 		parent->x() + (parent->width () / 2) - (geo.width () / 2),
 		parent->y() + (parent->height() / 2) - (geo.height() / 2)
 	);
+}
+
+void QUaAcCommonDialog::clearButtons()
+{
+	ui->buttonBox->clear();
+}
+
+void QUaAcCommonDialog::addButton(const QString & text, QDialogButtonBox::ButtonRole role)
+{
+	auto butt = ui->buttonBox->addButton(text, role);
+	butt->setFocusPolicy(Qt::FocusPolicy::NoFocus);
 }

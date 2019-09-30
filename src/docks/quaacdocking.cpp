@@ -148,23 +148,53 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
 	[this, strDockName, widgetEdit, editCallback]() {
 		Q_CHECK_PTR(widgetEdit);
-		// dialog
-		QUaAcCommonDialog dialog(m_dockManager);
-		dialog.setWindowTitle(tr("Widget Configuration - %1").arg(strDockName));
-		// set and takes ownership
-		dialog.setWidget(widgetEdit);
-		// remove ownership from tab widget (else will be delated when dialog closed)
-		widgetEdit->setParent(m_dockManager);
-		// exec dialog
-		int res = dialog.exec();
-		if (res != QDialog::Accepted)
-		{
-			return;
-		}
-		// call apply callback
+		// show modal or non-model dialog
 		if (editCallback)
 		{
-			editCallback();
+			// dialog
+			QUaAcCommonDialog dialog(m_dockManager);
+			dialog.setWindowTitle(tr("Widget Configuration - %1").arg(strDockName));
+			// set and takes ownership
+			dialog.setWidget(widgetEdit);
+			// exec dialog
+			int res = dialog.exec();
+			// remove ownership from tab widget (else will be delated when dialog closed)
+			widgetEdit->setParent(m_dockManager);
+			if (res != QDialog::Accepted)
+			{
+				return;
+			}
+			// call apply callback
+			editCallback();			
+		}
+		else
+		{
+			if (m_mapDialogs.contains(strDockName))
+			{
+				m_mapDialogs[strDockName]->show();
+				m_mapDialogs[strDockName]->raise();
+				return;
+			}
+			// NOTE : get non-modal dialog
+			auto dialog = QUaAcCommonDialog::CreateModal(m_dockManager);
+			dialog->setWindowTitle(tr("Edit View"));
+			// create edit widget and make dialog take ownership
+			dialog->setWidget(widgetEdit);
+			// NOTE : modify buttons because this dialog edits live
+			dialog->clearButtons();
+			dialog->addButton(tr("Close"), QDialogButtonBox::ButtonRole::AcceptRole);
+			// exec dialog
+			dialog->show();
+			// NOTE : to avoid opening multiple dialogs
+			m_mapDialogs.insert(strDockName, dialog.data());
+			QObject::connect(dialog.data(), &QUaAcCommonDialog::dialogDestroyed, this,
+			[this, widgetEdit, strDockName]() {
+				// remove ownership from tab widget (else will be delated when dialog closed)
+				widgetEdit->setParent(m_dockManager);
+				// remove from map
+				Q_ASSERT(m_mapDialogs.contains(strDockName));
+				m_mapDialogs.remove(strDockName);
+			});
 		}
 	});
 	// handle permissions button clicked
@@ -189,6 +219,8 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 		// read permissions and set them for widget
 		this->setDockPermissions(strDockName, permsWidget->permissions());
 	});
+	// no permissions initially
+	this->setDockPermissions(strDockName, nullptr);
 	return wAreaNew;
 }
 
@@ -206,6 +238,11 @@ void QUaAcDocking::removeDock(const QString & strDockName)
 bool QUaAcDocking::hasDock(const QString & strDockName)
 {
 	return m_dockManager->dockWidgetsMap().contains(strDockName);
+}
+
+QAdDockWidget * QUaAcDocking::dock(const QString &strDockName) const
+{
+	return m_dockManager->dockWidgetsMap().value(strDockName, nullptr);
 }
 
 QList<QString> QUaAcDocking::dockNames() const
@@ -487,6 +524,8 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	layActOld->setChecked(false);
 	// update internal (after uncheck old)
 	m_currLayout = strLayoutName;
+	// emit signal
+	emit this->aboutToChangeLayout();
 	// set new layout
 	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
 	// update permissions
@@ -711,13 +750,13 @@ void QUaAcDocking::saveAsCurrentLayout()
 		QLineEdit::Normal,
 		"",
 		&ok
-	);
+	).trimmed();
 	if (!ok && strLayoutName.isEmpty())
 	{
 		return;
 	}
 
-	// TODO : validate text format ?
+	// TODO : validate text format XML safe ?
 
 	// check is empty
 	if (strLayoutName.compare(QUaAcDocking::m_strEmpty, Qt::CaseInsensitive) == 0)
@@ -815,9 +854,6 @@ void QUaAcDocking::handleDockAdded(const QStringList & strDockPathName,
 			menuChild->setObjectName(strPathName);
 		}
 		Q_CHECK_PTR(menuChild);
-
-		// TODO : add to model
-
 		this->handleDockAdded(strDockPathName, menuChild, index + 1);
 		// exit
 		return;
@@ -826,18 +862,20 @@ void QUaAcDocking::handleDockAdded(const QStringList & strDockPathName,
 	QString strDockName = strDockPathName.at(index);
 	// add action to menu
 	auto dock = m_dockManager->findDockWidget(strDockName);
-	Q_ASSERT(dock);
-	menuParent->addAction(dock->toggleViewAction());
-
-	// TODO : add to model
+	Q_CHECK_PTR(dock);
+	auto action = dock->toggleViewAction();
+	menuParent->addAction(action);
+	action->setProperty("ParentMenu", QVariant::fromValue(menuParent));
 }
 
 void QUaAcDocking::handleDockRemoved(const QString & strDockName)
 {
+	auto dock = m_dockManager->findDockWidget(strDockName);
+	Q_CHECK_PTR(dock);
 	// NOTE : find recursivelly by default, uses QObject::objectName
-	QAction * action = m_docksMenu->findChild<QAction*>(strDockName);
+	QAction * action = dock->toggleViewAction();
 	Q_CHECK_PTR(action);
-	QMenu * parentMenu = dynamic_cast<QMenu*>(action->parentWidget());
+	QMenu * parentMenu = action->property("ParentMenu").value<QMenu*>();
 	Q_CHECK_PTR(parentMenu);
 	parentMenu->removeAction(action);
 }
