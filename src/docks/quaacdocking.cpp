@@ -141,7 +141,7 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	// fix margins
 	wrapper->layout()->setContentsMargins(3, 3, 3, 3);
 	// add dock
-	auto wAreaNew = m_dockManager->addDock(dockArea, pDock, widgetArea); 
+	auto wAreaNew = m_dockManager->addDockWidget(dockArea, pDock, widgetArea); 
 	// add to menu and tree model
 	this->handleDockAdded(listPathParts, m_docksMenu);
 	// handle config button clicked
@@ -232,7 +232,8 @@ void QUaAcDocking::removeDock(const QString & strDockName)
 		return;
 	}
 	this->handleDockRemoved(strDockName);
-	m_dockManager->removeDock(dock);
+	m_dockManager->removeDockWidget(dock);
+	dock->deleteLater();
 }
 
 bool QUaAcDocking::hasDock(const QString & strDockName)
@@ -521,7 +522,8 @@ void QUaAcDocking::setLayout(const QString & strLayoutName)
 	// uncheck old layout action
 	QAction * layActOld = menuLayouts->findChild<QAction*>(this->currentLayout());
 	Q_CHECK_PTR(layActOld);
-	layActOld->setChecked(false);
+	// TODO : sometimes fails, when opening/closing configs, have not been able to reproduce
+	if (layActOld) { layActOld->setChecked(false); }
 	// update internal (after uncheck old)
 	m_currLayout = strLayoutName;
 	// emit signal
