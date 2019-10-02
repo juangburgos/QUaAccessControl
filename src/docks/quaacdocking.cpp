@@ -92,10 +92,13 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	QMenu *menuLayouts = m_layoutsMenu->addMenu(tr("Show"));
 	menuLayouts->setObjectName("Show");
 	m_layoutsMenu->addSeparator();
-	m_layoutsMenu->addAction(tr("Save")      , this, &QUaAcDocking::saveCurrentLayout  )->setObjectName("Save");
-	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout)->setObjectName("SaveAs");
+	m_layoutsMenu->addAction(tr("Save")      , this, &QUaAcDocking::saveCurrentLayout  )
+		->setObjectName("Save");
+	m_layoutsMenu->addAction(tr("Save As..."), this, &QUaAcDocking::saveAsCurrentLayout)
+		->setObjectName("SaveAs");
 	m_layoutsMenu->addSeparator()->setObjectName("Separator");
-	m_layoutsMenu->addAction(tr("Remove")    , this, &QUaAcDocking::removeCurrentLayout)->setObjectName("Remove");
+	m_layoutsMenu->addAction(tr("Remove")    , this, &QUaAcDocking::removeCurrentLayout)
+		->setObjectName("Remove");
 	// set empty initially
 	this->saveCurrentLayoutInternal(QUaAcDocking::m_strEmpty);
 	this->setEmptyLayout();

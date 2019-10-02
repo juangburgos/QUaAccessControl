@@ -41,9 +41,7 @@
       <bool>false</bool>
      </property>
      <property name="styleSheet">
-      <string notr="true">QFrame {
-	background : rgb(255, 255, 255);
-}</string>
+      <string notr="true"/>
      </property>
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>

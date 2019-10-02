@@ -6,10 +6,6 @@ QAdDockWidgetWrapper::QAdDockWidgetWrapper(QWidget *parent) :
     ui(new Ui::QAdDockWidgetWrapper)
 {
     ui->setupUi(this);
-
-	// NOTE : if you are looking for the QFrame background color, it is set
-	//        as a stylesheet on the qaddockwidgetwrapper.ui file
-
 	// tooltips
 	ui->pushButtonConfig->setToolTip(tr(
 		"Displays the wrapped widget configuration."
