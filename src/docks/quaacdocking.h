@@ -8,6 +8,7 @@
 #include <DockManager.h>
 #include <DockWidget.h>
 #include <DockAreaWidget.h>
+#include <DockWidgetTab.h>
 
 #include <QMap>
 #include <QMapIterator>
@@ -22,6 +23,7 @@ typedef QAd::CDockManager    QAdDockManager;
 typedef QAd::CDockWidget     QAdDockWidget;
 typedef QAd::DockWidgetArea  QAdDockArea;
 typedef QAd::CDockAreaWidget QAdDockWidgetArea;
+typedef QAd::CDockWidgetTab  QAdDockWidgetTab;
 
 typedef std::function<void(void)> QAdWidgetEditFunc;
 
