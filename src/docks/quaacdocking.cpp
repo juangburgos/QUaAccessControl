@@ -842,10 +842,12 @@ void QUaAcDocking::removeCurrentLayout()
 	{
 		return;
 	}
-	// remove
-	this->removeLayout(this->currentLayout());
-	// initially empty
+	// get layout to remove
+	QString strLayout = this->currentLayout();
+	// set empty to avoid issues downstream
 	this->setLayout(QUaAcDocking::m_strEmpty);
+	// remove layout
+	this->removeLayout(strLayout);
 }
 
 void QUaAcDocking::on_loggedUserChanged(QUaUser * user)
