@@ -272,11 +272,11 @@ bool QUaAcFullUi::on_closeConfig()
 	// NOTE : need to delete inmediatly, ac->clear(); (deleteLater) won't do the job
 	ac->clearInmediatly();
 	// clear dock manager (not widgets because some are fixed)
-	m_dockManager->setWidgetListPermissions(nullptr);
+	m_dockManager->setDockListPermissions(nullptr);
 	m_dockManager->setLayoutListPermissions(nullptr);
-	for (auto widgetName : m_dockManager->widgetNames())
+	for (auto dockName : m_dockManager->dockNames())
 	{
-		m_dockManager->setWidgetPermissions(widgetName, nullptr);
+		m_dockManager->setDockPermissions(dockName, nullptr);
 		// TODO : cannot remove widget because they are fixed. Should they be fixed or recreate every time?
 	}
 	for (auto layoutName : m_dockManager->layoutNames())
@@ -420,7 +420,7 @@ void QUaAcFullUi::setupMenuBar()
 	actLayoutBar->setChecked(true);
 
 	// user widgets
-	this->menuBar()->addMenu(m_dockManager->widgetsMenu());
+	this->menuBar()->addMenu(m_dockManager->docksMenu());
 
 	// user layouts
 	this->menuBar()->addMenu(m_dockManager->layoutsMenu());

@@ -12,7 +12,7 @@ TARGET = 03_quausertable
 TEMPLATE = app
 
 include($$PWD/../../libs/QUaServer.git/src/wrapper/quaserver.pri)
-include($$PWD/../../libs/Utils/utils.pri)
+include($$PWD/../../libs/QFunctionUtils.git/src/qfunctionutils.pri)
 
 SOURCES += main.cpp \
     quausertabletestdialog.cpp
