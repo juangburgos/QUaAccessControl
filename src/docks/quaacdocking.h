@@ -77,10 +77,10 @@ public:
 
 	QMenu * docksMenu();
 
-	bool              hasPermissions    (const QString &strDockName) const;
+	bool              hasDockPermissions(const QString &strDockName) const;
 	QUaPermissions  * dockPermissions   (const QString &strDockName) const;
 	void              setDockPermissions(const QString &strDockName,
-		                                   QUaPermissions * permissions);
+		                                 QUaPermissions * permissions);
 
 	// over all list permissions
 	// can read controls if user can list, create, save, remove or set permissions to individual widgets (hides top-elvel menu)

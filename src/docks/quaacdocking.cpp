@@ -325,7 +325,7 @@ QMenu * QUaAcDocking::docksMenu()
 	return m_docksMenu;
 }
 
-bool QUaAcDocking::hasPermissions(const QString & strDockName) const
+bool QUaAcDocking::hasDockPermissions(const QString & strDockName) const
 {
 	return m_mapDockPerms.contains(strDockName);
 }
