@@ -129,6 +129,7 @@ signals:
 	void currentLayoutChanged    (const QString &strLayoutName);
 	void layoutPermissionsChanged(const QString &strLayoutName, QUaPermissions * permissions);
 	void layoutListPermissionsChanged(QUaPermissions * permissions);
+	void dockPermissionsChanged(const QString &strDockName, QUaPermissions * permissions);
 
 public slots:
 	void saveCurrentLayout  ();

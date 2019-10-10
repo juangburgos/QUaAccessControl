@@ -348,6 +348,8 @@ void QUaAcDocking::setDockPermissions(const QString & strDockName, QUaPermission
 	}
 	// update permissions
 	this->updateDockPermissions(strDockName, permissions);
+	// emit
+	emit this->dockPermissionsChanged(strDockName, permissions);
 }
 
 void QUaAcDocking::setDockListPermissions(QUaPermissions * permissions)
