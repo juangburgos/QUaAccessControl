@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1081</width>
-    <height>28</height>
+    <height>25</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,6 +39,12 @@
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>45</width>
+       <height>0</height>
+      </size>
      </property>
      <property name="text">
       <string>Layout : </string>
@@ -131,13 +137,6 @@
        <widget class="QPushButton" name="pushButtonPermissions">
         <property name="text">
          <string>Permissions</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="Line" name="line3">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
         </property>
        </widget>
       </item>

@@ -618,8 +618,8 @@ void QUaAcDocking::setLayoutPermissions(const QString & strLayoutName, QUaPermis
 		return;
 	}
 	m_mapLayouts[strLayoutName].permsObject = permissions;
-	emit this->layoutPermissionsChanged(strLayoutName, permissions);
 	this->updateLayoutPermissions(strLayoutName, permissions);
+	emit this->layoutPermissionsChanged(strLayoutName, permissions);
 }
 
 void QUaAcDocking::setLayoutListPermissions(QUaPermissions * permissions)
