@@ -535,6 +535,7 @@ void QUaAcDocking::removeLayout(const QString & strLayoutName)
 	}
 	m_mapLayouts.remove(strLayoutName);
 	this->handleLayoutRemoved(strLayoutName);
+	emit this->layoutRemoved(strLayoutName);
 }
 
 void QUaAcDocking::setLayout(const QString & strLayoutName)
