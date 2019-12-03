@@ -39,7 +39,7 @@
    <item row="2" column="0" colspan="2">
     <widget class="QFrame" name="frameEditActions">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
