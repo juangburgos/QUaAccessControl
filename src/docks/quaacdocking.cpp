@@ -147,10 +147,16 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	auto wAreaNew = m_dockManager->addDockWidget(dockArea, pDock, widgetArea); 
 	// add to menu and tree model
 	this->handleDockAdded(listPathParts, m_docksMenu);
+	// define a parent for edit widget
+	if (widgetEdit)
+	{
+		widgetEdit->setParent(pDock);
+	}
 	// handle config button clicked
 	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
-	[this, strDockName, widgetEdit, editCallback]() {
+	[this, pDock, widgetEdit, editCallback]() {
 		Q_CHECK_PTR(widgetEdit);
+		auto strDockName = pDock->windowTitle();
 		// show modal or non-model dialog
 		if (editCallback)
 		{
@@ -162,7 +168,7 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 			// exec dialog
 			int res = dialog.exec();
 			// remove ownership from tab widget (else will be delated when dialog closed)
-			widgetEdit->setParent(m_dockManager);
+			widgetEdit->setParent(pDock);
 			if (res != QDialog::Accepted)
 			{
 				return;
@@ -191,9 +197,10 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 			// NOTE : to avoid opening multiple dialogs
 			m_mapDialogs.insert(strDockName, dialog.data());
 			QObject::connect(dialog.data(), &QUaAcCommonDialog::dialogDestroyed, this,
-			[this, widgetEdit, strDockName]() {
+			[this, widgetEdit, pDock]() {
+				auto strDockName = pDock->windowTitle();
 				// remove ownership from tab widget (else will be delated when dialog closed)
-				widgetEdit->setParent(m_dockManager);
+				widgetEdit->setParent(pDock);
 				// remove from map
 				Q_ASSERT(m_mapDialogs.contains(strDockName));
 				m_mapDialogs.remove(strDockName);
