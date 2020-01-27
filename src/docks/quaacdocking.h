@@ -95,7 +95,7 @@ public:
 	bool    hasLayout     (const QString &strLayoutName) const;
 	void    saveLayout    (const QString &strLayoutName);
 	void    removeLayout  (const QString &strLayoutName);
-	void    setLayout     (const QString &strLayoutName);
+	void    setLayout     (const QString &strLayoutName, const bool &force = false);
 
 	QUaAcLayouts   layouts() const;
 	QList<QString> layoutNames() const;

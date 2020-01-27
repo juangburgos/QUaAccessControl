@@ -113,6 +113,12 @@ inline QUaAcDockWidgets<T>::QUaAcDockWidgets(T *parent) : QObject(parent)
 {
 	Q_CHECK_PTR(parent);
 	m_thiz = parent;
+	m_userTable   = nullptr;
+	m_roleTable   = nullptr;
+	m_permsTable  = nullptr;
+	m_userWidget  = nullptr;
+	m_roleWidget  = nullptr;
+	m_permsWidget = nullptr;
 	//
 	QUaAcDockWidgets<T>::m_listWidgetNames = QList<QString>()
 		<< QUaAcDockWidgets<T>::m_strUsersTable

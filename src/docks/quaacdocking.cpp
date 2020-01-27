@@ -151,6 +151,7 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	if (widgetEdit)
 	{
 		widgetEdit->setParent(pDock);
+		widgetEdit->hide();
 	}
 	// handle config button clicked
 	QObject::connect(wrapper, &QAdDockWidgetWrapper::configClicked, pDock,
@@ -165,10 +166,12 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 			dialog.setWindowTitle(tr("Widget Configuration - %1").arg(strDockName));
 			// set and takes ownership
 			dialog.setWidget(widgetEdit);
+			widgetEdit->show();
 			// exec dialog
 			int res = dialog.exec();
-			// remove ownership from tab widget (else will be delated when dialog closed)
+			// remove ownership from tab widget (else will be deleted when dialog closed)
 			widgetEdit->setParent(pDock);
+			widgetEdit->hide();
 			if (res != QDialog::Accepted)
 			{
 				return;
@@ -178,6 +181,7 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 		}
 		else
 		{
+			// avoid opening multiple dialogs
 			if (m_mapDialogs.contains(strDockName))
 			{
 				m_mapDialogs[strDockName]->show();
@@ -189,21 +193,32 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 			dialog->setWindowTitle(tr("Edit View"));
 			// create edit widget and make dialog take ownership
 			dialog->setWidget(widgetEdit);
+			widgetEdit->show();
 			// NOTE : modify buttons because this dialog edits live
 			dialog->clearButtons();
 			dialog->addButton(tr("Close"), QDialogButtonBox::ButtonRole::AcceptRole);
 			// exec dialog
 			dialog->show();
-			// NOTE : to avoid opening multiple dialogs
-			m_mapDialogs.insert(strDockName, dialog.data());
-			QObject::connect(dialog.data(), &QUaAcCommonDialog::dialogDestroyed, this,
-			[this, widgetEdit, pDock]() {
-				auto strDockName = pDock->windowTitle();
-				// remove ownership from tab widget (else will be delated when dialog closed)
-				widgetEdit->setParent(pDock);
+			// handle view deleted while edit dialog is shown
+			auto conn = QObject::connect(pDock, &QObject::destroyed, this, 
+			[this, strDockName]() {
 				// remove from map
 				Q_ASSERT(m_mapDialogs.contains(strDockName));
 				m_mapDialogs.remove(strDockName);
+			});
+			// avoid opening multiple dialogs
+			m_mapDialogs.insert(strDockName, dialog.data());
+			QObject::connect(dialog.data(), &QUaAcCommonDialog::dialogDestroyed, pDock,
+			[this, widgetEdit, pDock, conn]() {
+				auto strDockName = pDock->windowTitle();
+				// remove ownership from tab widget (else will be delated when dialog closed)
+				widgetEdit->setParent(pDock);
+				widgetEdit->hide();
+				// remove from map
+				Q_ASSERT(m_mapDialogs.contains(strDockName));
+				m_mapDialogs.remove(strDockName);
+				// remove
+				QObject::disconnect(conn);
 			});
 		}
 	});
@@ -377,7 +392,7 @@ QString QUaAcDocking::currentLayout() const
 
 void QUaAcDocking::setEmptyLayout()
 {
-	this->setLayout(QUaAcDocking::m_strEmpty);
+	this->setLayout(QUaAcDocking::m_strEmpty, true);
 }
 
 bool QUaAcDocking::hasLayout(const QString &strLayoutName) const
@@ -500,7 +515,10 @@ void QUaAcDocking::updateDockPermissions(const QString & strDockName, QUaPermiss
 	dock->toggleViewAction()->setVisible(canRead);
 	bool isOpen  = !dock->isClosed();
 	bool setOpen = !m_loggedUser ? false : !permissions ? isOpen : permissions->canUserRead(m_loggedUser) && isOpen;
-	dock->toggleView(setOpen);
+	if (isOpen != setOpen)
+	{
+		dock->toggleView(setOpen);
+	}
 	// write (set permissions)
 	bool canWrite = !m_loggedUser ? false : !permissions ? true : permissions->canUserWrite(m_loggedUser);
 	wrapper->setEditBarVisible(canWrite);
@@ -545,10 +563,15 @@ void QUaAcDocking::removeLayout(const QString & strLayoutName)
 	emit this->layoutRemoved(strLayoutName);
 }
 
-void QUaAcDocking::setLayout(const QString & strLayoutName)
+void QUaAcDocking::setLayout(const QString & strLayoutName, const bool& force/* = false*/)
 {
 	Q_ASSERT(this->hasLayout(strLayoutName));
 	if (!this->hasLayout(strLayoutName))
+	{
+		return;
+	}
+	// only set if different
+	if (!force && m_currLayout.compare(strLayoutName, Qt::CaseSensitive) == 0)
 	{
 		return;
 	}
