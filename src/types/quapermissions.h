@@ -81,9 +81,9 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 	// static
-	static QUaReference IsReadableByRefType;
-	static QUaReference IsWritableByRefType;
-	static QUaReference HasPermissionsRefType;
+	static QUaReferenceType IsReadableByRefType;
+	static QUaReferenceType IsWritableByRefType;
+	static QUaReferenceType HasPermissionsRefType;
 
 signals:
 	void canReadRoleAdded   (QUaRole * role);

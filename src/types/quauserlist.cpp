@@ -37,21 +37,19 @@ QString QUaUserList::addUser(QString strName, QString strPassword)
 		return  tr("%1 : User Password cannot contain less than 6 characters.\n").arg("Error");
 	}
 	// check if nodeId exists
-	QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
-	if (this->server()->nodeById(strNodeId))
+	QUaNodeId nodeId = { 0, QString("users.%1").arg(strName) };
+	if (this->server()->nodeById(nodeId))
 	{
-		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(strNodeId);
+		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(nodeId);
 	}
 	// create instance
-	auto user = this->addChild<QUaUser>(strNodeId);
+	auto user = this->addChild<QUaUser>(strName, nodeId);
 	// check
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 	if (!user)
 	{
-		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(nodeId);
 	}
-	user->setDisplayName(strName);
-	user->setBrowseName(strName);
 	// set password
 	user->setPassword(strPassword);
 	// return
@@ -117,16 +115,14 @@ QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHas
 	{
 		return strError;
 	}
-	QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
-	auto user = this->addChild<QUaUser>(strNodeId);
+	QUaNodeId strNodeId = { 0, QString("users.%1").arg(strName) };
+	auto user = this->addChild<QUaUser>(strName, strNodeId);
 	// check
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 	if (!user)
 	{
 		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
 	}
-	user->setDisplayName(strName);
-	user->setBrowseName(strName);
 	// set password
 	user->setHash(bytaHash);
 	// return
@@ -140,7 +136,7 @@ QList<QUaUser*> QUaUserList::users() const
 
 QUaUser * QUaUserList::user(const QString & strName) const
 {
-	return this->browseChild<QUaUser>(strName);
+	return const_cast<QUaUserList*>(this)->browseChild<QUaUser>(strName);
 }
 
 QUaAccessControl * QUaUserList::accessControl() const
@@ -195,17 +191,15 @@ void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 			continue;
 		}
 		// NOTE : cannot use QUaUserList::addUser because server does not store passwords
-		QString strNodeId = QString("ns=1;s=users.%1").arg(strName);
-		auto user = this->addChild<QUaUser>(strNodeId);
+		QUaNodeId nodeId = { 0, QString("users.%1").arg(strName) };
+		auto user = this->addChild<QUaUser>(strName, nodeId);
 		// check
 		Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 		if (!user)
 		{
-			strError += tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+			strError += tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(nodeId);
 			continue;
 		}
-		user->setDisplayName(strName);
-		user->setBrowseName(strName);
 	}
 }
 

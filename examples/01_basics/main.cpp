@@ -16,9 +16,7 @@ int main(int argc, char *argv[])
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// setup access control information model
-	auto accessControl = objsFolder->addChild<QUaAccessControl>();
-	accessControl->setDisplayName("AccessControl");
-	accessControl->setBrowseName ("AccessControl");
+	auto accessControl = objsFolder->addChild<QUaAccessControl>("AccessControl");
 
 	// default admin user and hash
 	// hash generated with https://www.freeformatter.com/hmac-generator.html, 

@@ -42,8 +42,8 @@ signals:
 public slots:
 
 private slots:
-	void on_referenceAdded  (const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
-	void on_referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
+	void on_referenceAdded  (const QUaReferenceType & ref, QUaNode * nodeTarget, const bool &isForward);
+	void on_referenceRemoved(const QUaReferenceType & ref, QUaNode * nodeTarget, const bool &isForward);
 };
 
 #endif // QUAROLE_H

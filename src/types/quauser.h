@@ -59,7 +59,7 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 	// static
-	static QUaReference UserHasRoleRefType;
+	static QUaReferenceType UserHasRoleRefType;
 
 signals:
 	// C++ API

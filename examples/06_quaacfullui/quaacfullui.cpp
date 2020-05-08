@@ -294,9 +294,7 @@ void QUaAcFullUi::setupInfoModel()
 {
 	// setup access control information model
 	QUaFolderObject * objsFolder = m_server.objectsFolder();
-	auto ac = objsFolder->addChild<QUaAccessControl>();
-	ac->setDisplayName("AccessControl");
-	ac->setBrowseName("AccessControl");
+	auto ac = objsFolder->addChild<QUaAccessControl>("AccessControl");
 
 	// disable anon login
 	m_server.setAnonymousLoginAllowed(false);

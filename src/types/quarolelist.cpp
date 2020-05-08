@@ -43,21 +43,19 @@ QString QUaRoleList::addRole(QString strName)
 		return  tr("%1 : Role Name already exists.\n").arg("Error");
 	}
 	// check if nodeId exists
-	QString strNodeId = QString("ns=1;s=roles.%1").arg(strName);
-	if (this->server()->nodeById(strNodeId))
+	QUaNodeId nodeId = { 0, QString("roles.%1").arg(strName) };
+	if (this->server()->nodeById(nodeId))
 	{
-		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(strNodeId);
+		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(nodeId);
 	}
 	// create instance
-	auto role = this->addChild<QUaRole>(strNodeId);
+	auto role = this->addChild<QUaRole>(strName, nodeId);
 	// check
 	Q_ASSERT_X(role, "addRole", "Is NodeId repeated or invalid?");
 	if (!role)
 	{
-		return tr("%1 : Failed to create role %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+		return tr("%1 : Failed to create role %2 with NodeId %3.\n").arg("Error").arg(strName).arg(nodeId);
 	}
-	role->setDisplayName(strName);
-	role->setBrowseName(strName);
 	// return
 	return "Success\n";
 }
@@ -119,7 +117,7 @@ QList<QUaRole*> QUaRoleList::roles() const
 
 QUaRole * QUaRoleList::role(const QString & strName) const
 {
-	return this->browseChild<QUaRole>(strName);
+	return const_cast<QUaRoleList*>(this)->browseChild<QUaRole>(strName);
 }
 
 QDomElement QUaRoleList::toDomElement(QDomDocument & domDoc) const

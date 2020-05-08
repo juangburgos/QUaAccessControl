@@ -43,21 +43,19 @@ QString QUaPermissionsList::addPermissions(QString strId)
 		return  tr("%1 : Permissions Id already exists.\n").arg("Error");
 	}
 	// check if nodeId exists
-	QString strNodeId = QString("ns=1;s=permissions.%1").arg(strId);
-	if (this->server()->nodeById(strNodeId))
+	QUaNodeId nodeId = { 0, QString("permissions.%1").arg(strId) };
+	if (this->server()->nodeById(nodeId))
 	{
-		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(strNodeId);
+		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(nodeId);
 	}
 	// create instance
-	auto permissions = this->addChild<QUaPermissions>(strNodeId);
+	auto permissions = this->addChild<QUaPermissions>(strId, nodeId);
 	// check
 	Q_ASSERT_X(permissions, "addPermissions", "Is NodeId repeated or invalid?");
 	if (!permissions)
 	{
-		return tr("%1 : Failed to create permissions %2 with NodeId %3.\n").arg("Error").arg(strId).arg(strNodeId);
+		return tr("%1 : Failed to create permissions %2 with NodeId %3.\n").arg("Error").arg(strId).arg(nodeId);
 	}
-	permissions->setDisplayName(strId);
-	permissions->setBrowseName(strId);
 	// return
 	return "Success\n";
 }
@@ -120,7 +118,7 @@ QList<QUaPermissions*> QUaPermissionsList::permissionsList() const
 
 QUaPermissions * QUaPermissionsList::permission(const QString & strId) const
 {
-	return this->browseChild<QUaPermissions>(strId);
+	return const_cast<QUaPermissionsList*>(this)->browseChild<QUaPermissions>(strId);
 }
 
 QUaAccessControl * QUaPermissionsList::accessControl() const

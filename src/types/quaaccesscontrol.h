@@ -47,7 +47,7 @@ public:
 	void        fromDomElement(QDomElement  & domElem, QString &strError);
 
 	// static
-	static QUaReference HasRootUserRefType;
+	static QUaReferenceType HasRootUserRefType;
 
 signals:
 	void rootUserChanged(QUaUser * rootUser);

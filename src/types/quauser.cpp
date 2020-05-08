@@ -7,7 +7,7 @@
 
 #include <QMessageAuthenticationCode>
 
-QUaReference QUaUser::UserHasRoleRefType = { "HasRole", "IsRoleOf" };
+QUaReferenceType QUaUser::UserHasRoleRefType = { "HasRole", "IsRoleOf" };
 
 QUaUser::QUaUser(QUaServer *server)
 	: QUaBaseObjectProtected(server)
@@ -22,7 +22,7 @@ QUaUser::QUaUser(QUaServer *server)
 
 QUaProperty * QUaUser::hash() const
 {
-	return this->browseChild<QUaProperty>("Hash");
+	return const_cast<QUaUser*>(this)->browseChild<QUaProperty>("Hash");
 }
 
 void QUaUser::remove()
@@ -105,7 +105,7 @@ void QUaUser::clearRole()
 
 QString QUaUser::getName() const
 {
-	return this->browseName();
+	return this->browseName().name();
 }
 
 QByteArray QUaUser::getHash() const

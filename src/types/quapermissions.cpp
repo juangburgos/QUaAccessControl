@@ -6,9 +6,9 @@
 #include <QUaPermissions>
 #include <QUaAccessControl>
 
-QUaReference QUaPermissions::IsReadableByRefType   = { "IsReadableBy"  , "CanRead"         };
-QUaReference QUaPermissions::IsWritableByRefType   = { "IsWritableBy"  , "CanWrite"        };
-QUaReference QUaPermissions::HasPermissionsRefType = { "HasPermissions", "IsPermissionsOf" };
+QUaReferenceType QUaPermissions::IsReadableByRefType   = { "IsReadableBy"  , "CanRead"         };
+QUaReferenceType QUaPermissions::IsWritableByRefType   = { "IsWritableBy"  , "CanWrite"        };
+QUaReferenceType QUaPermissions::HasPermissionsRefType = { "HasPermissions", "IsPermissionsOf" };
 
 QUaPermissions::QUaPermissions(QUaServer *server)
 	: QUaBaseObjectProtected(server)
@@ -121,7 +121,7 @@ QString QUaPermissions::removeUserCanWrite(QString strUserNodeId)
 
 QString QUaPermissions::getId() const
 {
-	return this->browseName();
+	return this->browseName().name();
 }
 
 QUaRole * QUaPermissions::findRole(const QString &strRoleNodeId, QString &strError) const

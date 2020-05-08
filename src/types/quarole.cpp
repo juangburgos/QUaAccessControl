@@ -20,7 +20,7 @@ void QUaRole::remove()
 
 QString QUaRole::getName() const
 {
-	return this->browseName();
+	return this->browseName().name();
 }
 
 QList<QUaUser*> QUaRole::users() const
@@ -65,7 +65,7 @@ void QUaRole::fromDomElement(QDomElement & domElem, QString & strError)
 	}
 }
 
-void QUaRole::on_referenceAdded(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward)
+void QUaRole::on_referenceAdded(const QUaReferenceType& ref, QUaNode * nodeTarget, const bool & isForward)
 {
 	if (ref != QUaUser::UserHasRoleRefType)
 	{
@@ -82,7 +82,7 @@ void QUaRole::on_referenceAdded(const QUaReference & ref, QUaNode * nodeTarget, 
 	emit this->userAdded(user);
 }
 
-void QUaRole::on_referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward)
+void QUaRole::on_referenceRemoved(const QUaReferenceType& ref, QUaNode * nodeTarget, const bool & isForward)
 {
 	if (ref != QUaUser::UserHasRoleRefType)
 	{

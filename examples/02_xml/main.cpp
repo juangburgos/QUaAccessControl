@@ -195,9 +195,7 @@ int main(int argc, char *argv[])
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// setup access control information model
-	auto accessControl = objsFolder->addChild<QUaAccessControl>();
-	accessControl->setDisplayName("AccessControl");
-	accessControl->setBrowseName ("AccessControl");
+	auto accessControl = objsFolder->addChild<QUaAccessControl>("AccessControl");
 
 	// load existing config if any
 	if (!configLoad(accessControl))
@@ -224,7 +222,7 @@ int main(int argc, char *argv[])
 		// set as root user
 		auto adminUser = listUsers->user("admin");
 		Q_CHECK_PTR(adminUser);
-		Q_CHECK_PTR(server.nodeById<QUaUser>("ns=1;s=users/admin"));
+		Q_CHECK_PTR(server.nodeById<QUaUser>({0, "users.admin"}));
 		accessControl->setRootUser(adminUser);
 		// permissions will be auto created later
 		QObject::connect(adminUser, &QUaUser::permissionsObjectChanged,
