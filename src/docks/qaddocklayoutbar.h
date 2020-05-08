@@ -25,7 +25,7 @@ public:
     ~QAdDockLayoutBar();
 
 signals:
-	void setLayout           (const QString &strLayoutName);
+	void setLayout           (const QString &strLayoutName, const bool& force = false);
 	void saveCurrentLayout   ();
 	void saveAsCurrentLayout ();
 	void removeCurrentLayout ();

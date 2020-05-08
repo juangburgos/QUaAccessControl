@@ -2,6 +2,7 @@
 #include "ui_qaddocklayoutbar.h"
 
 #include <QCompleter>
+#include <QSignalBlocker>
 
 #include <QUaPermissions>
 
@@ -74,6 +75,8 @@ void QAdDockLayoutBar::on_currentLayoutChanged(const QString & strLayoutName)
 		return;
 	}
 	// NOTE : setCurrentText does not work for this
+	// NOTE : avoid feedback to QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged
+	const QSignalBlocker blocker(ui->comboBoxLayout);
 	ui->comboBoxLayout->setCurrentIndex(index);
 }
 
