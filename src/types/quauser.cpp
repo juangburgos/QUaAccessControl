@@ -75,7 +75,7 @@ QString QUaUser::setRole(QString strRoleNodeId)
 			.arg(strRoleNodeId);
 	}
 	// try to cast
-	QUaRole * role = dynamic_cast<QUaRole*>(node);
+	QUaRole * role = qobject_cast<QUaRole*>(node);
 	if (!role)
 	{
 		return tr("%1 : Node with NodeId %2 is not a role.")
@@ -128,7 +128,7 @@ QUaRole * QUaUser::role() const
 {
 	auto listRefs = this->findReferences(QUaUser::UserHasRoleRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaUser::role", "Only one role per user is currently supported.");
-	return listRefs.count() >= 1 ? dynamic_cast<QUaRole*>(listRefs.at(0)) : nullptr;
+	return listRefs.count() >= 1 ? qobject_cast<QUaRole*>(listRefs.at(0)) : nullptr;
 }
 
 void QUaUser::setRole(QUaRole * role)
@@ -166,7 +166,7 @@ bool QUaUser::isPasswordValid(const QString &strPassword) const
 
 QUaUserList * QUaUser::list() const
 {
-	return dynamic_cast<QUaUserList*>(this->parent());
+	return qobject_cast<QUaUserList*>(this->parent());
 }
 
 bool QUaUser::isRootUser() const

@@ -191,7 +191,7 @@ void QUaRoleList::fromDomElementConfigure(QDomElement & domElem, QString & strEr
 
 void QUaRoleList::on_childAdded(QUaNode * node)
 {
-	QUaRole * role = dynamic_cast<QUaRole*>(node);
+	QUaRole * role = qobject_cast<QUaRole*>(node);
 	if (!role)
 	{
 		return;

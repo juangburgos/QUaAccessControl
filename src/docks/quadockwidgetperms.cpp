@@ -51,7 +51,7 @@ void QUaDockWidgetPerms::setComboModel(QSortFilterProxyModel * proxy)
 
 QSortFilterProxyModel * QUaDockWidgetPerms::comboModel() const
 {
-	return dynamic_cast<QSortFilterProxyModel*>(ui->comboBoxPermissions->model());
+	return qobject_cast<QSortFilterProxyModel*>(ui->comboBoxPermissions->model());
 }
 
 QUaPermissions * QUaDockWidgetPerms::permissions() const

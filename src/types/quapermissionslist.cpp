@@ -123,7 +123,7 @@ QUaPermissions * QUaPermissionsList::permission(const QString & strId) const
 
 QUaAccessControl * QUaPermissionsList::accessControl() const
 {
-	return dynamic_cast<QUaAccessControl*>(this->parent());
+	return qobject_cast<QUaAccessControl*>(this->parent());
 }
 
 QDomElement QUaPermissionsList::toDomElement(QDomDocument & domDoc) const
@@ -197,7 +197,7 @@ void QUaPermissionsList::fromDomElementConfigure(QDomElement & domElem, QString 
 
 void QUaPermissionsList::on_childAdded(QUaNode * node)
 {
-	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+	QUaPermissions * permissions = qobject_cast<QUaPermissions*>(node);
 	if (!permissions)
 	{
 		return;

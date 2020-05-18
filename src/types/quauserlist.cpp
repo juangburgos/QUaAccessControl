@@ -141,7 +141,7 @@ QUaUser * QUaUserList::user(const QString & strName) const
 
 QUaAccessControl * QUaUserList::accessControl() const
 {
-	return dynamic_cast<QUaAccessControl*>(this->parent());
+	return qobject_cast<QUaAccessControl*>(this->parent());
 }
 
 QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
@@ -231,7 +231,7 @@ void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QString & strEr
 
 void QUaUserList::on_childAdded(QUaNode * node)
 {
-	QUaUser * user = dynamic_cast<QUaUser*>(node);
+	QUaUser * user = qobject_cast<QUaUser*>(node);
 	if (!user)
 	{
 		return;

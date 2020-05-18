@@ -35,7 +35,7 @@ bool QUaRole::hasUser(QUaUser * user) const
 
 QUaRoleList * QUaRole::list() const
 {
-	return dynamic_cast<QUaRoleList*>(this->parent());
+	return qobject_cast<QUaRoleList*>(this->parent());
 }
 
 QDomElement QUaRole::toDomElement(QDomDocument & domDoc) const
@@ -72,7 +72,7 @@ void QUaRole::on_referenceAdded(const QUaReferenceType& ref, QUaNode * nodeTarge
 		return;
 	}
 	Q_ASSERT(!isForward);
-	auto user = dynamic_cast<QUaUser*>(nodeTarget);
+	auto user = qobject_cast<QUaUser*>(nodeTarget);
 	//Q_CHECK_PTR(user); happens on shutdown
 	if (!user)
 	{
@@ -89,7 +89,7 @@ void QUaRole::on_referenceRemoved(const QUaReferenceType& ref, QUaNode * nodeTar
 		return;
 	}
 	Q_ASSERT(!isForward);
-	auto user = dynamic_cast<QUaUser*>(nodeTarget);
+	auto user = qobject_cast<QUaUser*>(nodeTarget);
 	//Q_CHECK_PTR(user); happens on shutdown
 	if (!user)
 	{

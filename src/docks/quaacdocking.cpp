@@ -508,7 +508,7 @@ void QUaAcDocking::updateDockPermissions(const QString & strDockName, QUaPermiss
 	auto dock = m_dockManager->findDockWidget(strDockName);
 	Q_ASSERT(dock);
 	Q_ASSERT(dock->toggleViewAction());
-	auto wrapper = dynamic_cast<QAdDockWidgetWrapper*>(dock->widget());
+	auto wrapper = qobject_cast<QAdDockWidgetWrapper*>(dock->widget());
 	Q_ASSERT(wrapper);
 	// read
 	bool canRead = !m_loggedUser ? false : !permissions ? true : permissions->canUserRead(m_loggedUser);
@@ -781,7 +781,7 @@ QUaPermissions * QUaAcDocking::findPermissions(QUaAccessControl * ac, const QStr
 			.arg(strNodeId);
 		return nullptr;
 	}
-	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+	QUaPermissions * permissions = qobject_cast<QUaPermissions*>(node);
 	if (!permissions)
 	{
 		strError += tr("%1 : Node with NodeId %2 is not a permissions instance.")

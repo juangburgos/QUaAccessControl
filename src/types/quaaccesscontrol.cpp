@@ -90,7 +90,7 @@ QUaUser * QUaAccessControl::rootUser() const
 {
 	auto listRefs = this->findReferences(QUaAccessControl::HasRootUserRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaAccessControl::rootUser", "Only one root user is currently supported.");
-	return listRefs.count() >= 1 ? dynamic_cast<QUaUser*>(listRefs.at(0)) : nullptr;
+	return listRefs.count() >= 1 ? qobject_cast<QUaUser*>(listRefs.at(0)) : nullptr;
 }
 
 void QUaAccessControl::setRootUser(QUaUser * rootUser)
@@ -226,7 +226,7 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 				.arg(domElem.attribute("RootUser"));
 			return;
 		}
-		QUaUser * user = dynamic_cast<QUaUser*>(node);
+		QUaUser * user = qobject_cast<QUaUser*>(node);
 		if (!user)
 		{
 			strError += tr("%1 : Node with NodeId %2 is not a user.")

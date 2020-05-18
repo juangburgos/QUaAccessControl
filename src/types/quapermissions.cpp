@@ -134,7 +134,7 @@ QUaRole * QUaPermissions::findRole(const QString &strRoleNodeId, QString &strErr
 			.arg(strRoleNodeId);
 		return nullptr;
 	}
-	QUaRole * role = dynamic_cast<QUaRole*>(node);
+	QUaRole * role = qobject_cast<QUaRole*>(node);
 	if (!role)
 	{
 		strError += tr("%1 : Node with NodeId %2 is not a role.")
@@ -155,7 +155,7 @@ QUaUser * QUaPermissions::findUser(const QString &strUserNodeId, QString & strEr
 			.arg(strUserNodeId);
 		return nullptr;
 	}
-	QUaUser * user = dynamic_cast<QUaUser*>(node);
+	QUaUser * user = qobject_cast<QUaUser*>(node);
 	if (!user)
 	{
 		strError += tr("%1 : Node with NodeId %2 is not a user.")
@@ -418,7 +418,7 @@ bool QUaPermissions::canUserWrite(const QString strUserName) const
 
 QUaPermissionsList * QUaPermissions::list() const
 {
-	return dynamic_cast<QUaPermissionsList*>(this->parent());
+	return qobject_cast<QUaPermissionsList*>(this->parent());
 }
 
 QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const

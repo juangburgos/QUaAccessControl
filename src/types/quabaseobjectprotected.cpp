@@ -19,7 +19,7 @@ QString QUaBaseObjectProtected::setPermissions(QString strPermissionsNodeId)
 			.arg("Error")
 			.arg(strPermissionsNodeId);
 	}
-	QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+	QUaPermissions * permissions = qobject_cast<QUaPermissions*>(node);
 	if (!permissions)
 	{
 		return tr("%1 : Node with NodeId %2 is not a permissions instance.")
@@ -59,7 +59,7 @@ QUaPermissions * QUaBaseObjectProtected::permissionsObject() const
 	auto listRefs = this->findReferences(QUaPermissions::HasPermissionsRefType);
 	Q_ASSERT_X(listRefs.count() <= 1, "QUaBaseObjectProtected::permissionsObject",
 		"Only one permissions object per protected object is currently suppported.");
-	return listRefs.count() >= 1 ? dynamic_cast<QUaPermissions*>(listRefs.at(0)) : nullptr;
+	return listRefs.count() >= 1 ? qobject_cast<QUaPermissions*>(listRefs.at(0)) : nullptr;
 }
 
 void QUaBaseObjectProtected::setPermissionsObject(QUaPermissions * permissions)

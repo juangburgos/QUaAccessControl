@@ -221,7 +221,7 @@ inline void QUaAcDockWidgets<T>::fromDomElement(QDomElement & domElem, QString &
 				.arg(strPermissionsNodeId);
 			continue;
 		}
-		QUaPermissions * permissions = dynamic_cast<QUaPermissions*>(node);
+		QUaPermissions * permissions = qobject_cast<QUaPermissions*>(node);
 		if (!permissions)
 		{
 			strError += tr("%1 : Node with NodeId %2 is not a permissions instance.")
