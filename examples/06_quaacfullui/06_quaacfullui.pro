@@ -12,7 +12,6 @@ TARGET = 06_quaacfullui
 TEMPLATE = app
 
 include($$PWD/../../libs/QUaServer.git/src/wrapper/quaserver.pri)
-include($$PWD/../../libs/Utils/utils.pri)
 include($$PWD/../../libs/qadvanceddocking.pri)
 
 SOURCES += main.cpp \
@@ -24,6 +23,7 @@ HEADERS += \
 FORMS += \
     quaacfullui.ui
 
+include($$PWD/../../libs/QUaServerWidgets.git/src/quaserverwidgets.pri)
 include($$PWD/../../src/types/quaaccesscontrol.pri)
 include($$PWD/../../src/widgets/quaaccesscontrolwidgets.pri)
 include($$PWD/../../src/docks/quaacdocking.pri)

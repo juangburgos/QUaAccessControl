@@ -699,13 +699,13 @@ QDomElement QUaAcDocking::toDomElement(QDomDocument & domDoc) const
 
 }
 
-void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, QString & strError)
+void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	Q_CHECK_PTR(ac);
 	// lists permissions (optional)
 	if (domElem.hasAttribute("DockListPermissions"))
 	{
-		auto permissions = this->findPermissions(ac, domElem.attribute("DockListPermissions"), strError);
+		auto permissions = this->findPermissions(ac, domElem.attribute("DockListPermissions"), errorLogs);
 		if (permissions)
 		{
 			this->setDockListPermissions(permissions);
@@ -713,7 +713,7 @@ void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, 
 	}
 	if (domElem.hasAttribute("LayoutListPermissions"))
 	{
-		auto permissions = this->findPermissions(ac, domElem.attribute("LayoutListPermissions"), strError);
+		auto permissions = this->findPermissions(ac, domElem.attribute("LayoutListPermissions"), errorLogs);
 		if (permissions)
 		{
 			this->setLayoutListPermissions(permissions);
@@ -728,17 +728,21 @@ void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, 
 		// name is mandatory
 		if (!elem.hasAttribute("Name"))
 		{
-			strError += tr("%1 : %2 element must have Name attribute.")
-				.arg("Error")
-				.arg(QUaAcDocking::m_strXmlLayoutName);
+			errorLogs << QUaLog(
+				tr("%1 element must have Name attribute.").arg(QUaAcDocking::m_strXmlLayoutName),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 		// state is mandatory
 		if (!elem.hasAttribute("State"))
 		{
-			strError += tr("%1 : %2 element must have State attribute.")
-				.arg("Error")
-				.arg(QUaAcDocking::m_strXmlLayoutName);
+			errorLogs << QUaLog(
+				tr("%1 element must have State attribute.").arg(QUaAcDocking::m_strXmlLayoutName),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 		QString strLayoutName = elem.attribute("Name");
@@ -762,7 +766,7 @@ void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, 
 		}
 		// attempt to add permissions
 		QString strNodeId = elem.attribute("Permissions");
-		auto permissions  = this->findPermissions(ac, strNodeId, strError);
+		auto permissions  = this->findPermissions(ac, strNodeId, errorLogs);
 		if (!permissions)
 		{
 			continue;
@@ -771,22 +775,26 @@ void QUaAcDocking::fromDomElement(QUaAccessControl * ac, QDomElement & domElem, 
 	}
 }
 
-QUaPermissions * QUaAcDocking::findPermissions(QUaAccessControl * ac, const QString & strNodeId, QString & strError)
+QUaPermissions * QUaAcDocking::findPermissions(QUaAccessControl * ac, const QString & strNodeId, QQueue<QUaLog>& errorLogs)
 {
 	QUaNode * node = ac->server()->nodeById(strNodeId);
 	if (!node)
 	{
-		strError += tr("%1 : Unexisting node with NodeId %2.")
-			.arg("Error")
-			.arg(strNodeId);
+		errorLogs << QUaLog(
+			tr("Unexisting node with NodeId %1.").arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return nullptr;
 	}
 	QUaPermissions * permissions = qobject_cast<QUaPermissions*>(node);
 	if (!permissions)
 	{
-		strError += tr("%1 : Node with NodeId %2 is not a permissions instance.")
-			.arg("Error")
-			.arg(strNodeId);
+		errorLogs << QUaLog(
+			tr("Node with NodeId %1 is not a permissions instance.").arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return nullptr;
 	}
 	return permissions;

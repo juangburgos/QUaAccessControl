@@ -53,15 +53,22 @@ QDomElement QUaRole::toDomElement(QDomDocument & domDoc) const
 	return elem;
 }
 
-void QUaRole::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaRole::fromDomElement(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
-	Q_UNUSED(strError);
 	// NOTE : at this point name must already be set
 	Q_ASSERT(this->getName().compare(domElem.attribute("Name"), Qt::CaseSensitive) == 0);
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 }
 

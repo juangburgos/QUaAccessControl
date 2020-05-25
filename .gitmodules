@@ -10,3 +10,7 @@
 	path = libs/QFunctionUtils.git
 	url = https://github.com/juangburgos/QFunctionUtils.git
 	branch = master
+[submodule "libs/QUaServerWidgets.git"]
+	path = libs/QUaServerWidgets.git
+	url = https://github.com/juangburgos/QUaServerWidgets.git
+	branch = master

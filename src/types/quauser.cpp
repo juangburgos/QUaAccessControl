@@ -196,14 +196,22 @@ QDomElement QUaUser::toDomElement(QDomDocument & domDoc) const
 	return elem;
 }
 
-void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaUser::fromDomElement(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// NOTE : at this point name must already be set
 	Q_ASSERT(this->getName().compare(domElem.attribute("Name"), Qt::CaseSensitive) == 0);
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 	// load hash (raw)
 	this->setHash(QByteArray::fromHex(domElem.attribute("Hash").toUtf8()));
@@ -213,5 +221,13 @@ void QUaUser::fromDomElement(QDomElement & domElem, QString & strError)
 		// having no role is acceptable, so no error or warning is required
 		return;
 	}
-	strError += this->setRole(domElem.attribute("Role"));
+	QString strError = this->setRole(domElem.attribute("Role"));
+	if (strError.contains("Error"))
+	{
+		errorLogs << QUaLog(
+			strError,
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+	}
 }

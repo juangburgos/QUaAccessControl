@@ -33,8 +33,8 @@ public:
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
-	void        fromDomElementInstantiate(QDomElement  & domElem, QString &strError);
-	void        fromDomElementConfigure  (QDomElement  & domElem, QString &strError);
+	void        fromDomElementInstantiate(QDomElement  & domElem, QQueue<QUaLog>& errorLogs);
+	void        fromDomElementConfigure  (QDomElement  & domElem, QQueue<QUaLog>& errorLogs);
 
 signals:
 	void roleAdded  (QUaRole * role);

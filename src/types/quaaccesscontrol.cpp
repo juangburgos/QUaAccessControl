@@ -33,30 +33,39 @@ QString QUaAccessControl::xmlConfig()
 
 QString QUaAccessControl::setXmlConfig(QString strXmlConfig)
 {
-	QString strError;
+	QQueue<QUaLog> errorLogs;
 	// set to dom doc
 	QDomDocument doc;
 	int line, col;
+	QString strError;
 	doc.setContent(strXmlConfig, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
-		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
-		return strError;
+		errorLogs << QUaLog(
+			tr("Invalid XML in Line %1 Column %2 Error %3.").arg(line).arg(col).arg(strError),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// get list of params
 	QDomElement elemAc = doc.firstChildElement(QUaAccessControl::staticMetaObject.className());
 	if (elemAc.isNull())
 	{
-		strError = tr("%1 : No AccessControl element found in XML config.\n").arg("Error");
-		return strError;
+		errorLogs << QUaLog(
+			tr("No AccessControl element found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// load config from xml
-	this->fromDomElement(elemAc, strError);
-	if (strError.isEmpty())
+	this->fromDomElement(elemAc, errorLogs);
+	if (!strError.isEmpty())
 	{
-		strError = "Success.\n";
+		return QUaLog::toString(errorLogs);
 	}
-	return strError;
+	return "Success.";
 }
 
 void QUaAccessControl::clear()
@@ -172,46 +181,66 @@ QDomElement QUaAccessControl::toDomElement(QDomDocument & domDoc) const
 	return elemAc;
 }
 
-void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaAccessControl::fromDomElement(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// NOTE : first we need to instantiate all, then configure them (due to references)
 	// find roles
 	QDomElement elemRoles = domElem.firstChildElement(QUaRoleList::staticMetaObject.className());
 	if (elemRoles.isNull())
 	{
-		strError = tr("%1 : No Role list found in XML config.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("No Role list found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
 	// instantiate roles
-	this->roles()->fromDomElementInstantiate(elemRoles, strError);
+	this->roles()->fromDomElementInstantiate(elemRoles, errorLogs);
 	// find roles
 	QDomElement elemUsers = domElem.firstChildElement(QUaUserList::staticMetaObject.className());
 	if (elemUsers.isNull())
 	{
-		strError = tr("%1 : No User list found in XML config.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("No User list found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
 	// instantiate roles
-	this->users()->fromDomElementInstantiate(elemUsers, strError);
+	this->users()->fromDomElementInstantiate(elemUsers, errorLogs);
 	// find permissions
 	QDomElement elemPerms = domElem.firstChildElement(QUaPermissionsList::staticMetaObject.className());
 	if (elemPerms.isNull())
 	{
-		strError = tr("%1 : No Permissions list found in XML config.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("No Permissions list found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
 	// instantiate permissions list
-	this->permissions()->fromDomElementInstantiate(elemPerms, strError);
+	this->permissions()->fromDomElementInstantiate(elemPerms, errorLogs);
 
 	// configure all
-	this->roles      ()->fromDomElementConfigure(elemRoles, strError);
-	this->users      ()->fromDomElementConfigure(elemUsers, strError);
-	this->permissions()->fromDomElementConfigure(elemPerms, strError);
+	this->roles      ()->fromDomElementConfigure(elemRoles, errorLogs);
+	this->users      ()->fromDomElementConfigure(elemUsers, errorLogs);
+	this->permissions()->fromDomElementConfigure(elemPerms, errorLogs);
 
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 
 	// load root user if any
@@ -221,17 +250,21 @@ void QUaAccessControl::fromDomElement(QDomElement & domElem, QString & strError)
 		QUaNode * node = this->server()->nodeById(domElem.attribute("RootUser"));
 		if (!node)
 		{
-			strError += tr("%1 : Unexisting node with NodeId %2.")
-				.arg("Error")
-				.arg(domElem.attribute("RootUser"));
+			errorLogs << QUaLog(
+				tr("Unexisting node with NodeId %1.").arg(domElem.attribute("RootUser")),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);			
 			return;
 		}
 		QUaUser * user = qobject_cast<QUaUser*>(node);
 		if (!user)
 		{
-			strError += tr("%1 : Node with NodeId %2 is not a user.")
-				.arg("Error")
-				.arg(domElem.attribute("RootUser"));
+			errorLogs << QUaLog(
+				tr("Node with NodeId %1 is not a user.").arg(domElem.attribute("RootUser")),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 		}
 		else
 		{

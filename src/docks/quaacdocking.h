@@ -18,6 +18,8 @@
 #include <QDomDocument>
 #include <QDomElement>
 
+#include <QUaCustomDataTypes>
+
 namespace QAd = ads;
 typedef QAd::CDockManager    QAdDockManager;
 typedef QAd::CDockWidget     QAdDockWidget;
@@ -118,7 +120,7 @@ public:
 	// NOTE : only layouts, widgets are serialized wherever they are handled (factory)
 
 	QDomElement toDomElement(QDomDocument & domDoc) const;
-	void        fromDomElement(QUaAccessControl * ac, QDomElement  & domElem, QString &strError);
+	void        fromDomElement(QUaAccessControl * ac, QDomElement  & domElem, QQueue<QUaLog>& errorLogs);
 
 	const static QString m_strXmlName;
 	const static QString m_strXmlDockName;
@@ -179,7 +181,7 @@ private:
 	void updateLayoutListPermissions();
 	void updateDockListPermissions();
 
-	QUaPermissions * findPermissions(QUaAccessControl * ac, const QString &strNodeId, QString &strError);
+	QUaPermissions * findPermissions(QUaAccessControl * ac, const QString &strNodeId, QQueue<QUaLog>& errorLogs);
 
 	const static QString m_strEmpty;
 };

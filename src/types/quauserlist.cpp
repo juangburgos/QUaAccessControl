@@ -19,28 +19,43 @@ QUaUserList::QUaUserList(QUaServer *server)
 
 QString QUaUserList::addUser(QString strName, QString strPassword)
 {
-	QString strError;
-	if (!this->isUserNameValid(strName, strError))
+	QQueue<QUaLog> errorLogs;
+	if (!this->isUserNameValid(strName, errorLogs))
 	{
-		return strError;
+		return QUaLog::toString(errorLogs);
 	}
 	// validate password
 	strPassword = strPassword.trimmed();
 	// check empty
 	if (strPassword.isEmpty())
 	{
-		return tr("%1 : User Password argument cannot be empty.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Password argument cannot be empty."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// check valid length
 	if (strPassword.count() < 6)
 	{
-		return  tr("%1 : User Password cannot contain less than 6 characters.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Password cannot contain less than 6 characters."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// check if nodeId exists
 	QUaNodeId nodeId = { 0, QString("users.%1").arg(strName) };
 	if (this->server()->nodeById(nodeId))
 	{
-		return  tr("%1 : NodeId %2 already exists.\n").arg("Error").arg(nodeId);
+		errorLogs << QUaLog(
+			tr("NodeId %1 already exists.").arg(nodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// create instance
 	auto user = this->addChild<QUaUser>(strName, nodeId);
@@ -48,7 +63,12 @@ QString QUaUserList::addUser(QString strName, QString strPassword)
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 	if (!user)
 	{
-		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(nodeId);
+		errorLogs << QUaLog(
+			tr("Failed to create user %1 with NodeId %2.").arg(strName).arg(nodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// set password
 	user->setPassword(strPassword);
@@ -80,40 +100,49 @@ QString QUaUserList::xmlConfig()
 
 QString QUaUserList::setXmlConfig(QString strXmlConfig)
 {
-	QString strError;
+	QQueue<QUaLog> errorLogs;
 	// set to dom doc
 	QDomDocument doc;
 	int line, col;
+	QString strError;
 	doc.setContent(strXmlConfig, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
-		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
-		return strError;
+		errorLogs << QUaLog(
+			tr("Invalid XML in Line %1 Column %2 Error %3.").arg(line).arg(col).arg(strError),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// get list of params
 	QDomElement elemUsers = doc.firstChildElement(QUaUserList::staticMetaObject.className());
 	if (elemUsers.isNull())
 	{
-		strError = tr("%1 : No User list found in XML config.\n").arg("Error");
-		return strError;
+		errorLogs << QUaLog(
+			tr("No User list found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// load config from xml
-	this->fromDomElementInstantiate(elemUsers, strError);
-	this->fromDomElementConfigure  (elemUsers, strError);
-	if (strError.isEmpty())
+	this->fromDomElementInstantiate(elemUsers, errorLogs);
+	this->fromDomElementConfigure  (elemUsers, errorLogs);
+	if (!errorLogs.isEmpty())
 	{
-		strError = "Success.";
+		QUaLog::toString(errorLogs);
 	}
-	return strError;
+	return "Success.";
 }
 
-QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHash)
+QQueue<QUaLog> QUaUserList::addUser(const QString & strName, const QByteArray & bytaHash)
 {
-	QString strError;
+	QQueue<QUaLog> errorLogs;
 	QString strNameCopy = strName;
-	if (!this->isUserNameValid(strNameCopy, strError))
+	if (!this->isUserNameValid(strNameCopy, errorLogs))
 	{
-		return strError;
+		return errorLogs;
 	}
 	QUaNodeId strNodeId = { 0, QString("users.%1").arg(strName) };
 	auto user = this->addChild<QUaUser>(strName, strNodeId);
@@ -121,12 +150,16 @@ QString QUaUserList::addUser(const QString & strName, const QByteArray & bytaHas
 	Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 	if (!user)
 	{
-		return tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(strNodeId);
+		errorLogs << QUaLog(
+			tr("Failed to create user %1 with NodeId %2.").arg(strName).arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 	}
 	// set password
 	user->setHash(bytaHash);
 	// return
-	return "Success\n";
+	return errorLogs;
 }
 
 QList<QUaUser*> QUaUserList::users() const
@@ -165,7 +198,7 @@ QDomElement QUaUserList::toDomElement(QDomDocument & domDoc) const
 	return elemUsers;
 }
 
-void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & strError)
+void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// add user elems
 	QDomNodeList listUsers = domElem.elementsByTagName(QUaUser::staticMetaObject.className());
@@ -175,18 +208,26 @@ void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 		Q_ASSERT(!elem.isNull());
 		if (!elem.hasAttribute("Name"))
 		{
-			strError += tr("%1 : Cannot add User without Name attribute. Skipping.\n").arg("Error");
+			errorLogs << QUaLog(
+				tr("Cannot add User without Name attribute. Skipping."),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 		if (!elem.hasAttribute("Hash"))
 		{
-			strError += tr("%1 : Cannot add User without Hash attribute. Skipping.\n").arg("Error");
+			errorLogs << QUaLog(
+				tr("Cannot add User without Hash attribute. Skipping."),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 		// attempt to add
 		QString strName = elem.attribute("Name");
 		// validate
-		if (!this->isUserNameValid(strName, strError))
+		if (!this->isUserNameValid(strName, errorLogs))
 		{
 			continue;
 		}
@@ -197,18 +238,30 @@ void QUaUserList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 		Q_ASSERT_X(user, "addUser", "Is NodeId repeated or invalid?");
 		if (!user)
 		{
-			strError += tr("%1 : Failed to create user %2 with NodeId %3.\n").arg("Error").arg(strName).arg(nodeId);
+			errorLogs << QUaLog(
+				tr("Failed to create user %1 with NodeId %2.").arg(strName).arg(nodeId),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 	}
 }
 
-void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QString & strError)
+void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 	// add user elems
 	QDomNodeList listUsers = domElem.elementsByTagName(QUaUser::staticMetaObject.className());
@@ -222,10 +275,14 @@ void QUaUserList::fromDomElementConfigure(QDomElement & domElem, QString & strEr
 		auto user = this->browseChild<QUaUser>(strName);
 		if (!user)
 		{
-			strError += tr("%1 : Error finding User %2. Skipping.\n").arg("Error").arg(strName);
+			errorLogs << QUaLog(
+				tr("Error finding User %1. Skipping.").arg(strName),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
-		user->fromDomElement(elem, strError);
+		user->fromDomElement(elem, errorLogs);
 	}
 }
 
@@ -241,20 +298,28 @@ void QUaUserList::on_childAdded(QUaNode * node)
 	emit this->userAdded(user);
 }
 
-bool QUaUserList::isUserNameValid(QString &strName, QString &strError)
+bool QUaUserList::isUserNameValid(QString &strName, QQueue<QUaLog>& errorLogs)
 {
 	// validate name
 	strName = strName.trimmed();
 	// check empty
 	if (strName.isEmpty())
 	{
-		strError += tr("%1 : User Name argument cannot be empty.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Name argument cannot be empty."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return false;
 	}
 	// check valid length
 	if (strName.count() > 16)
 	{
-		strError += tr("%1 : User Name cannot contain more than 16 characters.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Name cannot contain more than 16 characters."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return false;
 	}
 	// check valid characters
@@ -262,13 +327,21 @@ bool QUaUserList::isUserNameValid(QString &strName, QString &strError)
 	QRegularExpressionMatch match = rx.match(strName, 0, QRegularExpression::PartialPreferCompleteMatch);
 	if (!match.hasMatch())
 	{
-		strError += tr("%1 : User Name can only contain numbers, letters and underscores /^[a-zA-Z0-9_]*$/.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Name can only contain numbers, letters and underscores /^[a-zA-Z0-9_]*$/."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return false;
 	}
 	// check if id already exists
 	if (this->hasChild(strName))
 	{
-		strError += tr("%1 : User Name already exists.\n").arg("Error");
+		errorLogs << QUaLog(
+			tr("User Name already exists."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return false;
 	}
 	return true;

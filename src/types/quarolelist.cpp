@@ -83,31 +83,40 @@ QString QUaRoleList::xmlConfig()
 
 QString QUaRoleList::setXmlConfig(QString strXmlConfig)
 {
-	QString strError;
+	QQueue<QUaLog> errorLogs;
 	// set to dom doc
 	QDomDocument doc;
 	int line, col;
+	QString strError;
 	doc.setContent(strXmlConfig, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
-		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
-		return strError;
+		errorLogs << QUaLog(
+			tr("Invalid XML in Line %1 Column %2 Error %3.").arg(line).arg(col).arg(strError),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// get list of params
 	QDomElement elemRoles = doc.firstChildElement(QUaRoleList::staticMetaObject.className());
 	if (elemRoles.isNull())
 	{
-		strError = tr("%1 : No User list found in XML config.\n").arg("Error");
-		return strError;
+		errorLogs << QUaLog(
+			tr("No User list found in XML config."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return QUaLog::toString(errorLogs);
 	}
 	// load config from xml
-	this->fromDomElementInstantiate(elemRoles, strError);
-	this->fromDomElementConfigure  (elemRoles, strError);
-	if (strError.isEmpty())
+	this->fromDomElementInstantiate(elemRoles, errorLogs);
+	this->fromDomElementConfigure  (elemRoles, errorLogs);
+	if (!strError.isEmpty())
 	{
-		strError = "Success.";
+		return QUaLog::toString(errorLogs);
 	}
-	return strError;
+	return "Success.";
 }
 
 QList<QUaRole*> QUaRoleList::roles() const
@@ -141,7 +150,7 @@ QDomElement QUaRoleList::toDomElement(QDomDocument & domDoc) const
 	return elemRoles;
 }
 
-void QUaRoleList::fromDomElementInstantiate(QDomElement & domElem, QString & strError)
+void QUaRoleList::fromDomElementInstantiate(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// add role elems
 	QDomNodeList listRoles = domElem.elementsByTagName(QUaRole::staticMetaObject.className());
@@ -151,7 +160,11 @@ void QUaRoleList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 		Q_ASSERT(!elem.isNull());
 		if (!elem.hasAttribute("Name"))
 		{
-			strError += tr("%1 : Cannot add Role without Name attribute. Skipping.\n").arg("Error");
+			errorLogs << QUaLog(
+				tr("Cannot add Role without Name attribute. Skipping."),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
 		// attempt to add
@@ -159,17 +172,29 @@ void QUaRoleList::fromDomElementInstantiate(QDomElement & domElem, QString & str
 		auto strErrorRole = this->addRole(strName);
 		if (strErrorRole.contains("Error"))
 		{
-			strError += tr("%1 : Error adding Role %2. Skipping.\n").arg("Error").arg(strErrorRole);
+			errorLogs << QUaLog(
+				tr("Error adding Role %1. Skipping.").arg(strErrorRole),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 		}
 	}
 }
 
-void QUaRoleList::fromDomElementConfigure(QDomElement & domElem, QString & strError)
+void QUaRoleList::fromDomElementConfigure(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 	// add role elems
 	QDomNodeList listRoles = domElem.elementsByTagName(QUaRole::staticMetaObject.className());
@@ -182,10 +207,14 @@ void QUaRoleList::fromDomElementConfigure(QDomElement & domElem, QString & strEr
 		auto role = this->browseChild<QUaRole>(strName);
 		if (!role)
 		{
-			strError += tr("%1 : Error finding Role %2. Skipping.\n").arg("Error").arg(strName);
+			errorLogs << QUaLog(
+				tr("Error finding Role %1. Skipping.").arg(strName),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
 			continue;
 		}
-		role->fromDomElement(elem, strError);
+		role->fromDomElement(elem, errorLogs);
 	}
 }
 

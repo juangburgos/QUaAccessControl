@@ -16,6 +16,9 @@
 #include <QUaDockWidgetPerms>
 #include <QAdDockLayoutBar>
 
+#include <QUaCommonDialog>
+#include <QUaLogWidget>
+
 QString QUaAcFullUi::m_strAppName   = QObject::tr("QUaUserAccess GUI");
 QString QUaAcFullUi::m_strUntitiled = QObject::tr("Untitled");
 QString QUaAcFullUi::m_strDefault   = QObject::tr("Default" );
@@ -170,12 +173,38 @@ void QUaAcFullUi::on_openConfig()
 				return;
 			}
 			// try load config
-			auto strError = this->setXmlConfig(byteContents);
-			if (strError.contains("Error"))
+			auto errorLogs = this->setXmlConfig(byteContents);
+			if (!errorLogs.isEmpty())
 			{
-				msgBox.setText(strError);
-				msgBox.exec();
-				return;
+				// setup log widget
+				auto logWidget = new QUaLogWidget;
+				logWidget->setFilterVisible(false);
+				logWidget->setSettingsVisible(false);
+				logWidget->setClearVisible(false);
+				logWidget->setColumnVisible(QUaLogWidget::Columns::Timestamp, false);
+				logWidget->setColumnVisible(QUaLogWidget::Columns::Category, false);
+				logWidget->setLevelColor(QUaLogLevel::Error, QBrush(QColor("#8E2F1C")));
+				logWidget->setLevelColor(QUaLogLevel::Warning, QBrush(QColor("#766B0F")));
+				logWidget->setLevelColor(QUaLogLevel::Info, QBrush(QColor("#265EB6")));
+				bool hasError = false;
+				while (errorLogs.count() > 0)
+				{
+					auto errorLog = errorLogs.dequeue();
+					hasError = hasError || errorLog.level == QUaLogLevel::Error ? true : false;
+					logWidget->addLog(errorLog);
+				}
+				// NOTE : dialog takes ownershit
+				QUaCommonDialog dialog(this);
+				dialog.setWindowTitle(tr("Config Issues"));
+				dialog.setWidget(logWidget);
+				dialog.clearButtons();
+				dialog.addButton(tr("Close"), QDialogButtonBox::ButtonRole::AcceptRole);
+				dialog.exec();
+				if (hasError)
+				{
+					this->on_closeConfig();
+					return;
+				}
 			}
 			// update title
 			this->setWindowTitle(m_strTitle.arg(strConfigFileName).arg(QUaAcFullUi::m_strAppName));
@@ -720,32 +749,37 @@ QByteArray QUaAcFullUi::xmlConfig()
 	return doc.toByteArray();
 }
 
-QString QUaAcFullUi::setXmlConfig(const QByteArray & xmlConfig)
+QQueue<QUaLog> QUaAcFullUi::setXmlConfig(const QByteArray & xmlConfig)
 {
-	QString strError;
+	QQueue<QUaLog> errorLogs;
 	// set to dom doc
 	QDomDocument doc;
 	int line, col;
+	QString strError;
 	doc.setContent(xmlConfig, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
-		strError = tr("%1 : Invalid XML in Line %2 Column %3 Error %4.\n").arg("Error").arg(line).arg(col).arg(strError);
-		return strError;
+		errorLogs << QUaLog(
+			tr("Invalid XML in Line %2 Column %3 Error %4.").arg(line).arg(col).arg(strError),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return errorLogs;
 	}
 	// get list of params
 	QDomElement elemApp = doc.firstChildElement(QUaAcFullUi::staticMetaObject.className());
 	if (elemApp.isNull())
 	{
-		strError = tr("%1 : No Application %2 element found in XML config.\n").arg("Error").arg(QUaAcFullUi::staticMetaObject.className());
-		return strError;
+		errorLogs << QUaLog(
+			tr("No Application %1 element found in XML config.").arg(QUaAcFullUi::staticMetaObject.className()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
+		return errorLogs;
 	}
 	// load config from xml
-	this->fromDomElement(elemApp, strError);
-	if (strError.isEmpty())
-	{
-		strError = "Success.\n";
-	}
-	return strError;
+	this->fromDomElement(elemApp, errorLogs);
+	return errorLogs;
 }
 
 QDomElement QUaAcFullUi::toDomElement(QDomDocument & domDoc) const
@@ -763,33 +797,45 @@ QDomElement QUaAcFullUi::toDomElement(QDomDocument & domDoc) const
 	return elemApp;
 }
 
-void QUaAcFullUi::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaAcFullUi::fromDomElement(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// access control
 	QDomElement elemAc = domElem.firstChildElement(QUaAccessControl::staticMetaObject.className());
 	if (elemAc.isNull())
 	{
-		strError = tr("%1 : No Access Control %2 element found in XML config.\n").arg("Error").arg(QUaAccessControl::staticMetaObject.className());
+		errorLogs << QUaLog(
+			tr("No Access Control %1 element found in XML config.").arg(QUaAccessControl::staticMetaObject.className()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
 	QUaAccessControl * ac = this->accessControl();
-	ac->fromDomElement(elemAc, strError);
+	ac->fromDomElement(elemAc, errorLogs);
 	// widgets
 	QDomElement elemAcW = domElem.firstChildElement(QUaAcDockWidgets<QUaAcFullUi>::m_strXmlName);
 	if (elemAcW.isNull())
 	{
-		strError = tr("%1 : No Access Control Widgets %2 element found in XML config.\n").arg("Error").arg(QUaAcDockWidgets<QUaAcFullUi>::m_strXmlName);
+		errorLogs << QUaLog(
+			tr("No Access Control Widgets %1 element found in XML config.").arg(QUaAcDockWidgets<QUaAcFullUi>::m_strXmlName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
-	m_acWidgets->fromDomElement(elemAcW, strError);
+	m_acWidgets->fromDomElement(elemAcW, errorLogs);
 	// layouts
 	QDomElement elemLayouts = domElem.firstChildElement(QUaAcDocking::m_strXmlName);
 	if (elemLayouts.isNull())
 	{
-		strError = tr("%1 : No Docking Layouts %2 element found in XML config.\n").arg("Error").arg(QUaAcDocking::m_strXmlName);
+		errorLogs << QUaLog(
+			tr("No Docking Layouts %1 element found in XML config.").arg(QUaAcDocking::m_strXmlName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		);
 		return;
 	}
-	m_dockManager->fromDomElement(ac, elemLayouts, strError);
+	m_dockManager->fromDomElement(ac, elemLayouts, errorLogs);
 }
 
 

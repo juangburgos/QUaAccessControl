@@ -486,14 +486,22 @@ QDomElement QUaPermissions::toDomElement(QDomDocument & domDoc) const
 	return elem;
 }
 
-void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
+void QUaPermissions::fromDomElement(QDomElement & domElem, QQueue<QUaLog>& errorLogs)
 {
 	// NOTE : at this point id must already be set
 	Q_ASSERT(this->getId().compare(domElem.attribute("Id"), Qt::CaseSensitive) == 0);
 	// load permissions if any
 	if (domElem.hasAttribute("Permissions") && !domElem.attribute("Permissions").isEmpty())
 	{
-		strError += this->setPermissions(domElem.attribute("Permissions"));
+		QString strError = this->setPermissions(domElem.attribute("Permissions"));
+		if (strError.contains("Error"))
+		{
+			errorLogs << QUaLog(
+				strError,
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			);
+		}
 	}
 	// can read
 	QDomElement elemReadList = domElem.firstChildElement("CanReadList");
@@ -505,7 +513,15 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listReadRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			strError += this->addRoleCanRead(elem.attribute("NodeId"));
+			QString strError = this->addRoleCanRead(elem.attribute("NodeId"));
+			if (strError.contains("Error"))
+			{
+				errorLogs << QUaLog(
+					strError,
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+				);
+			}
 		}
 		// can read users
 		QDomNodeList listReadUsers = elemReadList.elementsByTagName("User");
@@ -513,7 +529,15 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listReadUsers.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			strError += this->addUserCanRead(elem.attribute("NodeId"));
+			QString strError = this->addUserCanRead(elem.attribute("NodeId"));
+			if (strError.contains("Error"))
+			{
+				errorLogs << QUaLog(
+					strError,
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+				);
+			}
 		}
 	}
 	// can write
@@ -526,7 +550,15 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listWriteRoles.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			strError += this->addRoleCanWrite(elem.attribute("NodeId"));
+			QString strError = this->addRoleCanWrite(elem.attribute("NodeId"));
+			if (strError.contains("Error"))
+			{
+				errorLogs << QUaLog(
+					strError,
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+				);
+			}
 		}
 		// can write users
 		QDomNodeList listWriteUsers = elemWriteList.elementsByTagName("User");
@@ -534,7 +566,15 @@ void QUaPermissions::fromDomElement(QDomElement & domElem, QString & strError)
 		{
 			QDomElement elem = listWriteUsers.at(i).toElement();
 			Q_ASSERT(!elem.isNull());
-			strError += this->addUserCanWrite(elem.attribute("NodeId"));
+			QString strError = this->addUserCanWrite(elem.attribute("NodeId"));
+			if (strError.contains("Error"))
+			{
+				errorLogs << QUaLog(
+					strError,
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+				);
+			}
 		}
 	}
 }

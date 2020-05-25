@@ -28,7 +28,7 @@ public:
 
 	// C++ API
 
-	QString addUser(const QString &strName, const QByteArray &bytaHash);
+	QQueue<QUaLog> addUser(const QString &strName, const QByteArray &bytaHash);
 
 	QList<QUaUser*> users() const;
 
@@ -38,8 +38,8 @@ public:
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
-	void        fromDomElementInstantiate(QDomElement  & domElem, QString &strError);
-	void        fromDomElementConfigure  (QDomElement  & domElem, QString &strError);
+	void        fromDomElementInstantiate(QDomElement  & domElem, QQueue<QUaLog>& errorLogs);
+	void        fromDomElementConfigure  (QDomElement  & domElem, QQueue<QUaLog>& errorLogs);
 
 signals:
 	void userAdded  (QUaUser * user);
@@ -49,7 +49,7 @@ private slots:
 	void on_childAdded(QUaNode * node);
 
 private:
-	bool isUserNameValid(QString &strName, QString &strError);
+	bool isUserNameValid(QString &strName, QQueue<QUaLog>& errorLogs);
 };
 
 #endif // QUAUSERLIST_H
