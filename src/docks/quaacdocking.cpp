@@ -30,6 +30,7 @@ QUaAcDocking::QUaAcDocking(QMainWindow           * parent,
 	m_dockListPerms   = nullptr;
 	m_layoutListPerms = nullptr;
 	m_dockManager     = new QAdDockManager(parent);
+	m_dockManager->setStyleSheet("");
 	// docks menu
 	m_docksMenu = new QMenu(tr("Docks"), m_dockManager);
 	m_docksMenu->setToolTipsVisible(true);
@@ -246,31 +247,31 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	});
 	// no permissions initially
 	this->setDockPermissions(strDockName, nullptr);
-	// NOTE : unavoidable style fix
-	QObject::connect(pDock, &QAdDockWidget::viewToggled, this,
-	[pDock](bool Open) {
-		if (!Open)
-		{
-			return;
-		}
-		const QString strStyleSheet =
-			"ads--CDockWidget { border-color: #A0A0A0; } "
-			"ads--CDockWidgetTab { background: transparent; border-color: #A0A0A0; } "
-			"ads--CDockAreaWidget { border-color: #A0A0A0; } ";
-		pDock->setStyleSheet(strStyleSheet);
-		auto area = pDock->dockAreaWidget();
-		if (!area)
-		{
-			return;
-		}
-		area->setStyleSheet(strStyleSheet);
-		auto tab = area->findChild<QAdDockWidgetTab*>();
-		if (!tab)
-		{
-			return;
-		}
-		tab->setStyleSheet(strStyleSheet);
-	});
+	//// NOTE : unavoidable style fix
+	//QObject::connect(pDock, &QAdDockWidget::viewToggled, this,
+	//[pDock](bool Open) {
+	//	if (!Open)
+	//	{
+	//		return;
+	//	}
+	//	const QString strStyleSheet =
+	//		"ads--CDockWidget { border-color: #A0A0A0; } "
+	//		"ads--CDockWidgetTab { background: transparent; border-color: #A0A0A0; } "
+	//		"ads--CDockAreaWidget { border-color: #A0A0A0; } ";
+	//	pDock->setStyleSheet(strStyleSheet);
+	//	auto area = pDock->dockAreaWidget();
+	//	if (!area)
+	//	{
+	//		return;
+	//	}
+	//	area->setStyleSheet(strStyleSheet);
+	//	auto tab = area->findChild<QAdDockWidgetTab*>();
+	//	if (!tab)
+	//	{
+	//		return;
+	//	}
+	//	tab->setStyleSheet(strStyleSheet);
+	//});
 	return wAreaNew;
 }
 
