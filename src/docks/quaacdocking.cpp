@@ -591,7 +591,10 @@ void QUaAcDocking::setLayout(const QString & strLayoutName, const bool& force/* 
 	// emit signal
 	emit this->aboutToChangeLayout();
 	// set new layout
-	m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
+	if (m_dockManager->centralWidget())
+	{
+		m_dockManager->restoreState(m_mapLayouts.value(m_currLayout).byteState);
+	}	
 	// update permissions
 	this->updateDockPermissions();
 	// check new layout action
