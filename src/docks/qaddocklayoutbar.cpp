@@ -154,7 +154,8 @@ void QAdDockLayoutBar::on_comboBoxLayout_currentIndexChanged(int index)
 	bool canWrite = perms ? perms->canUserWrite(m_loggedUser) : true;
 	this->setLayoutActionsCanWrite(canWrite);
 	// ask to change layout
-	emit this->setLayout(ui->comboBoxLayout->currentText());
+	auto strLayout = ui->comboBoxLayout->currentText();
+	emit this->setLayout(strLayout);
 }
 
 void QAdDockLayoutBar::updateLayoutListPermissions()
