@@ -471,7 +471,7 @@ void QUaAcDocking::updateLayoutPermissions()
 void QUaAcDocking::updateDockPermissions()
 {
 	// update dock permissions
-	for (auto dockName : this->dockNames())
+	for (auto &dockName : this->dockNames())
 	{
 		this->updateDockPermissions(dockName, m_mapDockPerms.value(dockName, nullptr));
 	}
@@ -680,7 +680,7 @@ QDomElement QUaAcDocking::toDomElement(QDomDocument & domDoc) const
 		elemDock.setAttribute("LayoutListPermissions", m_layoutListPerms->nodeId());
 	}
 	// NOTE : only layouts, docks are serialized by their factories (which might need to serilize extra info)
-	for (auto layoutName : this->layoutNames())
+	for (auto &layoutName : this->layoutNames())
 	{
 		QDomElement elemLayout = domDoc.createElement(QUaAcDocking::m_strXmlLayoutName);
 		// set name

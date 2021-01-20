@@ -72,17 +72,18 @@ QUaPermissionsTable::QUaPermissionsTable(QWidget *parent) :
 	});
 
 	// setup user table
-	ui->tableViewPerms->setModel(&m_proxyPerms);
-	ui->tableViewPerms->setAlternatingRowColors(true);
-	ui->tableViewPerms->horizontalHeader()->setStretchLastSection(true);
-	ui->tableViewPerms->verticalHeader()->setVisible(false);
-	ui->tableViewPerms->setSortingEnabled(true);
-	ui->tableViewPerms->sortByColumn((int)Headers::Id, Qt::SortOrder::AscendingOrder);
-	ui->tableViewPerms->setSelectionBehavior(QAbstractItemView::SelectRows);
-	ui->tableViewPerms->setSelectionMode(QAbstractItemView::SingleSelection);
-	ui->tableViewPerms->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	ui->treeViewPerms->setModel(&m_proxyPerms);
+	ui->treeViewPerms->setAlternatingRowColors(true);
+	// NOTE : before it was table
+	//ui->treeViewPerms->horizontalHeader()->setStretchLastSection(true);
+	//ui->treeViewPerms->verticalHeader()->setVisible(false);
+	ui->treeViewPerms->setSortingEnabled(true);
+	ui->treeViewPerms->sortByColumn((int)Headers::Id, Qt::SortOrder::AscendingOrder);
+	ui->treeViewPerms->setSelectionBehavior(QAbstractItemView::SelectRows);
+	ui->treeViewPerms->setSelectionMode(QAbstractItemView::SingleSelection);
+	ui->treeViewPerms->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	// setup user table interactions
-	QObject::connect(ui->tableViewPerms->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+	QObject::connect(ui->treeViewPerms->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
 	[this](const QModelIndex &current, const QModelIndex &previous) {
 		auto itemPrev = m_modelPerms.itemFromIndex(m_proxyPerms.mapToSource(previous));
 		auto itemCurr = m_modelPerms.itemFromIndex(m_proxyPerms.mapToSource(current));
@@ -147,7 +148,7 @@ void QUaPermissionsTable::setAccessControl(QUaAccessControl * ac)
 		auto item = this->handlePermssionsAdded(perms);
 		// select newly created
 		auto index = m_proxyPerms.mapFromSource(item->index());
-		ui->tableViewPerms->setCurrentIndex(index);
+		ui->treeViewPerms->setCurrentIndex(index);
 	}, Qt::QueuedConnection);
 
 	// add already existing permissions

@@ -71,17 +71,18 @@ QUaUserTable::QUaUserTable(QWidget *parent) :
 	});
 
 	// setup user table
-	ui->tableViewUsers->setModel(&m_proxyUsers);
-	ui->tableViewUsers->setAlternatingRowColors(true);
-	ui->tableViewUsers->horizontalHeader()->setStretchLastSection(true);
-	ui->tableViewUsers->verticalHeader()->setVisible(false);
-	ui->tableViewUsers->setSortingEnabled(true);
-	ui->tableViewUsers->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
-	ui->tableViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
-	ui->tableViewUsers->setSelectionMode(QAbstractItemView::SingleSelection);
-	ui->tableViewUsers->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	ui->treeViewUsers->setModel(&m_proxyUsers);
+	ui->treeViewUsers->setAlternatingRowColors(true);
+	// NOTE : before it was table
+	//ui->treeViewUsers->horizontalHeader()->setStretchLastSection(true);
+	//ui->treeViewUsers->verticalHeader()->setVisible(false);
+	ui->treeViewUsers->setSortingEnabled(true);
+	ui->treeViewUsers->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
+	ui->treeViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
+	ui->treeViewUsers->setSelectionMode(QAbstractItemView::SingleSelection);
+	ui->treeViewUsers->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	// setup user table interactions
-	QObject::connect(ui->tableViewUsers->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+	QObject::connect(ui->treeViewUsers->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
 		[this](const QModelIndex &current, const QModelIndex &previous) {
 		auto itemPrev = m_modelUsers.itemFromIndex(m_proxyUsers.mapToSource(previous));
 		auto itemCurr = m_modelUsers.itemFromIndex(m_proxyUsers.mapToSource(current));
@@ -146,7 +147,7 @@ void QUaUserTable::setAccessControl(QUaAccessControl * ac)
 		auto item = this->handleUserAdded(user);
 		// select newly created
 		auto index = m_proxyUsers.mapFromSource(item->index());
-		ui->tableViewUsers->setCurrentIndex(index);
+		ui->treeViewUsers->setCurrentIndex(index);
 	}, Qt::QueuedConnection);
 
 	// add already existing users

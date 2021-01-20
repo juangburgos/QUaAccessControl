@@ -32,15 +32,16 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
 	// setup role sort filter
 	m_proxyRoles.setSourceModel(&m_modelRoles);
 	// setup role table
-	ui->tableViewRoles->setModel(&m_proxyRoles);
-	ui->tableViewRoles->setAlternatingRowColors(true);
-	ui->tableViewRoles->horizontalHeader()->setStretchLastSection(true);
-	ui->tableViewRoles->verticalHeader()->setVisible(false);
-	ui->tableViewRoles->setSortingEnabled(true);
-	ui->tableViewRoles->sortByColumn((int)RoleHeaders::Name, Qt::SortOrder::AscendingOrder);
-	ui->tableViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
-	ui->tableViewRoles->setSelectionMode(QAbstractItemView::SingleSelection);
-	ui->tableViewRoles->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	ui->treeViewRoles->setModel(&m_proxyRoles);
+	ui->treeViewRoles->setAlternatingRowColors(true);
+	// NOTE : before it was table
+	//ui->treeViewRoles->horizontalHeader()->setStretchLastSection(true);
+	//ui->treeViewRoles->verticalHeader()->setVisible(false);
+	ui->treeViewRoles->setSortingEnabled(true);
+	ui->treeViewRoles->sortByColumn((int)RoleHeaders::Name, Qt::SortOrder::AscendingOrder);
+	ui->treeViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
+	ui->treeViewRoles->setSelectionMode(QAbstractItemView::SingleSelection);
+	ui->treeViewRoles->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	// setup users table model
 	m_modelUsers.setColumnCount((int)UserHeaders::Invalid);
@@ -53,15 +54,16 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
 	// setup user sort filter
 	m_proxyUsers.setSourceModel(&m_modelUsers);
 	// setup user table
-	ui->tableViewUsers->setModel(&m_proxyUsers);
-	ui->tableViewUsers->setAlternatingRowColors(true);
-	ui->tableViewUsers->horizontalHeader()->setStretchLastSection(true);
-	ui->tableViewUsers->verticalHeader()->setVisible(false);
-	ui->tableViewUsers->setSortingEnabled(true);
-	ui->tableViewUsers->sortByColumn((int)UserHeaders::Name, Qt::SortOrder::AscendingOrder);
-	ui->tableViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
-	ui->tableViewUsers->setSelectionMode(QAbstractItemView::SingleSelection);
-	ui->tableViewUsers->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	ui->treeViewUsers->setModel(&m_proxyUsers);
+	ui->treeViewUsers->setAlternatingRowColors(true);
+	// NOTE : before it was table
+	//ui->treeViewUsers->horizontalHeader()->setStretchLastSection(true);
+	//ui->treeViewUsers->verticalHeader()->setVisible(false);
+	ui->treeViewUsers->setSortingEnabled(true);
+	ui->treeViewUsers->sortByColumn((int)UserHeaders::Name, Qt::SortOrder::AscendingOrder);
+	ui->treeViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
+	ui->treeViewUsers->setSelectionMode(QAbstractItemView::SingleSelection);
+	ui->treeViewUsers->setEditTriggers(QAbstractItemView::NoEditTriggers);
 }
 
 QUaPermissionsWidgetEdit::~QUaPermissionsWidgetEdit()
@@ -99,8 +101,8 @@ void QUaPermissionsWidgetEdit::setAccessReadOnly(const bool & readOnly)
 {
 	m_accessReadOnly = readOnly;
 	// since read only, no select
-	ui->tableViewRoles->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
-	ui->tableViewUsers->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
+	ui->treeViewRoles->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
+	ui->treeViewUsers->setSelectionMode(m_accessReadOnly ? QAbstractItemView::NoSelection : QAbstractItemView::SingleSelection);
 	// TODO : more efficient implementation?
 	this->setRoleAccessMap(this->roleAccessMap());
 	this->setUserAccessMap(this->userAccessMap());
@@ -108,16 +110,16 @@ void QUaPermissionsWidgetEdit::setAccessReadOnly(const bool & readOnly)
 
 bool QUaPermissionsWidgetEdit::areAccessVisible() const
 {
-	return ui->tableViewRoles->isEnabled();
+	return ui->treeViewRoles->isEnabled();
 }
 
 void QUaPermissionsWidgetEdit::setAccessVisible(const bool & isVisible)
 {
-	ui->tableViewRoles->setEnabled(isVisible);
-	ui->tableViewRoles->setVisible(isVisible);
+	ui->treeViewRoles->setEnabled(isVisible);
+	ui->treeViewRoles->setVisible(isVisible);
 	ui->labelRoles->setVisible(isVisible);
-	ui->tableViewUsers->setEnabled(isVisible);
-	ui->tableViewUsers->setVisible(isVisible);
+	ui->treeViewUsers->setEnabled(isVisible);
+	ui->treeViewUsers->setVisible(isVisible);
 	ui->labelUsers->setVisible(isVisible);
 }
 
@@ -153,14 +155,14 @@ QUaRoleAccessMap QUaPermissionsWidgetEdit::roleAccessMap() const
 		auto iName = m_modelRoles.item(row, (int)RoleHeaders::Name);
 		// read column
 		auto iRead = m_modelRoles.item(row, (int)RoleHeaders::Read);
-		pWidget = ui->tableViewRoles->indexWidget(m_proxyRoles.mapFromSource(iRead->index()));
+		pWidget = ui->treeViewRoles->indexWidget(m_proxyRoles.mapFromSource(iRead->index()));
 		Q_CHECK_PTR(pWidget);
 		pChBox = pWidget->findChild<QCheckBox*>("Read");
 		Q_CHECK_PTR(pChBox);
 		retMap[iName->text()].canRead = pChBox->isChecked();
 		// write column
 		auto iWrite = m_modelRoles.item(row, (int)RoleHeaders::Write);
-		pWidget = ui->tableViewRoles->indexWidget(m_proxyRoles.mapFromSource(iWrite->index()));
+		pWidget = ui->treeViewRoles->indexWidget(m_proxyRoles.mapFromSource(iWrite->index()));
 		Q_CHECK_PTR(pWidget);
 		pChBox = pWidget->findChild<QCheckBox*>("Write");
 		Q_CHECK_PTR(pChBox);
@@ -225,7 +227,7 @@ void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewRoles->setIndexWidget(m_proxyRoles.mapFromSource(iRead->index()), pWidget);
+		ui->treeViewRoles->setIndexWidget(m_proxyRoles.mapFromSource(iRead->index()), pWidget);
 
 		// write column
 		auto iWrite = new QStandardItem();
@@ -250,7 +252,7 @@ void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewRoles->setIndexWidget(m_proxyRoles.mapFromSource(iWrite->index()), pWidget);
+		ui->treeViewRoles->setIndexWidget(m_proxyRoles.mapFromSource(iWrite->index()), pWidget);
 
 		// exit
 		return;
@@ -259,14 +261,14 @@ void QUaPermissionsWidgetEdit::updateRoleAccess(const QString & strRoleName,
 	auto row = match->row();
 	// read column
 	auto iRead   = m_modelRoles.item(row, (int)RoleHeaders::Read);
-	pWidget = ui->tableViewRoles->indexWidget(m_proxyRoles.mapFromSource(iRead->index()));
+	pWidget = ui->treeViewRoles->indexWidget(m_proxyRoles.mapFromSource(iRead->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox  = pWidget->findChild<QCheckBox*>("Read");
 	Q_CHECK_PTR(pChBox);
 	pChBox->setChecked(roleAccess.canRead);
 	// write column
 	auto iWrite = m_modelRoles.item(row, (int)RoleHeaders::Write);
-	pWidget = ui->tableViewRoles->indexWidget(m_proxyRoles.mapFromSource(iWrite->index()));
+	pWidget = ui->treeViewRoles->indexWidget(m_proxyRoles.mapFromSource(iWrite->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox = pWidget->findChild<QCheckBox*>("Write");
 	Q_CHECK_PTR(pChBox);
@@ -284,14 +286,14 @@ QUaUserAccessMap QUaPermissionsWidgetEdit::userAccessMap() const
 		auto iName = m_modelUsers.item(row, (int)UserHeaders::Name);
 		// read column
 		auto iRead = m_modelUsers.item(row, (int)UserHeaders::UserRead);
-		pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRead->index()));
+		pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRead->index()));
 		Q_CHECK_PTR(pWidget);
 		pChBox = pWidget->findChild<QCheckBox*>("UserRead");
 		Q_CHECK_PTR(pChBox);
 		retMap[iName->text()].canUserRead = pChBox->isChecked();
 		// write column
 		auto iWrite = m_modelUsers.item(row, (int)UserHeaders::UserWrite);
-		pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iWrite->index()));
+		pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iWrite->index()));
 		Q_CHECK_PTR(pWidget);
 		pChBox = pWidget->findChild<QCheckBox*>("UserWrite");
 		Q_CHECK_PTR(pChBox);
@@ -359,7 +361,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iUserRead->index()), pWidget);
+		ui->treeViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iUserRead->index()), pWidget);
 
 		// write user column
 		auto iUserWrite = new QStandardItem();
@@ -384,7 +386,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iUserWrite->index()), pWidget);
+		ui->treeViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iUserWrite->index()), pWidget);
 
 		// read role column
 		auto iRoleRead = new QStandardItem();
@@ -407,7 +409,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iRoleRead->index()), pWidget);
+		ui->treeViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iRoleRead->index()), pWidget);
 
 		// write role column
 		auto iRoleWrite = new QStandardItem();
@@ -430,7 +432,7 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 		pLayout->addSpacerItem(pSpace2);
 		pLayout->setContentsMargins(5, 0, 5, 0);
 		pWidget->setLayout(pLayout);
-		ui->tableViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iRoleWrite->index()), pWidget);
+		ui->treeViewUsers->setIndexWidget(m_proxyUsers.mapFromSource(iRoleWrite->index()), pWidget);
 
 		// exit
 		return;
@@ -439,28 +441,28 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 	auto row = match->row();
 	// read user column
 	auto iUserRead   = m_modelUsers.item(row, (int)UserHeaders::UserRead);
-	pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iUserRead->index()));
+	pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iUserRead->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox  = pWidget->findChild<QCheckBox*>("UserRead");
 	Q_CHECK_PTR(pChBox);
 	pChBox->setChecked(userAccess.canUserRead);
 	// write user column
 	auto iUserWrite = m_modelUsers.item(row, (int)UserHeaders::UserWrite);
-	pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iUserWrite->index()));
+	pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iUserWrite->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox = pWidget->findChild<QCheckBox*>("UserWrite");
 	Q_CHECK_PTR(pChBox);
 	pChBox->setChecked(userAccess.canUserWrite);
 	// read role column
 	auto iRoleRead = m_modelUsers.item(row, (int)UserHeaders::RoleRead);
-	pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRoleRead->index()));
+	pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRoleRead->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox = pWidget->findChild<QCheckBox*>("RoleRead");
 	Q_CHECK_PTR(pChBox);
 	pChBox->setChecked(userAccess.canRoleRead);
 	// write role column
 	auto iRoleWrite = m_modelUsers.item(row, (int)UserHeaders::RoleWrite);
-	pWidget = ui->tableViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRoleWrite->index()));
+	pWidget = ui->treeViewUsers->indexWidget(m_proxyUsers.mapFromSource(iRoleWrite->index()));
 	Q_CHECK_PTR(pWidget);
 	pChBox = pWidget->findChild<QCheckBox*>("RoleWrite");
 	Q_CHECK_PTR(pChBox);

@@ -72,17 +72,18 @@ QUaRoleTable::QUaRoleTable(QWidget *parent) :
 	});
 
 	// setup user table
-	ui->tableViewRoles->setModel(&m_proxyRoles);
-	ui->tableViewRoles->setAlternatingRowColors(true);
-	ui->tableViewRoles->horizontalHeader()->setStretchLastSection(true);
-	ui->tableViewRoles->verticalHeader()->setVisible(false);
-	ui->tableViewRoles->setSortingEnabled(true);
-	ui->tableViewRoles->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
-	ui->tableViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
-	ui->tableViewRoles->setSelectionMode(QAbstractItemView::SingleSelection);
-	ui->tableViewRoles->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	ui->treeViewRoles->setModel(&m_proxyRoles);
+	ui->treeViewRoles->setAlternatingRowColors(true);
+	// NOTE : before it was table
+	//ui->treeViewRoles->horizontalHeader()->setStretchLastSection(true);
+	//ui->treeViewRoles->verticalHeader()->setVisible(false);
+	ui->treeViewRoles->setSortingEnabled(true);
+	ui->treeViewRoles->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
+	ui->treeViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
+	ui->treeViewRoles->setSelectionMode(QAbstractItemView::SingleSelection);
+	ui->treeViewRoles->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	// setup user table interactions
-	QObject::connect(ui->tableViewRoles->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+	QObject::connect(ui->treeViewRoles->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
 		[this](const QModelIndex &current, const QModelIndex &previous) {
 		auto itemPrev = m_modelRoles.itemFromIndex(m_proxyRoles.mapToSource(previous));
 		auto itemCurr = m_modelRoles.itemFromIndex(m_proxyRoles.mapToSource(current));
@@ -147,7 +148,7 @@ void QUaRoleTable::setAccessControl(QUaAccessControl * ac)
 		auto item = this->handleRoleAdded(role);
 		// select newly created
 		auto index = m_proxyRoles.mapFromSource(item->index());
-		ui->tableViewRoles->setCurrentIndex(index);
+		ui->treeViewRoles->setCurrentIndex(index);
 	}, Qt::QueuedConnection);
 
 	// add already existing roles
