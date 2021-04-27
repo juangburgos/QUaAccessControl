@@ -77,6 +77,9 @@ public:
 	bool isDockVisible(const QString &strDockName);
 	bool setIsDockVisible(const QString &strDockName, const bool &visible);
 
+	bool isDockActive(const QString& strDockName);
+	bool setIsDockActive(const QString& strDockName, const bool& active);
+
 	QMenu * docksMenu();
 
 	bool              hasDockPermissions(const QString &strDockName) const;

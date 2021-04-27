@@ -17,6 +17,7 @@
 #include <QUaPermissionsWidgetEdit>
 
 #include <QMessageBox>
+#include <QSettings>
 
 template <class T>
 class QUaAcDockWidgets : public QObject
@@ -29,6 +30,9 @@ public:
 	void updateWidgetsPermissions();
 	void clearWidgets();
 	void closeConfig();
+
+	void loadSettings(const QSettings &settings);
+	void saveSettings(QSettings& settings);
 
 	// XML import / export
 	QDomElement toDomElement(QDomDocument & domDoc) const;
@@ -171,6 +175,18 @@ inline void QUaAcDockWidgets<T>::closeConfig()
 	this->clearWidgetUserEdit();
 	this->clearWidgetRoleEdit();
 	this->clearWidgetPermissionsEdit();
+}
+
+template<class T>
+inline void QUaAcDockWidgets<T>::loadSettings(const QSettings& settings)
+{
+	Q_UNUSED(settings)
+}
+
+template<class T>
+inline void QUaAcDockWidgets<T>::saveSettings(QSettings& settings)
+{
+	Q_UNUSED(settings)
 }
 
 template<class T>

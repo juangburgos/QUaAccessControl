@@ -343,6 +343,48 @@ bool QUaAcDocking::setIsDockVisible(const QString & strDockName, const bool & vi
 	return true;
 }
 
+bool QUaAcDocking::isDockActive(const QString& strDockName)
+{
+	Q_ASSERT_X(this->hasDock(strDockName), "QUaAcDocking", "Dock does not exist.");
+	if (!this->hasDock(strDockName))
+	{
+		return false;
+	}
+	auto dock = m_dockManager->findDockWidget(strDockName);
+	Q_ASSERT_X(dock, "QUaAcDocking", "Invalid dock.");
+	if (!dock)
+	{
+		return false;
+	}
+	return dock->isCurrentTab();
+}
+
+bool QUaAcDocking::setIsDockActive(const QString& strDockName, const bool& active)
+{
+	Q_ASSERT_X(this->hasDock(strDockName), "QUaAcDocking", "Dock does not exist.");
+	if (!this->hasDock(strDockName))
+	{
+		return false;
+	}
+	auto dock = m_dockManager->findDockWidget(strDockName);
+	Q_ASSERT_X(dock, "QUaAcDocking", "Invalid dock.");
+	if (!dock)
+	{
+		return false;
+	}
+	// check if already
+	if (
+		(!dock->isCurrentTab() && !active) ||
+		(dock->isCurrentTab() && active)
+		)
+	{
+		return true;
+	}
+	dock->setAsCurrentTab();
+	dock->raise();
+	return true;
+}
+
 QMenu * QUaAcDocking::docksMenu()
 {
 	return m_docksMenu;
