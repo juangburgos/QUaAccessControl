@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>252</width>
-    <height>264</height>
+    <width>345</width>
+    <height>371</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -19,7 +19,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -32,51 +32,132 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelUserName">
-     <property name="text">
-      <string>User Name : </string>
+   <item>
+    <widget class="QFrame" name="frameForm">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
      </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="lineWidth">
+      <number>0</number>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelUserName">
+        <property name="text">
+         <string>User Name : </string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEditUserName"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelRole">
+        <property name="text">
+         <string>Role : </string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QFrame" name="frameRole">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>0</number>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QUaAcReadOnlyComboBox" name="comboBoxRole"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonShowRoles">
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelPassword">
+        <property name="text">
+         <string>Password : </string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEditPass">
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="labelRepeat">
+        <property name="text">
+         <string>Reenter : </string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEditRepeat">
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="labelHash">
+        <property name="text">
+         <string>Hash : </string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QPlainTextEdit" name="plainTextEditHash"/>
+      </item>
+     </layout>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="lineEditUserName"/>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="labelRole">
-     <property name="text">
-      <string>Role : </string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QUaAcReadOnlyComboBox" name="comboBoxRole"/>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="labelPassword">
-     <property name="text">
-      <string>Password : </string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLineEdit" name="lineEditPass">
-     <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="labelHash">
-     <property name="text">
-      <string>Hash : </string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QPlainTextEdit" name="plainTextEditHash"/>
-   </item>
-   <item row="5" column="0" colspan="2">
+   <item>
     <widget class="QFrame" name="frameEditActions">
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
@@ -97,17 +178,24 @@
       <property name="bottomMargin">
        <number>0</number>
       </property>
-      <item row="0" column="0" colspan="3">
+      <item row="1" column="0">
+       <widget class="QPushButton" name="pushButtonDelete">
+        <property name="text">
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" colspan="4">
        <widget class="Line" name="line">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QPushButton" name="pushButtonDelete">
+      <item row="1" column="3">
+       <widget class="QPushButton" name="pushButtonApply">
         <property name="text">
-         <string>Delete</string>
+         <string>Apply</string>
         </property>
        </widget>
       </item>
@@ -125,27 +213,13 @@
        </spacer>
       </item>
       <item row="1" column="2">
-       <widget class="QPushButton" name="pushButtonApply">
+       <widget class="QPushButton" name="pushButtonReset">
         <property name="text">
-         <string>Apply</string>
+         <string>Reset</string>
         </property>
        </widget>
       </item>
      </layout>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="labelRepeat">
-     <property name="text">
-      <string>Reenter : </string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLineEdit" name="lineEditRepeat">
-     <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
-     </property>
     </widget>
    </item>
   </layout>

@@ -21,6 +21,7 @@ QUaDockWidgetPerms::QUaDockWidgetPerms(QWidget *parent) :
 	ui->widgetPermsView->setIdVisible(false);
 	ui->widgetPermsView->setAccessReadOnly(true);
 	// events
+	QObject::connect(ui->pushButtonShowPerms, &QPushButton::clicked, this, &QUaDockWidgetPerms::showPermsClicked);
 	QObject::connect(ui->comboBoxPermissions, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &QUaDockWidgetPerms::on_currentIndexChanged);
 }
 

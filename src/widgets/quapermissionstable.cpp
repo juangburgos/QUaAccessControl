@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QMetaEnum>
 #include <QPainter>
+#include <QMenu>
 
 #include <QUaAccessControl>
 #include <QUaUser>
@@ -70,13 +71,9 @@ QUaPermissionsTable::QUaPermissionsTable(QWidget *parent) :
 		// return yes can read
 		return true;
 	});
-
-	// setup user table
+	// setup perms table
 	ui->treeViewPerms->setModel(&m_proxyPerms);
 	ui->treeViewPerms->setAlternatingRowColors(true);
-	// NOTE : before it was table
-	//ui->treeViewPerms->horizontalHeader()->setStretchLastSection(true);
-	//ui->treeViewPerms->verticalHeader()->setVisible(false);
 	ui->treeViewPerms->setSortingEnabled(true);
 	ui->treeViewPerms->sortByColumn((int)Headers::Id, Qt::SortOrder::AscendingOrder);
 	ui->treeViewPerms->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -102,6 +99,23 @@ QUaPermissionsTable::QUaPermissionsTable(QWidget *parent) :
 		// emit
 		emit this->permissionsSelectionChanged(nodePrev, nodeCurr);
 	});
+	// emit on double click
+	QObject::connect(ui->treeViewPerms, &QAbstractItemView::doubleClicked, this,
+	[this](const QModelIndex& index) {
+		auto item = m_modelPerms.itemFromIndex(m_proxyPerms.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto perms = item->data(QUaPermissionsTable::PointerRole).value<QUaPermissions*>();
+		if (!perms)
+		{
+			return;
+		}
+		this->permissionsDoubleClicked(perms);
+	});
+	// context menu
+	this->setupTableContextMenu();
 }
 
 QUaPermissionsTable::~QUaPermissionsTable()
@@ -206,6 +220,62 @@ void QUaPermissionsTable::on_pushButtonAdd_clicked()
 	this->showNewPermissionsDialog(dialog);
 }
 
+void QUaPermissionsTable::setupTableContextMenu()
+{
+	ui->treeViewPerms->setContextMenuPolicy(Qt::CustomContextMenu);
+	QObject::connect(ui->treeViewPerms, &QTreeView::customContextMenuRequested, this,
+	[this](const QPoint& point) {
+		QModelIndex index = ui->treeViewPerms->indexAt(point);
+		QMenu contextMenu(ui->treeViewPerms);
+		if (!index.isValid())
+		{
+			contextMenu.addAction(m_iconAdd, tr("Add Permissions"), this,
+				[this]() {
+					this->on_pushButtonAdd_clicked();
+				});
+			// exec
+			contextMenu.exec(ui->treeViewPerms->viewport()->mapToGlobal(point));
+			return;
+		}
+		auto item = m_modelPerms.itemFromIndex(m_proxyPerms.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto perms = item->data(QUaPermissionsTable::PointerRole).value<QUaPermissions*>();
+		if (!perms)
+		{
+			return;
+		}
+		// edit user
+		contextMenu.addAction(m_iconEdit, tr("Edit"), this,
+		[this, perms]() {
+			this->permissionsEditClicked(perms);
+		});
+		contextMenu.addSeparator();
+		// delete param
+		contextMenu.addAction(m_iconDelete, tr("Delete"), this,
+		[this, perms]() {
+			// are you sure?
+			auto res = QMessageBox::question(
+				this,
+				tr("Delete Permissions Confirmation"),
+				tr("Would you like to delete permissions %1?").arg(perms->getId()),
+				QMessageBox::StandardButton::Ok,
+				QMessageBox::StandardButton::Cancel
+			);
+			if (res != QMessageBox::StandardButton::Ok)
+			{
+				return;
+			}
+			// delete
+			perms->remove();
+		});
+		// exec
+		contextMenu.exec(ui->treeViewPerms->viewport()->mapToGlobal(point));
+	});
+}
+
 void QUaPermissionsTable::showNewPermissionsDialog(QUaAcCommonDialog & dialog)
 {
 	int res = dialog.exec();
@@ -254,4 +324,56 @@ QStandardItem * QUaPermissionsTable::handlePermssionsAdded(QUaPermissions * perm
 	});
 
 	return iId;
+}
+
+QIcon QUaPermissionsTable::iconAdd() const
+{
+	return m_iconAdd;
+}
+
+void QUaPermissionsTable::setIconAdd(const QIcon& icon)
+{
+	m_iconAdd = icon;
+}
+
+QIcon QUaPermissionsTable::iconEdit() const
+{
+	return m_iconEdit;
+}
+
+void QUaPermissionsTable::setIconEdit(const QIcon& icon)
+{
+	m_iconEdit = icon;
+}
+
+QIcon QUaPermissionsTable::iconDelete() const
+{
+	return m_iconDelete;
+}
+
+void QUaPermissionsTable::setIconDelete(const QIcon& icon)
+{
+	m_iconDelete = icon;
+}
+
+QIcon QUaPermissionsTable::iconClear() const
+{
+	return m_iconClear;
+}
+
+void QUaPermissionsTable::setIconClear(const QIcon& icon)
+{
+	m_iconClear = icon;
+}
+
+QByteArray QUaPermissionsTable::headerState() const
+{
+	auto header = ui->treeViewPerms->header();
+	return header->saveState();
+}
+
+void QUaPermissionsTable::setHeaderState(const QByteArray& state)
+{
+	auto header = ui->treeViewPerms->header();
+	header->restoreState(state);
 }

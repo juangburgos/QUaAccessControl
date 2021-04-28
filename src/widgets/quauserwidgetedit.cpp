@@ -12,8 +12,10 @@ QUaUserWidgetEdit::QUaUserWidgetEdit(QWidget *parent) :
 {
     ui->setupUi(this);
 	// forward signals
-	QObject::connect(ui->pushButtonDelete, &QPushButton::clicked, this, &QUaUserWidgetEdit::deleteClicked);
-	QObject::connect(ui->pushButtonApply , &QPushButton::clicked, this, &QUaUserWidgetEdit::applyClicked );
+	QObject::connect(ui->pushButtonDelete   , &QPushButton::clicked, this, &QUaUserWidgetEdit::deleteClicked   );
+	QObject::connect(ui->pushButtonApply    , &QPushButton::clicked, this, &QUaUserWidgetEdit::applyClicked    );
+	QObject::connect(ui->pushButtonReset    , &QPushButton::clicked, this, &QUaUserWidgetEdit::resetClicked    );
+	QObject::connect(ui->pushButtonShowRoles, &QPushButton::clicked, this, &QUaUserWidgetEdit::showRolesClicked);
 	// setup combo model
 	m_proxyCombo.setSourceModel(&m_modelCombo);
 	// setup combo
@@ -46,13 +48,13 @@ void QUaUserWidgetEdit::setUserNameReadOnly(const bool & readOnly)
 
 bool QUaUserWidgetEdit::isRoleVisible() const
 {
-	return ui->comboBoxRole->isEnabled();
+	return ui->frameRole->isEnabled();
 }
 
 void QUaUserWidgetEdit::setRoleVisible(const bool & isVisible)
 {
-	ui->comboBoxRole->setEnabled(isVisible);
-	ui->comboBoxRole->setVisible(isVisible);
+	ui->frameRole->setEnabled(isVisible);
+	ui->frameRole->setVisible(isVisible);
 	ui->labelRole->setEnabled(isVisible);
 	ui->labelRole->setVisible(isVisible);
 }
@@ -155,7 +157,7 @@ void QUaUserWidgetEdit::setRoleList(const QUaRoleList * listRoles)
 		iRole->setData(QVariant::fromValue(role), QUaUserWidgetEdit::PointerRole);
 		// subscribe to destroyed
 		m_connections << QObject::connect(role, &QObject::destroyed, this,
-			[this, iRole]() {
+		[this, iRole]() {
 			Q_CHECK_PTR(iRole);
 			// remove from model
 			m_modelCombo.removeRows(iRole->index().row(), 1);

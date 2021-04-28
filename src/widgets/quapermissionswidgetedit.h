@@ -62,6 +62,12 @@ public:
 	void setUserAccessMap(const QUaUserAccessMap &userMap); //completely overwrites
 	void updateUserAccess(const QString &strUserName, const QUaUserAccess &userAccess);
 
+	QByteArray rolesHeaderState() const;
+	void setRolesHeaderState(const QByteArray& state);
+
+	QByteArray usersHeaderState() const;
+	void setUsersHeaderState(const QByteArray& state);
+
 	// role table headers
 	enum class RoleHeaders
 	{
@@ -86,7 +92,9 @@ public:
 
 signals:
 	void deleteClicked();
+	void resetClicked();
 	void applyClicked();
+	void showPermsClicked();
 
 private:
     Ui::QUaPermissionsWidgetEdit *ui;

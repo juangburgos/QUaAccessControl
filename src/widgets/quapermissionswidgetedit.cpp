@@ -18,9 +18,10 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
     ui->setupUi(this);
 	m_accessReadOnly = false;
 	// forward signals
-	QObject::connect(ui->pushButtonDelete, &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::deleteClicked);
-	QObject::connect(ui->pushButtonApply , &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::applyClicked );
-
+	QObject::connect(ui->pushButtonDelete   , &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::deleteClicked   );
+	QObject::connect(ui->pushButtonReset    , &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::resetClicked    );
+	QObject::connect(ui->pushButtonApply    , &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::applyClicked    );
+	QObject::connect(ui->pushButtonShowPerms, &QPushButton::clicked, this, &QUaPermissionsWidgetEdit::showPermsClicked);
 	// setup roles table model
 	m_modelRoles.setColumnCount((int)RoleHeaders::Invalid);
 	QStringList roleHeaders;
@@ -34,15 +35,11 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
 	// setup role table
 	ui->treeViewRoles->setModel(&m_proxyRoles);
 	ui->treeViewRoles->setAlternatingRowColors(true);
-	// NOTE : before it was table
-	//ui->treeViewRoles->horizontalHeader()->setStretchLastSection(true);
-	//ui->treeViewRoles->verticalHeader()->setVisible(false);
 	ui->treeViewRoles->setSortingEnabled(true);
 	ui->treeViewRoles->sortByColumn((int)RoleHeaders::Name, Qt::SortOrder::AscendingOrder);
 	ui->treeViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
 	ui->treeViewRoles->setSelectionMode(QAbstractItemView::SingleSelection);
 	ui->treeViewRoles->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
 	// setup users table model
 	m_modelUsers.setColumnCount((int)UserHeaders::Invalid);
 	QStringList userHeaders;
@@ -56,9 +53,6 @@ QUaPermissionsWidgetEdit::QUaPermissionsWidgetEdit(QWidget *parent) :
 	// setup user table
 	ui->treeViewUsers->setModel(&m_proxyUsers);
 	ui->treeViewUsers->setAlternatingRowColors(true);
-	// NOTE : before it was table
-	//ui->treeViewUsers->horizontalHeader()->setStretchLastSection(true);
-	//ui->treeViewUsers->verticalHeader()->setVisible(false);
 	ui->treeViewUsers->setSortingEnabled(true);
 	ui->treeViewUsers->sortByColumn((int)UserHeaders::Name, Qt::SortOrder::AscendingOrder);
 	ui->treeViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -121,6 +115,8 @@ void QUaPermissionsWidgetEdit::setAccessVisible(const bool & isVisible)
 	ui->treeViewUsers->setEnabled(isVisible);
 	ui->treeViewUsers->setVisible(isVisible);
 	ui->labelUsers->setVisible(isVisible);
+	ui->splitter->setEnabled(isVisible);
+	ui->splitter->setVisible(isVisible);
 }
 
 bool QUaPermissionsWidgetEdit::areActionsVisible() const
@@ -132,6 +128,8 @@ void QUaPermissionsWidgetEdit::setActionsVisible(const bool & isVisible)
 {
 	ui->frameEditActions->setEnabled(isVisible);
 	ui->frameEditActions->setVisible(isVisible);
+	ui->pushButtonShowPerms->setEnabled(isVisible);
+	ui->pushButtonShowPerms->setVisible(isVisible);
 }
 
 QString QUaPermissionsWidgetEdit::id() const
@@ -467,4 +465,28 @@ void QUaPermissionsWidgetEdit::updateUserAccess(const QString & strUserName,
 	pChBox = pWidget->findChild<QCheckBox*>("RoleWrite");
 	Q_CHECK_PTR(pChBox);
 	pChBox->setChecked(userAccess.canRoleWrite);
+}
+
+QByteArray QUaPermissionsWidgetEdit::rolesHeaderState() const
+{
+	auto header = ui->treeViewRoles->header();
+	return header->saveState();
+}
+
+void QUaPermissionsWidgetEdit::setRolesHeaderState(const QByteArray& state)
+{
+	auto header = ui->treeViewRoles->header();
+	header->restoreState(state);
+}
+
+QByteArray QUaPermissionsWidgetEdit::usersHeaderState() const
+{
+	auto header = ui->treeViewUsers->header();
+	return header->saveState();
+}
+
+void QUaPermissionsWidgetEdit::setUsersHeaderState(const QByteArray& state)
+{
+	auto header = ui->treeViewUsers->header();
+	header->restoreState(state);
 }

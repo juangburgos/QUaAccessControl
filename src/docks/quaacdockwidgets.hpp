@@ -30,6 +30,7 @@ public:
 	void updateWidgetsPermissions();
 	void clearWidgets();
 	void closeConfig();
+	void showDefaultWidgets();
 
 	void loadSettings(const QSettings &settings);
 	void saveSettings(QSettings& settings);
@@ -178,15 +179,44 @@ inline void QUaAcDockWidgets<T>::closeConfig()
 }
 
 template<class T>
+inline void QUaAcDockWidgets<T>::showDefaultWidgets()
+{
+	// TODO
+}
+
+template<class T>
 inline void QUaAcDockWidgets<T>::loadSettings(const QSettings& settings)
 {
-	Q_UNUSED(settings)
+	if (settings.contains("QUaUserTable::headerState"))
+	{
+		m_userTable->setHeaderState(settings.value("QUaUserTable::headerState").toByteArray());
+	}
+	if (settings.contains("QUaRoleTable::headerState"))
+	{
+		m_roleTable->setHeaderState(settings.value("QUaRoleTable::headerState").toByteArray());
+	}
+	if (settings.contains("QUaPermissionsTable::headerState"))
+	{
+		m_permsTable->setHeaderState(settings.value("QUaPermissionsTable::headerState").toByteArray());
+	}
+	if (settings.contains("QUaPermissionsWidgetEdit::rolesHeaderState"))
+	{
+		m_permsWidget->setRolesHeaderState(settings.value("QUaPermissionsWidgetEdit::rolesHeaderState").toByteArray());
+	}
+	if (settings.contains("QUaPermissionsWidgetEdit::usersHeaderState"))
+	{
+		m_permsWidget->setUsersHeaderState(settings.value("QUaPermissionsWidgetEdit::usersHeaderState").toByteArray());
+	}
 }
 
 template<class T>
 inline void QUaAcDockWidgets<T>::saveSettings(QSettings& settings)
 {
-	Q_UNUSED(settings)
+	settings.setValue("QUaUserTable::headerState", m_userTable->headerState());
+	settings.setValue("QUaRoleTable::headerState", m_roleTable->headerState());
+	settings.setValue("QUaPermissionsTable::headerState", m_permsTable->headerState());
+	settings.setValue("QUaPermissionsWidgetEdit::rolesHeaderState", m_permsWidget->rolesHeaderState());
+	settings.setValue("QUaPermissionsWidgetEdit::usersHeaderState", m_permsWidget->usersHeaderState());
 }
 
 template<class T>
@@ -272,6 +302,11 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 		QAd::CenterDockWidgetArea,
 		m_userTable
 	);
+	QObject::connect(m_userTable, &QUaUserTable::showRolesClicked, this,
+	[this]() {
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRolesTable, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRolesTable, true);
+	});
 
 	m_roleTable = new QUaRoleTable(m_thiz);
 	this->getDockManager()->addDock(
@@ -293,6 +328,11 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 		QAd::CenterDockWidgetArea,
 		m_userWidget
 	);
+	QObject::connect(m_userWidget, &QUaUserWidgetEdit::showRolesClicked, this,
+	[this]() {
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRolesTable, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRolesTable, true);
+	});
 
 	m_roleWidget = new QUaRoleWidgetEdit(m_thiz);
 	this->getDockManager()->addDock(
@@ -307,6 +347,11 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 		QAd::CenterDockWidgetArea,
 		m_permsWidget
 	);
+	QObject::connect(m_permsWidget, &QUaPermissionsWidgetEdit::showPermsClicked, this,
+	[this]() {
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsTable, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsTable, true);
+	});
 }
 
 template<class T>
@@ -317,18 +362,15 @@ inline void QUaAcDockWidgets<T>::setupUserWidgets()
 	// disable until some valid object selected
 	m_userWidget->setEnabled(false);
 	m_userWidget->setRepeatVisible(true);
-
 	// get access control
 	QUaAccessControl * ac = m_thiz->accessControl();
-
 	// set ac to table
 	QObject::connect(m_thiz, &T::loggedUserChanged, m_userTable, &QUaUserTable::on_loggedUserChanged);
 	m_userTable->setAccessControl(ac);
-
 	// handle table events (user selection)
 	// change widgets
 	QObject::connect(m_userTable, &QUaUserTable::userSelectionChanged, this,
-		[this](QUaUser * userPrev, QUaUser * userCurr)
+	[this](QUaUser * userPrev, QUaUser * userCurr)
 	{
 		Q_UNUSED(userPrev);
 		// early exit
@@ -339,7 +381,19 @@ inline void QUaAcDockWidgets<T>::setupUserWidgets()
 		// bind widget for current selection
 		this->bindWidgetUserEdit(userCurr);
 	});
-
+	// open user edit widget when double clicked
+	QObject::connect(m_userTable, &QUaUserTable::userDoubleClicked, this,
+	[this](QUaUser* user) {
+		Q_UNUSED(user);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strUserEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strUserEdit, true);
+	});
+	QObject::connect(m_userTable, &QUaUserTable::userEditClicked, this,
+	[this](QUaUser* user) {
+		Q_UNUSED(user);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strUserEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strUserEdit, true);
+	});
 	// setup user edit widget
 	m_userWidget->setRoleList(ac->roles());
 }
@@ -351,14 +405,11 @@ inline void QUaAcDockWidgets<T>::setupRoleWidgets()
 	Q_CHECK_PTR(m_roleWidget);
 	// disable until some valid object selected
 	m_roleWidget->setEnabled(false);
-
 	// get access control
 	QUaAccessControl * ac = m_thiz->accessControl();
-
 	// set ac to table
 	QObject::connect(m_thiz, &T::loggedUserChanged, m_roleTable, &QUaRoleTable::on_loggedUserChanged);
 	m_roleTable->setAccessControl(ac);
-
 	// handle table events (user selection)
 	// change widgets
 	QObject::connect(m_roleTable, &QUaRoleTable::roleSelectionChanged, this,
@@ -373,6 +424,19 @@ inline void QUaAcDockWidgets<T>::setupRoleWidgets()
 		// bind widget for current selection
 		this->bindWidgetRoleEdit(roleCurr);
 	});
+	// open user edit widget when double clicked
+	QObject::connect(m_roleTable, &QUaRoleTable::roleDoubleClicked, this,
+	[this](QUaRole* role) {
+		Q_UNUSED(role);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRoleEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRoleEdit, true);
+	});
+	QObject::connect(m_roleTable, &QUaRoleTable::roleEditClicked, this,
+	[this](QUaRole* role) {
+		Q_UNUSED(role);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRoleEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRoleEdit, true);
+	});
 }
 
 template<class T>
@@ -382,15 +446,12 @@ inline void QUaAcDockWidgets<T>::setupPermsWidgets()
 	Q_CHECK_PTR(m_permsWidget);
 	// disable until some valid object selected
 	m_permsWidget->setEnabled(false);
-
 	// get access control
 	QUaAccessControl * ac = m_thiz->accessControl();
-
 	// set ac to table
 	QObject::connect(m_thiz, &T::loggedUserChanged, m_permsTable, &QUaPermissionsTable::on_loggedUserChanged);
 	m_permsTable->setAccessControl(ac);
-
-	// handle table events (user selection)
+	// handle table events (perms selection)
 	// change widgets
 	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsSelectionChanged, this,
 	[this](QUaPermissions * permsPrev, QUaPermissions * permsCurr)
@@ -403,6 +464,19 @@ inline void QUaAcDockWidgets<T>::setupPermsWidgets()
 		}
 		// bind widget for current selection
 		this->bindWidgetPermissionsEdit(permsCurr);
+	});
+	// open perms edit widget when double clicked
+	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsDoubleClicked, this,
+	[this](QUaPermissions* perms) {
+		Q_UNUSED(perms);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
+	});
+	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsEditClicked, this,
+	[this](QUaPermissions* perms) {
+		Q_UNUSED(perms);
+		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
+		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
 	});
 }
 
@@ -476,11 +550,15 @@ inline void QUaAcDockWidgets<T>::bindWidgetUserEdit(QUaUser * user)
 		}
 		m_userWidget->setHash(hash.toHex());
 	});
-
-	// password
+	// clear password
 	m_userWidget->setPassword("");
 	m_userWidget->setRepeat("");
-
+	// on click reset
+	m_connsUserWidget <<
+	QObject::connect(m_userWidget, &QUaUserWidgetEdit::resetClicked, user,
+	[this, user]() {
+		this->bindWidgetUserEdit(user);
+	});
 	// on click delete
 	m_connsUserWidget <<
 	QObject::connect(m_userWidget, &QUaUserWidgetEdit::deleteClicked, user,
@@ -499,7 +577,6 @@ inline void QUaAcDockWidgets<T>::bindWidgetUserEdit(QUaUser * user)
 		// delete (emit signal on list)
 		user->remove();
 	});
-
 	// on click apply
 	m_connsUserWidget <<
 	QObject::connect(m_userWidget, &QUaUserWidgetEdit::applyClicked, user,
@@ -525,7 +602,6 @@ inline void QUaAcDockWidgets<T>::bindWidgetUserEdit(QUaUser * user)
 			QMessageBox::critical(m_thiz, tr("Edit User Error"), tr("Invalid new password. %1").arg(strError), QMessageBox::StandardButton::Ok);
 		}
 	});
-
 	// set permissions
 	this->updateWidgetUserEditPermissions(user);
 }
@@ -893,7 +969,12 @@ inline void QUaAcDockWidgets<T>::bindWidgetPermissionsEdit(QUaPermissions * perm
 			k.value().canUserWrite ? perms->addUserCanWrite(user) : perms->removeUserCanWrite(user);
 		}
 	});
-
+	// on click reset
+	m_connsPermsWidget <<
+	QObject::connect(m_permsWidget, &QUaPermissionsWidgetEdit::resetClicked, perms,
+	[this, perms]() {
+		this->bindWidgetPermissionsEdit(perms);
+	});
 	// on click delete
 	m_connsPermsWidget <<
 	QObject::connect(m_permsWidget, &QUaPermissionsWidgetEdit::deleteClicked, perms,

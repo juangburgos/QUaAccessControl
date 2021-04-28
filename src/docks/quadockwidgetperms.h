@@ -27,6 +27,9 @@ public:
 
 	static int PointerRole;
 
+signals:
+	void showPermsClicked();
+
 private slots:
 	void on_currentIndexChanged(int index);
 

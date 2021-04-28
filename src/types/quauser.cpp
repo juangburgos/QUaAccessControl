@@ -133,6 +133,7 @@ QUaRole * QUaUser::role() const
 
 void QUaUser::setRole(QUaRole * role)
 {
+	QObject::disconnect(m_roleDestroyedConn);
 	// remove old reference if any
 	if (this->hasRole())
 	{
@@ -145,6 +146,12 @@ void QUaUser::setRole(QUaRole * role)
 		// NOTE : clearRole already emits nullptr
 		return;
 	}
+	// subscribe to role destroyed
+	m_roleDestroyedConn =
+	QObject::connect(role, &QObject::destroyed, this, [this](){
+		QObject::disconnect(m_roleDestroyedConn);
+		emit this->roleChanged(nullptr);
+	});
 	// add reference
 	this->addReference(QUaUser::UserHasRoleRefType, role);
 	// emit

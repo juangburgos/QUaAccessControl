@@ -64,7 +64,9 @@ public:
 
 signals:
 	void deleteClicked();
+	void resetClicked();
 	void applyClicked();
+	void showRolesClicked();
 
 private:
     Ui::QUaUserWidgetEdit *ui;

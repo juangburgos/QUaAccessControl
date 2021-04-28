@@ -3,6 +3,7 @@
 
 #include <QMessageBox>
 #include <QMetaEnum>
+#include <QMenu>
 
 #include <QUaAccessControl>
 #include <QUaUser>
@@ -73,9 +74,6 @@ QUaUserTable::QUaUserTable(QWidget *parent) :
 	// setup user table
 	ui->treeViewUsers->setModel(&m_proxyUsers);
 	ui->treeViewUsers->setAlternatingRowColors(true);
-	// NOTE : before it was table
-	//ui->treeViewUsers->horizontalHeader()->setStretchLastSection(true);
-	//ui->treeViewUsers->verticalHeader()->setVisible(false);
 	ui->treeViewUsers->setSortingEnabled(true);
 	ui->treeViewUsers->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
 	ui->treeViewUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -101,6 +99,23 @@ QUaUserTable::QUaUserTable(QWidget *parent) :
 		// emit
 		emit this->userSelectionChanged(nodePrev, nodeCurr);
 	});
+	// emit on double click
+	QObject::connect(ui->treeViewUsers, &QAbstractItemView::doubleClicked, this,
+	[this](const QModelIndex& index) {
+		auto item = m_modelUsers.itemFromIndex(m_proxyUsers.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto user = item->data(QUaUserTable::PointerRole).value<QUaUser*>();
+		if (!user)
+		{
+			return;
+		}
+		this->userDoubleClicked(user);
+	});
+	// context menu
+	this->setupTableContextMenu();
 }
 
 QUaUserTable::~QUaUserTable()
@@ -161,6 +176,58 @@ void QUaUserTable::setAccessControl(QUaAccessControl * ac)
 	}
 }
 
+QIcon QUaUserTable::iconAdd() const
+{
+	return m_iconAdd;
+}
+
+void QUaUserTable::setIconAdd(const QIcon& icon)
+{
+	m_iconAdd = icon;
+}
+
+QIcon QUaUserTable::iconEdit() const
+{
+	return m_iconEdit;
+}
+
+void QUaUserTable::setIconEdit(const QIcon& icon)
+{
+	m_iconEdit = icon;
+}
+
+QIcon QUaUserTable::iconDelete() const
+{
+	return m_iconDelete;
+}
+
+void QUaUserTable::setIconDelete(const QIcon& icon)
+{
+	m_iconDelete = icon;
+}
+
+QIcon QUaUserTable::iconClear() const
+{
+	return m_iconClear;
+}
+
+void QUaUserTable::setIconClear(const QIcon& icon)
+{
+	m_iconClear = icon;
+}
+
+QByteArray QUaUserTable::headerState() const
+{
+	auto header = ui->treeViewUsers->header();
+	return header->saveState();
+}
+
+void QUaUserTable::setHeaderState(const QByteArray& state)
+{
+	auto header = ui->treeViewUsers->header();
+	header->restoreState(state);
+}
+
 void QUaUserTable::on_loggedUserChanged(QUaUser * user)
 {
 	m_loggedUser = user;
@@ -199,12 +266,73 @@ void QUaUserTable::on_pushButtonAdd_clicked()
 	widgetNewUser->setHashVisible(false);
 	widgetNewUser->setRoleList(m_ac->roles());
 	widgetNewUser->setRepeatVisible(true);
+	QObject::connect(widgetNewUser, &QUaUserWidgetEdit::showRolesClicked, this, &QUaUserTable::showRolesClicked);
 	// NOTE : dialog takes ownershit
 	QUaAcCommonDialog dialog(this);
 	dialog.setWindowTitle(tr("New User"));
 	dialog.setWidget(widgetNewUser);
 	// NOTE : call in own method to we can recall it if fails
 	this->showNewUserDialog(dialog);
+}
+
+void QUaUserTable::setupTableContextMenu()
+{
+	ui->treeViewUsers->setContextMenuPolicy(Qt::CustomContextMenu);
+	QObject::connect(ui->treeViewUsers, &QTreeView::customContextMenuRequested, this,
+	[this](const QPoint& point) {
+		QModelIndex index = ui->treeViewUsers->indexAt(point);
+		QMenu contextMenu(ui->treeViewUsers);
+		if (!index.isValid())
+		{
+			contextMenu.addAction(m_iconAdd, tr("Add User"), this,
+			[this]() {
+				this->on_pushButtonAdd_clicked();
+			});
+			// exec
+			contextMenu.exec(ui->treeViewUsers->viewport()->mapToGlobal(point));
+			return;
+		}
+		auto item = m_modelUsers.itemFromIndex(m_proxyUsers.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto user = item->data(QUaUserTable::PointerRole).value<QUaUser*>();
+		if (!user)
+		{
+			return;
+		}
+		// edit user
+		contextMenu.addAction(m_iconEdit, tr("Edit"), this,
+			[this, user]() {
+				this->userEditClicked(user);
+			});
+		// cannot delete root user
+		if (!user->isRootUser())
+		{
+			contextMenu.addSeparator();
+			// delete param
+			contextMenu.addAction(m_iconDelete, tr("Delete"), this,
+			[this, user]() {
+				// are you sure?
+				auto res = QMessageBox::question(
+					this,
+					tr("Delete User Confirmation"),
+					tr("Would you like to delete user %1?").arg(user->getName()),
+					QMessageBox::StandardButton::Ok,
+					QMessageBox::StandardButton::Cancel
+				);
+				if (res != QMessageBox::StandardButton::Ok)
+				{
+					return;
+				}
+				// delete
+				user->remove();
+			});
+		}
+		// exec
+		contextMenu.exec(ui->treeViewUsers->viewport()->mapToGlobal(point));
+	});
 }
 
 void QUaUserTable::showNewUserDialog(QUaAcCommonDialog & dialog)
@@ -254,14 +382,12 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 	// get parent to add rows as children
 	auto parent = m_modelUsers.invisibleRootItem();
 	auto row = parent->rowCount();
-
 	// name column
 	auto iName = new QStandardItem(user->getName());
 	// set data
 	iName->setData(QVariant::fromValue(user), QUaUserTable::PointerRole);
 	// add after data
 	parent->setChild(row, (int)Headers::Name, iName);
-
 	// role column
 	QMetaObject::Connection roleDestConn;
 	QString strRole = "";
@@ -276,32 +402,16 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 	iRole->setData(QVariant::fromValue(user), QUaUserTable::PointerRole);
 	// add after data
 	parent->setChild(row, (int)Headers::Role, iRole);
-	// updates
-	if (role)
-	{
-		// subscribe role delete
-		roleDestConn = QObject::connect(role, &QObject::destroyed, user,
-			[user, iRole]() {
-			QString strRole = "";
-			if (user->role())
-			{
-				strRole = user->role()->getName();
-			}
-			iRole->setText(strRole);
-		});
-	}
+	// subscribe role change
 	QObject::connect(user, &QUaUser::roleChanged, this,
-	[this, iRole, roleDestConn](QUaRole * role) {
+	[this, iRole](QUaRole * role) {
 		QString strRole = "";
 		if (role)
 		{
 			strRole = role->getName();
 		}
 		iRole->setText(strRole);
-		// disconnect
-		QObject::disconnect(roleDestConn);
 	});
-
 	// remove row if deleted
 	// NOTE : set this as receiver, so callback is not called if this has been deleted
 	QObject::connect(user, &QObject::destroyed, this,
@@ -310,6 +420,5 @@ QStandardItem * QUaUserTable::handleUserAdded(QUaUser * user)
 		// remove from table
 		m_modelUsers.removeRows(iName->index().row(), 1);
 	});
-
 	return iName;
 }

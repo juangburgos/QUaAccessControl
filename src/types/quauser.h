@@ -65,6 +65,9 @@ signals:
 	// C++ API
 	void hashChanged(const QByteArray &hash);
 	void roleChanged(QUaRole * role);
+
+private:
+	QMetaObject::Connection m_roleDestroyedConn;
 };
 
 #endif // QUAUSER_H

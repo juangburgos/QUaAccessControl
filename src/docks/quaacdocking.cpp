@@ -123,7 +123,6 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	Q_ASSERT_X(!this->hasDock(strDockName), "addDock", "Repeated Widget Name not supported.");
 	if (this->hasDock(strDockName))
 	{
-		// TODO : remove old, put new?
 		return nullptr;
 	}
 	// create dock
@@ -228,6 +227,16 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	[this, strDockName]() {
 		// create permissions widget
 		auto permsWidget = new QUaDockWidgetPerms;
+		QObject::connect(permsWidget, &QUaDockWidgetPerms::showPermsClicked, this, [this]() {
+			// TODO : this is a hack, I don't know how to solve this elegantly
+			static const QString strPermsTable = "Permissions Table";
+			if (!this->hasDock(strPermsTable))
+			{
+				return;
+			}
+			this->setIsDockVisible(strPermsTable, true);
+			this->setIsDockActive (strPermsTable, true);
+		});
 		// configure perms widget combo
 		permsWidget->setComboModel(m_proxyPerms);
 		permsWidget->setPermissions(this->dockPermissions(strDockName));
@@ -247,31 +256,6 @@ QAdDockWidgetArea * QUaAcDocking::addDock(
 	});
 	// no permissions initially
 	this->setDockPermissions(strDockName, nullptr);
-	//// NOTE : unavoidable style fix
-	//QObject::connect(pDock, &QAdDockWidget::viewToggled, this,
-	//[pDock](bool Open) {
-	//	if (!Open)
-	//	{
-	//		return;
-	//	}
-	//	const QString strStyleSheet =
-	//		"ads--CDockWidget { border-color: #A0A0A0; } "
-	//		"ads--CDockWidgetTab { background: transparent; border-color: #A0A0A0; } "
-	//		"ads--CDockAreaWidget { border-color: #A0A0A0; } ";
-	//	pDock->setStyleSheet(strStyleSheet);
-	//	auto area = pDock->dockAreaWidget();
-	//	if (!area)
-	//	{
-	//		return;
-	//	}
-	//	area->setStyleSheet(strStyleSheet);
-	//	auto tab = area->findChild<QAdDockWidgetTab*>();
-	//	if (!tab)
-	//	{
-	//		return;
-	//	}
-	//	tab->setStyleSheet(strStyleSheet);
-	//});
 	return wAreaNew;
 }
 

@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QMetaEnum>
 #include <QPainter>
+#include <QMenu>
 
 #include <QUaAccessControl>
 #include <QUaUser>
@@ -74,9 +75,6 @@ QUaRoleTable::QUaRoleTable(QWidget *parent) :
 	// setup user table
 	ui->treeViewRoles->setModel(&m_proxyRoles);
 	ui->treeViewRoles->setAlternatingRowColors(true);
-	// NOTE : before it was table
-	//ui->treeViewRoles->horizontalHeader()->setStretchLastSection(true);
-	//ui->treeViewRoles->verticalHeader()->setVisible(false);
 	ui->treeViewRoles->setSortingEnabled(true);
 	ui->treeViewRoles->sortByColumn((int)Headers::Name, Qt::SortOrder::AscendingOrder);
 	ui->treeViewRoles->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -102,6 +100,23 @@ QUaRoleTable::QUaRoleTable(QWidget *parent) :
 		// emit
 		emit this->roleSelectionChanged(nodePrev, nodeCurr);
 	});
+	// emit on double click
+	QObject::connect(ui->treeViewRoles, &QAbstractItemView::doubleClicked, this,
+	[this](const QModelIndex& index) {
+		auto item = m_modelRoles.itemFromIndex(m_proxyRoles.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto role = item->data(QUaRoleTable::PointerRole).value<QUaRole*>();
+		if (!role)
+		{
+			return;
+		}
+		this->roleDoubleClicked(role);
+	});
+	// context menu
+	this->setupTableContextMenu();
 }
 
 QUaRoleTable::~QUaRoleTable()
@@ -135,10 +150,8 @@ void QUaRoleTable::setAccessControl(QUaAccessControl * ac)
 	if (m_ac) { return; }
 	// set
 	m_ac = ac;
-
 	// enable add
 	ui->pushButtonAdd->setEnabled(true);
-
 	// subscribe to role added
 	// NOTE : needs to be a queued connection because we want to wait until browseName is set
 	QObject::connect(m_ac->roles(), &QUaRoleList::roleAdded, this,
@@ -150,7 +163,6 @@ void QUaRoleTable::setAccessControl(QUaAccessControl * ac)
 		auto index = m_proxyRoles.mapFromSource(item->index());
 		ui->treeViewRoles->setCurrentIndex(index);
 	}, Qt::QueuedConnection);
-
 	// add already existing roles
 	auto listRoles = m_ac->roles()->roles();
 	for (int i = 0; i < listRoles.count(); i++)
@@ -206,6 +218,62 @@ void QUaRoleTable::on_pushButtonAdd_clicked()
 	this->showNewRoleDialog(dialog);
 }
 
+void QUaRoleTable::setupTableContextMenu()
+{
+	ui->treeViewRoles->setContextMenuPolicy(Qt::CustomContextMenu);
+	QObject::connect(ui->treeViewRoles, &QTreeView::customContextMenuRequested, this,
+	[this](const QPoint& point) {
+		QModelIndex index = ui->treeViewRoles->indexAt(point);
+		QMenu contextMenu(ui->treeViewRoles);
+		if (!index.isValid())
+		{
+			contextMenu.addAction(m_iconAdd, tr("Add Role"), this,
+				[this]() {
+					this->on_pushButtonAdd_clicked();
+				});
+			// exec
+			contextMenu.exec(ui->treeViewRoles->viewport()->mapToGlobal(point));
+			return;
+		}
+		auto item = m_modelRoles.itemFromIndex(m_proxyRoles.mapToSource(index));
+		if (!item)
+		{
+			return;
+		}
+		auto role = item->data(QUaRoleTable::PointerRole).value<QUaRole*>();
+		if (!role)
+		{
+			return;
+		}
+		// edit user
+		contextMenu.addAction(m_iconEdit, tr("Edit"), this,
+		[this, role]() {
+			this->roleEditClicked(role);
+		});
+		contextMenu.addSeparator();
+		// delete param
+		contextMenu.addAction(m_iconDelete, tr("Delete"), this,
+		[this, role]() {
+			// are you sure?
+			auto res = QMessageBox::question(
+				this,
+				tr("Delete Role Confirmation"),
+				tr("Would you like to delete role %1?").arg(role->getName()),
+				QMessageBox::StandardButton::Ok,
+				QMessageBox::StandardButton::Cancel
+			);
+			if (res != QMessageBox::StandardButton::Ok)
+			{
+				return;
+			}
+			// delete
+			role->remove();
+		});
+		// exec
+		contextMenu.exec(ui->treeViewRoles->viewport()->mapToGlobal(point));
+	});
+}
+
 void QUaRoleTable::showNewRoleDialog(QUaAcCommonDialog & dialog)
 {
 	int res = dialog.exec();
@@ -254,4 +322,56 @@ QStandardItem * QUaRoleTable::handleRoleAdded(QUaRole * role)
 	});
 
 	return iName;
+}
+
+QIcon QUaRoleTable::iconAdd() const
+{
+	return m_iconAdd;
+}
+
+void QUaRoleTable::setIconAdd(const QIcon& icon)
+{
+	m_iconAdd = icon;
+}
+
+QIcon QUaRoleTable::iconEdit() const
+{
+	return m_iconEdit;
+}
+
+void QUaRoleTable::setIconEdit(const QIcon& icon)
+{
+	m_iconEdit = icon;
+}
+
+QIcon QUaRoleTable::iconDelete() const
+{
+	return m_iconDelete;
+}
+
+void QUaRoleTable::setIconDelete(const QIcon& icon)
+{
+	m_iconDelete = icon;
+}
+
+QIcon QUaRoleTable::iconClear() const
+{
+	return m_iconClear;
+}
+
+void QUaRoleTable::setIconClear(const QIcon& icon)
+{
+	m_iconClear = icon;
+}
+
+QByteArray QUaRoleTable::headerState() const
+{
+	auto header = ui->treeViewRoles->header();
+	return header->saveState();
+}
+
+void QUaRoleTable::setHeaderState(const QByteArray& state)
+{
+	auto header = ui->treeViewRoles->header();
+	header->restoreState(state);
 }
