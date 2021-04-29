@@ -74,6 +74,7 @@ private:
 
 	// helpers
 	QUaAcDocking * getDockManager() const;
+	void showDock(const QString& strDockName);
 
 	const static QString m_strMenuPath;
 	const static QString m_strUsersTable;
@@ -304,8 +305,7 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 	);
 	QObject::connect(m_userTable, &QUaUserTable::showRolesClicked, this,
 	[this]() {
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRolesTable, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRolesTable, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strRolesTable);
 	});
 
 	m_roleTable = new QUaRoleTable(m_thiz);
@@ -330,8 +330,7 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 	);
 	QObject::connect(m_userWidget, &QUaUserWidgetEdit::showRolesClicked, this,
 	[this]() {
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRolesTable, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRolesTable, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strRolesTable);
 	});
 
 	m_roleWidget = new QUaRoleWidgetEdit(m_thiz);
@@ -349,8 +348,7 @@ inline void QUaAcDockWidgets<T>::createAcWidgetsDocks()
 	);
 	QObject::connect(m_permsWidget, &QUaPermissionsWidgetEdit::showPermsClicked, this,
 	[this]() {
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsTable, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsTable, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strPermissionsTable);
 	});
 }
 
@@ -385,14 +383,12 @@ inline void QUaAcDockWidgets<T>::setupUserWidgets()
 	QObject::connect(m_userTable, &QUaUserTable::userDoubleClicked, this,
 	[this](QUaUser* user) {
 		Q_UNUSED(user);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strUserEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strUserEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strUserEdit);
 	});
 	QObject::connect(m_userTable, &QUaUserTable::userEditClicked, this,
 	[this](QUaUser* user) {
 		Q_UNUSED(user);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strUserEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strUserEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strUserEdit);
 	});
 	// setup user edit widget
 	m_userWidget->setRoleList(ac->roles());
@@ -428,14 +424,12 @@ inline void QUaAcDockWidgets<T>::setupRoleWidgets()
 	QObject::connect(m_roleTable, &QUaRoleTable::roleDoubleClicked, this,
 	[this](QUaRole* role) {
 		Q_UNUSED(role);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRoleEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRoleEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strRoleEdit);
 	});
 	QObject::connect(m_roleTable, &QUaRoleTable::roleEditClicked, this,
 	[this](QUaRole* role) {
 		Q_UNUSED(role);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strRoleEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strRoleEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strRoleEdit);
 	});
 }
 
@@ -469,14 +463,12 @@ inline void QUaAcDockWidgets<T>::setupPermsWidgets()
 	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsDoubleClicked, this,
 	[this](QUaPermissions* perms) {
 		Q_UNUSED(perms);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strPermissionsEdit);
 	});
 	QObject::connect(m_permsTable, &QUaPermissionsTable::permissionsEditClicked, this,
 	[this](QUaPermissions* perms) {
 		Q_UNUSED(perms);
-		this->getDockManager()->setIsDockVisible(QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
-		this->getDockManager()->setIsDockActive (QUaAcDockWidgets<T>::m_strPermissionsEdit, true);
+		this->showDock(QUaAcDockWidgets<T>::m_strPermissionsEdit);
 	});
 }
 
@@ -1045,6 +1037,25 @@ template<class T>
 inline QUaAcDocking * QUaAcDockWidgets<T>::getDockManager() const
 {
 	return m_thiz->getDockManager();
+}
+
+template<class T>
+inline void QUaAcDockWidgets<T>::showDock(const QString& strDockName)
+{
+	auto manager = this->getDockManager();
+	auto perms = manager->dockPermissions(strDockName);
+	if (perms && !perms->canUserRead(m_thiz->loggedUser()))
+	{
+		QMessageBox::critical(
+			m_thiz,
+			tr("Permissions Error"),
+			tr("You are not allowed to perform this action.\n\nPlease contact an administrator."),
+			QMessageBox::StandardButton::Ok
+		);
+		return;
+	}
+	manager->setIsDockVisible(strDockName, true);
+	manager->setIsDockActive(strDockName, true);
 }
 
 #endif // QUAACDOCKWIDGETS_H
